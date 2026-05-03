@@ -48,6 +48,7 @@ app.use(cors({
 
 // ── Handle OPTIONS preflight for all routes ───────
 // Without this, browsers block requests like ?global=true
+/*
 app.options('*', cors({
   origin: (origin, cb) => {
     if (!origin || allowedOrigins.includes(origin)) cb(null, true)
@@ -57,7 +58,11 @@ app.options('*', cors({
   methods: ['GET','POST','PUT','DELETE','OPTIONS','PATCH'],
   allowedHeaders: ['Content-Type','Authorization'],
 }))
-
+*/
+app.use(cors({
+  origin: true,
+  credentials: true,
+}))
 
 // ── Sanitize MongoDB operators in req.body ────────
 app.use(mongoSanitize())
