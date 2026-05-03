@@ -145,10 +145,14 @@ export default function Connect() {
     (user?.sentRequests || []).map(c => c?._id?.toString() || c?.toString() || c)
   )
 
+  /*
   const token = localStorage.getItem('nx_token')
-  const base  = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+  const base = import.meta.env.VITE_API_URL + '/api'
   const h     = { Authorization: `Bearer ${token}` }
-
+*/
+const token = localStorage.getItem('nx_token')
+const base  = import.meta.env.VITE_API_URL + '/api'
+const h     = { Authorization: `Bearer ${token}` }
   // Load students / suggestions / requests based on tab
   /*
   useEffect(() => {

@@ -123,7 +123,7 @@ export default function ConnectionFeed() {
 
   useEffect(() => {
     const token = localStorage.getItem('nx_token')
-    const base  = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+    const base = import.meta.env.VITE_API_URL + '/api'
     const h     = { Authorization: `Bearer ${token}` }
 
     setLoading(true)

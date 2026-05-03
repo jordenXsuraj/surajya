@@ -626,12 +626,20 @@ async function handleAvatarFile(e) {
     const fd = new FormData()
     fd.append('image', compressed, 'avatar.jpg')
     const token = localStorage.getItem('nx_token')
-    const base  = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+    /*
+     const base = import.meta.env.VITE_API_URL + '/api'
     const res   = await fetch(`${base}/users/me/avatar`, {
       method:'POST',
        headers:{ Authorization:`Bearer ${token}` }, 
        body:fd
-    })
+    })*/
+   const base = import.meta.env.VITE_API_URL + '/api'
+
+const res = await fetch(`${base}/users/me/avatar`, {
+  method:'POST',
+  headers:{ Authorization:`Bearer ${token}` },
+  body:fd
+})
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
     updateUser({ avatar: data.avatar })
@@ -652,10 +660,18 @@ async function handleCoverFile(e) {
     const fd = new FormData()
     fd.append('image', compressed, 'cover.jpg')
     const token = localStorage.getItem('nx_token')
-    const base  = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+    /*
+     const base = import.meta.env.VITE_API_URL + '/api'
     const res   = await fetch(`${base}/users/me/cover`, {
       method:'POST', headers:{ Authorization:`Bearer ${token}` }, body:fd
-    })
+    })*/
+const base = import.meta.env.VITE_API_URL + '/api'
+
+const res = await fetch(`${base}/users/me/cover`, {
+  method:'POST',
+  headers:{ Authorization:`Bearer ${token}` },
+  body:fd
+})
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
     updateUser({ coverImage: data.coverImage })
