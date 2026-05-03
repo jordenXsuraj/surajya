@@ -113,7 +113,7 @@ const skip  = (page - 1) * limit
     const filter = isGlobal === 'true'
   ? { $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }] }
   : {
-      college: req.user.college,
+      college: collegeRegex(req.user.college),
       $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }]
     }
 
