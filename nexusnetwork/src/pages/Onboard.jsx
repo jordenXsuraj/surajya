@@ -385,7 +385,7 @@ function StepAuth({ onNext }) {
         {mode === 'signup' && (
           <>
             <input className="ob-inp" name="name"
-              placeholder="Full name" value={form.name} onChange={f} />
+              placeholder="Enter Your Name" value={form.name} onChange={f} />
 
            <CollegeInput className="ob-inp" name="college"
   value={form.college}
@@ -406,7 +406,7 @@ function StepAuth({ onNext }) {
         )}
 
         <input className="ob-inp" name="email" type="email"
-          placeholder="College email" value={form.email} onChange={f} />
+          placeholder="Enter your Email" value={form.email} onChange={f} />
         <input className="ob-inp" name="password" type="password"
           placeholder="Password (min 6)" value={form.password} onChange={f} />
 
