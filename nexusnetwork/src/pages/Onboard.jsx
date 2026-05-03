@@ -159,6 +159,19 @@ const COLLEGES = [
   'National Institute of Technology Trichy (NIT Trichy)',
   'National Institute of Technology Warangal (NIT Warangal)',
   'National Institute of Technology Calicut (NIT Calicut)',
+
+  //dyp
+  'D. Y. Patil College of Engineering and Innovation, Varale, Talegaon, Pune (DYPCOEI) ',
+  'Dr. D Y Patil Technical Campus , Talegaon, Pune',
+  'Ajeenkya D.Y. Patil University (Lohegaon) , Pune',
+  ' D.Y. Patil College of Engineering, Akurdi (DYPCOE)',
+  'Dr. D.Y. Patil Institute of Technology, Pimpri (DIT)',
+
+  'Indira College of Engineering & Management, Pune (ICEM)',
+  'Marathwada Mitra Mandals College of Engineering (MMCOE), Karvenagar',
+  'MM,s Institute of Management Education Research & Training (IMERT)',
+  'Pimpri Chinchwad College Of Engineering (PCCOE)',
+  'Pimpri Chinchwad College of Engineering and Research, Ravet(PCCoER)'
 ]
 
 
