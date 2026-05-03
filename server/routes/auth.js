@@ -49,7 +49,7 @@ function cleanUser(user) {
 // ─────────────────────────────────────────────
 // POST /api/auth/signup
 // ─────────────────────────────────────────────
-router.post('/signup', loginLimiter,async (req, res, next) => {
+router.post('/signup',async (req, res, next) => {
   try {
     const {
       name, email, password, college,

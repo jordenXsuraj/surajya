@@ -1,11 +1,11 @@
-const express      = require('express')
-const cors         = require('cors')
-const compression  = require('compression')
-const helmet       = require('helmet')
-const mongoSanitize= require('express-mongo-sanitize')
-const rateLimit    = require('express-rate-limit')
-const connectDB    = require('./config/db')
-const errorHandler = require('./middleware/errorHandler')
+const express       = require('express')
+const cors          = require('cors')
+const compression   = require('compression')
+const helmet        = require('helmet')
+const mongoSanitize = require('express-mongo-sanitize')
+const rateLimit     = require('express-rate-limit')
+const connectDB     = require('./config/db')
+const errorHandler  = require('./middleware/errorHandler')
 
 require('dotenv').config()
 require('express-async-errors')
@@ -16,7 +16,7 @@ app.disable('x-powered-by')
 
 connectDB()
 
-// ── Compression (gzip all responses) ─────────────
+// ── Compression ───────────────────────────────────
 app.use(compression())
 
 // ── Security headers ──────────────────────────────
@@ -24,62 +24,67 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }))
 
-// ── CORS — must come BEFORE routes ───────────────
+// ── CORS — ONE definition only ────────────────────
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  process.env.CLIENT_URL,       // e.g. https://nexus.vercel.app
-  process.env.FRONTEND_URL,     // fallback alias
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
 ].filter(Boolean)
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, cb) => {
-    // allow requests with no origin (mobile apps, curl, Postman)
-    if (!origin || allowedOrigins.includes(origin)) {
-      cb(null, true)
-    } else {
-      cb(new Error('Not allowed by CORS'))
-    }
+    // Allow no-origin (mobile apps, Postman, UptimeRobot)
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+    cb(new Error(`CORS blocked: ${origin}`))
   },
   credentials: true,
-  methods: ['GET','POST','PUT','DELETE','OPTIONS','PATCH'],
+  methods:        ['GET','POST','PUT','DELETE','OPTIONS','PATCH'],
   allowedHeaders: ['Content-Type','Authorization'],
-}))
+}
 
-// ── Handle OPTIONS preflight for all routes ───────
-// Without this, browsers block requests like ?global=true
-/*
-app.options('*', cors({
-  origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) cb(null, true)
-    else cb(new Error('Not allowed by CORS'))
-  },
-  credentials: true,
-  methods: ['GET','POST','PUT','DELETE','OPTIONS','PATCH'],
-  allowedHeaders: ['Content-Type','Authorization'],
-}))
-*/
-app.use(cors({
-  origin: true,
-  credentials: true,
-}))
+app.use(cors(corsOptions))
+app.options('*', cors(corsOptions))   // handle preflight for ALL routes
 
-// ── Sanitize MongoDB operators in req.body ────────
+// ── Sanitize MongoDB ──────────────────────────────
 app.use(mongoSanitize())
+
+// ── Rate limiting ─────────────────────────────────
+// General: 100 requests per 15 min per IP
+const generalLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max:      100,
+  message:  { message: 'Too many requests, slow down.' },
+  standardHeaders: true,
+  legacyHeaders:   false,
+})
+
+// Auth: 10 attempts per 15 min (prevents brute force)
+const authLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max:      10,
+  message:  { message: 'Too many login attempts. Try in 15 minutes.' },
+})
 
 // ── Body parsers ──────────────────────────────────
 app.use(express.json({ limit: '5mb' }))
 app.use(express.urlencoded({ extended: true, limit: '5mb' }))
 
 // ── Routes ────────────────────────────────────────
-app.use('/api/auth',          require('./routes/auth'))
-app.use('/api/posts',         require('./routes/posts'))
-app.use('/api/users',         require('./routes/users'))
-app.use('/api/notifications', require('./routes/notifications'))
+app.use('/api/auth',          authLimit,    require('./routes/auth'))
+app.use('/api/posts',         generalLimit, require('./routes/posts'))
+app.use('/api/users',         generalLimit, require('./routes/users'))
+app.use('/api/notifications', generalLimit, require('./routes/notifications'))
+app.use('/api/admin',         generalLimit, require('./routes/admin'))
 
 // ── Health check ──────────────────────────────────
 app.get('/', (req, res) => {
-  res.json({ message: '🚀 Nexus API running', status: 'ok' })
+  res.json({
+    message: '🚀 Nexus API running',
+    status:  'ok',
+    version: '1.0.0',
+    time:    new Date().toISOString()
+  })
 })
 
 // ── 404 ───────────────────────────────────────────
@@ -92,6 +97,7 @@ app.use(errorHandler)
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
-  console.log(`✅ Server running`)
+  console.log(`✅ Server running on port ${PORT}`)
   console.log(`✅ Mode: ${process.env.NODE_ENV}`)
+  console.log(`✅ Allowed origins: ${allowedOrigins.join(', ')}`)
 })
