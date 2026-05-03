@@ -551,6 +551,7 @@ const cleanLink = projLink.trim().slice(0, 200)
             value={projLink} onChange={e => setProjLink(e.target.value)} />
 
           {/* Roadmap — PROPER MULTILINE */}
+         { /*
           <h2 className="s2-title" style={{ marginTop:22 }}>Your roadmap 📍</h2>
           <p className="s2-sub">What are you currently learning or building?</p>
           <textarea
@@ -568,7 +569,7 @@ const cleanLink = projLink.trim().slice(0, 200)
 
           {err && <div className="ob-err">{err}</div>}
         </div>
-
+*/}
         <div className="ob-step2-foot">
           <button className="ob-btn" onClick={finish} disabled={loading}>
             {loading ? 'Creating account…' : 'Enter Nexus 🚀'}
