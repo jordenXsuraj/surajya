@@ -388,7 +388,7 @@ const [refreshKey, setRefreshKey] = useState(0)
     const isGlobal  = scope === 'global'
     const typeParam = category === 'all' ? '' : category
 
-    getFeed(typeParam, false, isGlobal, page)
+    getFeed(typeParam, true, isGlobal, page)
       .then(r => {
         const raw = r.data || []
 
