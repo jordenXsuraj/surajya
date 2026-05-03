@@ -75,7 +75,8 @@ app.use('/api/auth',          authLimit,    require('./routes/auth'))
 app.use('/api/posts',         generalLimit, require('./routes/posts'))
 app.use('/api/users',         generalLimit, require('./routes/users'))
 app.use('/api/notifications', generalLimit, require('./routes/notifications'))
-app.use('/api/admin',         generalLimit, require('./routes/admin'))
+
+//app.use('/api/admin',         generalLimit, require('./routes/admin'))
 
 // ── Health check ──────────────────────────────────
 app.get('/', (req, res) => {
