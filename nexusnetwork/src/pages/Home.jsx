@@ -544,7 +544,7 @@ useEffect(() => {
     <div className="page-wrap">
 
       <header className="home-header">
-        <div className="home-logo"><span className="logo-dot" />Nexus</div>
+        <div className="home-logo"><span className="logo-dot" />MeetNet</div>
         <div className="home-search">
           <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} width={14} height={14}>
             <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />

@@ -357,7 +357,7 @@ function StepAuth({ onNext }) {
     <div className="ob-page">
       <div className="ob-hero">
         <div className="ob-logo">
-          <span className="ob-dot" />Nexus
+          <span className="ob-dot" />MeetNet
         </div>
         <p className="ob-tagline">
           Your campus.<br /><strong>Connect. Post. Grow.</strong>
@@ -480,7 +480,7 @@ const cleanLink = projLink.trim().slice(0, 200)
 
         <div className="ob-step2-header">
           <div className="ob-logo" style={{ fontSize:'1.2rem' }}>
-            <span className="ob-dot" />Nexus
+            <span className="ob-dot" />MeetNet
           </div>
           <div className="step-badge">Step 2 of 2</div>
         </div>
@@ -551,7 +551,7 @@ const cleanLink = projLink.trim().slice(0, 200)
             value={projLink} onChange={e => setProjLink(e.target.value)} />
 
           {/* Roadmap — PROPER MULTILINE */}
-         { /*
+ {/*        
           <h2 className="s2-title" style={{ marginTop:22 }}>Your roadmap 📍</h2>
           <p className="s2-sub">What are you currently learning or building?</p>
           <textarea
@@ -568,11 +568,12 @@ const cleanLink = projLink.trim().slice(0, 200)
           />
 
           {err && <div className="ob-err">{err}</div>}
+          */}
         </div>
-*/}
+
         <div className="ob-step2-foot">
           <button className="ob-btn" onClick={finish} disabled={loading}>
-            {loading ? 'Creating account…' : 'Enter Nexus 🚀'}
+            {loading ? 'Creating account…' : 'Enter MeetNet🚀'}
           </button>
           <p className="ob-skip" onClick={finish}>Skip for now — fill later</p>
         </div>

@@ -170,7 +170,7 @@ export default function ConnectionFeed() {
     <div className="page-wrap">
 
       <header className="home-header">
-        <div className="home-logo"><span className="logo-dot"/>Nexus</div>
+        <div className="home-logo"><span className="logo-dot"/>MeetNet</div>
         <div style={{ flex:1, paddingLeft:8 }}>
           <div style={{ fontSize:'.82rem', fontWeight:700, color:'var(--text)' }}>Following</div>
           <div style={{ fontSize:'.68rem', color:'var(--dim)' }}>Posts from people you follow</div>
