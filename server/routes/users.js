@@ -74,7 +74,7 @@ if (mediaItems  !== undefined) updates.mediaItems  = Array.isArray(mediaItems)
         .map(p => ({ name: p.name.trim(), link: p.link?.trim() || '' }))
     }
     const updated = await User.findByIdAndUpdate(
-      req.user._id, { $set: updates }, { new: true, runValidators: true }
+      req.user._id, { $set: updates }, {   returnDocument: 'after', runValidators: true }
     ).select('-password -__v')
     res.json(safeUser(updated))
   } catch (err) {
