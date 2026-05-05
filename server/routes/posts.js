@@ -124,38 +124,35 @@ const skip  = (page - 1) * limit
       .select('following branch year typeEngagement')
       .lean()
 
-const allPosts = await Post.find(filter)
-  .populate('postedBy', 'name year branch avatar')
-  .populate({
-    path: 'replies.postedBy',
-    select: 'name year branch avatar',
-    options: { limit: 5 }
-  })
-  .lean()
-
+    const rawPosts = await Post.find(filter)
+.populate('postedBy', 'name year branch avatar')
+.populate({
+  path: 'replies.postedBy',
+  select: 'name year branch avatar',
+  options: { limit: 5 }   // only 5 replies
+})
+      .sort({ createdAt: -1 })
+      .skip(skip).limit(limit)
+      .lean()
 const followingSet = new Set((user.following || []).map(id => id.toString()))
-
-const scored = allPosts
-  .map(p => ({
-    post: {
+    const postsWithMeta = rawPosts.map(p => ({
       ...p,
       postedByBranch: p.postedBy?.branch,
-      postedByYear: p.postedBy?.year
-    },
-    score: scorePost(p, user, followingSet)
-  }))
-  .sort((a, b) => b.score - a.score)
+      postedByYear:   p.postedBy?.year,
+    }))
 
-const paginated = scored
-  .slice(skip, skip + limit)
-  .map(({ post }) => {
-    if (post.isAnonymous) post.postedBy = null
-    delete post.postedByBranch
-    delete post.postedByYear
-    return post
-  })
+    const scored = postsWithMeta
+      .map(p => ({ post: p, score: scorePost(p, user, followingSet) }))
+      .sort((a, b) => b.score - a.score)
 
-res.json(paginated)
+    const result = scored.map(({ post }) => {
+      if (post.isAnonymous) post.postedBy = null
+      delete post.postedByBranch
+      delete post.postedByYear
+      return post
+    })
+
+    res.json(result)
   } catch (err) {
     console.error('GET /posts error:', err)
     res.status(500).json({ message: 'Server error' })

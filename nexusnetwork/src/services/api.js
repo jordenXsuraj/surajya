@@ -31,11 +31,13 @@ export const signup = d => API.post('/auth/signup', d)
 export const login  = d => API.post('/auth/login',  d)
 
 // ── Posts ─────────────────────────────────────────
-export const getFeed = (type, connOnly, global) =>
+export const getFeed = (type, connOnly, global, page = 1) =>
   API.get(`/posts${buildQuery({
     type:        type     || '',
     connections: connOnly ? 'true' : undefined,
-    global:      global   ? 'true' : undefined
+    global:      global   ? 'true' : undefined,
+    page,
+    limit: 20
   })}`)
 
 export const createPost   = d            => API.post('/posts', d)

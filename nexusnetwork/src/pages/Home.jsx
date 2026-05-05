@@ -369,9 +369,9 @@ const [refreshKey, setRefreshKey] = useState(0)
   // Prevents duplicate page fetches from rapid scroll events
   const isLoading = useRef(false)
 
-  const [localConns,    setLocalConns]    = useState(
-    (user?.connections || []).map(c => c?._id?.toString() || c?.toString() || c)
-  )
+ const [localConns, setLocalConns] = useState(
+  (user?.following || []).map(c => c?._id?.toString() || c?.toString() || c)
+)
   const [localSentReqs, setLocalSentReqs] = useState(
     (user?.sentRequests || []).map(c => c?._id?.toString() || c?.toString() || c)
   )
@@ -380,7 +380,7 @@ const [refreshKey, setRefreshKey] = useState(0)
   useEffect(() => {
     setPage(1)
     setHasMore(true)
-   // setPosts([])
+    setPosts([])
   }, [category, scope])
 
   // ── FIX 2: Fetch posts — proper dependency array ──
@@ -400,6 +400,7 @@ const [refreshKey, setRefreshKey] = useState(0)
         // ── FIX 3: hasMore check — use actual limit from backend ──
         // Backend sends limit=20, if we got fewer we've reached the end
         if (raw.length < 20) setHasMore(false)
+// Also dedupe properly
 
         const sorted = smartSort(raw, user?._id, localConns)
 
@@ -483,10 +484,9 @@ useEffect(() => {
     const scrolledToBottom =
       window.innerHeight + window.scrollY >= document.body.offsetHeight - 300
 
-    if (scrolledToBottom && !isLoading.current) {
-  isLoading.current = true
-  setPage(p => p + 1)
-}
+    if (scrolledToBottom) {
+      setPage(p => p + 1)
+    }
   }, [hasMore])
 
   useEffect(() => {
@@ -596,7 +596,7 @@ useEffect(() => {
 
       {loading && page === 1 && <div className="feed-loading">Loading posts…</div>}
 
-      {!loading && posts.length === 0 && (
+      {!loading && visible.length === 0 && (
         <div className="feed-empty">
           <div className="fe-icon">📭</div>
           <h3>Nothing here yet</h3>
@@ -616,19 +616,31 @@ useEffect(() => {
           onConnect={handleConnect}/>
       ))}
 
-      {/* Loading indicator for subsequent pages */}
-      {loading && page > 1 && (
-        <div style={{ textAlign:'center', padding:'16px 0', color:'var(--dim)', fontSize:'.8rem' }}>
-          Loading more…
-        </div>
-      )}
-
-      {/* End of feed indicator */}
-      {!hasMore && posts.length > 0 && (
-        <div style={{ textAlign:'center', padding:'20px 0 8px', color:'var(--dim)', fontSize:'.75rem' }}>
-          You've seen all posts ✓
-        </div>
-      )}
+     {/* Bottom of feed */}
+{!loading && hasMore && (
+  <div style={{
+    textAlign:'center', padding:'20px',
+    color:'var(--dim)', fontSize:'.75rem'
+  }}>
+    Scroll for more
+  </div>
+)}
+{!loading && !hasMore && posts.length > 0 && (
+  <div style={{
+    textAlign:'center', padding:'20px',
+    color:'var(--dim)', fontSize:'.75rem'
+  }}>
+    You're all caught up 🎉
+  </div>
+)}
+{loading && page > 1 && (
+  <div style={{
+    textAlign:'center', padding:'16px',
+    color:'var(--dim)', fontSize:'.75rem'
+  }}>
+    Loading…
+  </div>
+)}
 
       <div style={{ height:14 }}/>
       <Toast msg={msg} onClose={clear}/>
