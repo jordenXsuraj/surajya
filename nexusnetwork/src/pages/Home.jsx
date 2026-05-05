@@ -380,7 +380,7 @@ const [refreshKey, setRefreshKey] = useState(0)
   useEffect(() => {
     setPage(1)
     setHasMore(true)
-    setPosts([])
+   // setPosts([])
   }, [category, scope])
 
   // ── FIX 2: Fetch posts — proper dependency array ──
@@ -483,9 +483,10 @@ useEffect(() => {
     const scrolledToBottom =
       window.innerHeight + window.scrollY >= document.body.offsetHeight - 300
 
-    if (scrolledToBottom) {
-      setPage(p => p + 1)
-    }
+    if (scrolledToBottom && !isLoading.current) {
+  isLoading.current = true
+  setPage(p => p + 1)
+}
   }, [hasMore])
 
   useEffect(() => {
@@ -595,7 +596,7 @@ useEffect(() => {
 
       {loading && page === 1 && <div className="feed-loading">Loading posts…</div>}
 
-      {!loading && visible.length === 0 && (
+      {!loading && posts.length === 0 && (
         <div className="feed-empty">
           <div className="fe-icon">📭</div>
           <h3>Nothing here yet</h3>
