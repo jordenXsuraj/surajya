@@ -16,11 +16,17 @@ app.set('trust proxy', 1)
 app.disable('x-powered-by')
 
 
+
+
+const xss = require('xss-clean')
+const hpp = require('hpp')
+const morgan = require('morgan')
+
+
+
 app.get('/healthz', (req, res) => {
   res.status(200).send('OK')
 })
-
-
 
 connectDB()
 
@@ -77,6 +83,10 @@ const authLimit = rateLimit({
 // ── Body parsers ──────────────────────────────────
 app.use(express.json({ limit: '5mb' }))
 app.use(express.urlencoded({ extended: true, limit: '5mb' }))
+
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
+app.use(xss())
+app.use(hpp())
 
 // ── Routes ────────────────────────────────────────
 app.use('/api/auth',          authLimit,    require('./routes/auth'))
