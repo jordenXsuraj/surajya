@@ -255,11 +255,7 @@ useEffect(() => {
   return () => window.removeEventListener('scroll', handleScroll)
 }, [hasMore, loading])
 
-useEffect(() => {
-  setPage(1)
-  setUsers([])
-  setHasMore(true)
-}, [tab, skill, scope])
+
 
   // Search filter
   const filtered = users.filter(u => {
