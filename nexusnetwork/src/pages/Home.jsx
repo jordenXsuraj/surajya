@@ -287,7 +287,7 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
 
       <div className="pc-actions">
         <button className={`act-btn ${liked ? 'liked' : ''}`} onClick={() => onLike(post._id)}>
-          ❤️ {(post.likes || []).length}
+            {liked ? '❤️' : '🤍'} {(initialPost.likes || []).length}
         </button>
         {post.type === 'partner' ? (
           <>

@@ -302,11 +302,11 @@ function PostCard({ post: initialPost, currentUserId, liked, saved, onLike, onSa
 
       {/* Actions — like · reply · bookmark */}
       <div className="pc-actions">
-        <button
+       <button
   className={`act-btn ${liked ? 'liked' : ''}`}
   onClick={() => onLike(initialPost._id)}
 >
-  ❤️ {(initialPost.likes || []).length}
+  {liked ? '❤️' : '🤍'} {(initialPost.likes || []).length}
 </button>
 
         {/* Reply button */}
