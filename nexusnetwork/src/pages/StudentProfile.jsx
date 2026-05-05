@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { connectUser, unfollowUser, addReply, deleteReply } from '../services/api'
+import { connectUser, unfollowUser, addReply, deleteReply ,likePost } from '../services/api'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import axios from 'axios'
@@ -295,6 +295,37 @@ function StudentPostCard({ post, currentUserId }) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
+
+function LikeButton({ post, currentUserId }) {
+  const myId = currentUserId?.toString() || ''
+  const [liked,     setLiked]     = useState(
+    (post.likes || []).map(l => l?.toString()).includes(myId)
+  )
+  const [likeCount, setLikeCount] = useState(post.likes?.length || 0)
+
+  async function handleLike() {
+    setLiked(p => !p)
+    setLikeCount(p => liked ? p - 1 : p + 1)
+    try {
+      await likePost(post._id)
+    } catch {
+      setLiked(p => !p)
+      setLikeCount(p => liked ? p + 1 : p - 1)
+    }
+  }
+
+  return (
+    <button
+      className={`mp-like-btn ${liked ? 'on' : ''}`}
+      onClick={e => { e.stopPropagation(); handleLike() }}
+    >
+      {liked ? '❤️' : '🤍'} {likeCount}
+    </button>
+  )
+}
+
+
+
   async function submitReply() {
     if (!rt.trim()) return
     setSub(true)
@@ -364,9 +395,7 @@ function StudentPostCard({ post, currentUserId }) {
 
       {/* Footer — like count + reply button */}
       <div className="mp-footer" style={{ gap:7, paddingTop:8, alignItems:'center' }}>
-        <span style={{ fontSize:'.72rem', color:'var(--dim)' }}>
-          ❤️ {post.likes?.length || 0}
-        </span>
+        <LikeButton post={post} currentUserId={currentUserId} />
         <button className="mp-action-btn" onClick={() => setShowBox(b => !b)}>
           {post.type === 'qa' ? '✍️ Answer' : '💬 Reply'}
         </button>
@@ -448,6 +477,7 @@ export default function StudentProfile() {
   const [loading,   setLoading]  = useState(true)
   const [btnBusy,   setBtnBusy]  = useState(false)
   const [sheet,     setSheet]    = useState(null) // 'following' | 'followers' | null
+
 
   // Redirect if own profile — before render
   const myId = user?._id?.toString()
