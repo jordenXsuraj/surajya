@@ -7,6 +7,11 @@ const rateLimit     = require('express-rate-limit')
 const connectDB     = require('./config/db')
 const errorHandler  = require('./middleware/errorHandler')
 
+app.get('/healthz', (req, res) => {
+  res.status(200).send('OK')
+})
+
+
 require('dotenv').config()
 require('express-async-errors')
 
