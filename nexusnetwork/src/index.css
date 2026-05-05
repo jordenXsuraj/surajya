@@ -2336,3 +2336,47 @@ border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
 
+.mp-like-btn {
+  background: #111;              /* dark base */
+  color: #ccc;
+  border: 1px solid #333;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s ease;
+}
+
+/* hover effect */
+.mp-like-btn:hover {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #555;
+  transform: scale(1.05);
+}
+
+/* liked state */
+.mp-like-btn.on {
+  background: #ff2e63;
+  color: #fff;
+  border-color: #ff2e63;
+  box-shadow: 0 0 10px rgba(255, 46, 99, 0.6);
+}
+
+/* liked hover */
+.mp-like-btn.on:hover {
+  background: #ff1a52;
+  box-shadow: 0 0 14px rgba(255, 46, 99, 0.9);
+}
+.mp-like-btn.on {
+  animation: pulse 0.3s ease;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
