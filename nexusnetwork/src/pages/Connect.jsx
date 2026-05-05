@@ -194,8 +194,9 @@ useEffect(() => {
   let request
 
   if (tab === 'find') {
-    const sp  = skill !== 'All' ? `?skill=${skill}` : ''
-    const url = scope === 'global'
+  const sp = skill !== 'All' ? `&skill=${skill}` : ''
+
+const url = scope === 'global'
   ? `${base}/users/all?page=${page}${sp}`
   : `${base}/users?page=${page}${sp}`
 
@@ -235,7 +236,7 @@ useEffect(() => {
     .finally(() => setLoading(false))
 
   return () => controller.abort()
-}, [tab, skill, scope])
+}, [tab, skill, scope,page])
 
 
 
@@ -255,6 +256,13 @@ useEffect(() => {
   return () => window.removeEventListener('scroll', handleScroll)
 }, [hasMore, loading])
 
+
+
+useEffect(() => {
+  setPage(1)
+  setUsers([])
+  setHasMore(true)
+}, [tab, skill, scope])
 
 
   // Search filter

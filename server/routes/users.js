@@ -264,16 +264,19 @@ router.get('/', protect, async (req, res) => {
       filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
     }
 
-    const users = await User.find(filter)
-      .select('name year branch bio skills projects following followers sentRequests college avatar coverImage')
-      .sort({ year: -1, createdAt: -1 })
-      //.limit(20)
-      const page  = parseInt(req.query.page) || 1
+
+const page  = parseInt(req.query.page) || 1
 const limit = 20
 const skip  = (page - 1) * limit
 
 .skip(skip).limit(limit)
-      .lean()
+
+    const users = await User.find(filter)
+      .select('name year branch bio skills projects following followers sentRequests college avatar coverImage')
+      .sort({ year: -1, createdAt: -1 })
+       .skip(skip)
+  .limit(limit)
+  .lean()
 
     const myFollowing = (req.user.following    || []).map(id => id.toString())
     const mySent      = (req.user.sentRequests || []).map(id => id.toString())
@@ -309,16 +312,19 @@ router.get('/all', protect, async (req, res) => {
       filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
     }
 
-    const users = await User.find(filter)
-      .select('name year branch bio skills projects following followers sentRequests college avatar')
-      .sort({ college: 1, year: -1 })
-      //.limit(20)
+
       const page  = parseInt(req.query.page) || 1
 const limit = 20
 const skip  = (page - 1) * limit
 
-.skip(skip).limit(limit)
-      .lean()
+
+
+    const users = await User.find(filter)
+      .select('name year branch bio skills projects following followers sentRequests college avatar')
+      .sort({ college: 1, year: -1 })
+        .skip(skip)
+  .limit(limit)
+  .lean()
 
     const myFollowing = (req.user.following    || []).map(id => id.toString())
     const mySent      = (req.user.sentRequests || []).map(id => id.toString())
