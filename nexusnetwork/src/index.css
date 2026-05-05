@@ -2400,3 +2400,57 @@ border-bottom: 1px solid rgba(255,255,255,0.05);
   background: #333;
   color: #aaa;
 }
+/* Base action button */
+.act-btn {
+  background: #111;
+  color: #aaa;
+  border: 1px solid #2a2a2a;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s ease;
+}
+
+/* Hover */
+.act-btn:hover {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #444;
+  transform: scale(1.05);
+}
+
+/* LIKE ACTIVE ❤️ */
+.act-btn.liked {
+  background: linear-gradient(135deg, #ff2e63, #ff4d6d);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 0 10px rgba(255, 46, 99, 0.6);
+}
+
+/* SAVE ACTIVE 🔖 */
+.act-btn.saved {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+}
+
+/* Reply button hover glow */
+.act-btn:hover {
+  box-shadow: 0 0 8px rgba(255,255,255,0.1);
+}
+
+/* Pulse animation on like */
+.act-btn.liked {
+  animation: likePulse 0.3s ease;
+}
+
+@keyframes likePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
