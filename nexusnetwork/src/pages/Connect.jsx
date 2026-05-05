@@ -141,6 +141,8 @@ export default function Connect() {
   const [suggests, setSuggests]= useState([])
   const [requests, setReqs]    = useState([])
   const [loading,  setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+const [hasMore, setHasMore] = useState(true)
   const [sentIds,  setSentIds] = useState(
     (user?.sentRequests || []).map(c => c?._id?.toString() || c?.toString() || c)
   )
@@ -194,15 +196,22 @@ useEffect(() => {
   if (tab === 'find') {
     const sp  = skill !== 'All' ? `?skill=${skill}` : ''
     const url = scope === 'global'
-      ? `${base}/users/all${sp}`
-      : `${base}/users${sp}`
+  ? `${base}/users/all?page=${page}${sp}`
+  : `${base}/users?page=${page}${sp}`
 
     request = axios.get(url, {
       headers: h,
       signal: controller.signal
-    }).then(r => setUsers(Array.isArray(r.data) ? r.data : []))
+    }).then(r => {
+  const data = Array.isArray(r.data) ? r.data : []
+
+  setUsers(prev => page === 1 ? data : [...prev, ...data])
+
+  setHasMore(data.length === 20)
+})
   }
 
+  
   if (tab === 'suggestions') {
     request = axios.get(`${base}/users/suggestions`, {
       headers: h,
@@ -228,6 +237,29 @@ useEffect(() => {
   return () => controller.abort()
 }, [tab, skill, scope])
 
+
+
+useEffect(() => {
+  function handleScroll() {
+    if (!hasMore || loading) return
+
+    const nearBottom =
+      window.innerHeight + window.scrollY >= document.body.offsetHeight - 200
+
+    if (nearBottom) {
+      setPage(p => p + 1)
+    }
+  }
+
+  window.addEventListener('scroll', handleScroll)
+  return () => window.removeEventListener('scroll', handleScroll)
+}, [hasMore, loading])
+
+useEffect(() => {
+  setPage(1)
+  setUsers([])
+  setHasMore(true)
+}, [tab, skill, scope])
 
   // Search filter
   const filtered = users.filter(u => {
