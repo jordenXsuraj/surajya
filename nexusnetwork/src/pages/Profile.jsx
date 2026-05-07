@@ -817,7 +817,7 @@ const res = await fetch(`${base}/users/me/cover`, {
             <h2 className="prof-name">{user?.name}</h2>
           
 <p className="prof-handle">
-  @{user?.username || user?.name?.toLowerCase().replace(/\s+/g, '.')} · {user?.year} yr {user?.branch}
+  @{user?.username || user?.name?.toLowerCase().replace(/\s+/g, '.')}
 </p>
             
             <p className="prof-bio" style={{ whiteSpace:'pre-wrap' }}>

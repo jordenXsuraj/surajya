@@ -240,13 +240,13 @@ if (tab === 'find') {
     .finally(() => setLoading(false))
 
   return () => controller.abort()
-}, [tab, skill, scope])
+ }, [tab, skill, scope, page])
 
 useEffect(() => {
   setPage(1)
   setHasMore(true)
   setUsers([])
-}, [tab, skill, scope])
+}, [tab, skill, scope, page])
 
   // Search filter
 const filtered = users.filter(u => {
