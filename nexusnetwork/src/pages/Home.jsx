@@ -402,13 +402,14 @@ const [refreshKey, setRefreshKey] = useState(0)
         if (raw.length < 20) setHasMore(false)
 // Also dedupe properly
 
-        const sorted = smartSort(raw, user?._id, localConns)
+        setPosts(prev => {
+  const merged =
+    page === 1
+      ? raw
+      : [...prev, ...raw.filter(p => !prev.some(x => x._id === p._id))]
 
-        setPosts(prev =>
-          page === 1
-            ? sorted
-            : [...prev, ...sorted.filter(p => !prev.some(x => x._id === p._id))]
-        )
+  return smartSort(merged, user?._id, localConns)
+})
       })
       .catch(() => show('❌ Could not load posts'))
       .finally(() => {
