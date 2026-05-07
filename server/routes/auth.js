@@ -49,6 +49,19 @@ function cleanUser(user) {
 // ─────────────────────────────────────────────
 // POST /api/auth/signup
 // ─────────────────────────────────────────────
+
+// Add this function at top of auth.js
+function generateUsername(name) {
+  const base = name
+    .toLowerCase()
+    .replace(/\s+/g, '.')
+    .replace(/[^a-z0-9.]/g, '')
+    .slice(0, 15)
+  const suffix = Math.floor(Math.random() * 999)
+  return `${base}${suffix}`
+}
+
+
 router.post('/signup',async (req, res, next) => {
   try {
     const {
@@ -84,6 +97,7 @@ router.post('/signup',async (req, res, next) => {
     // ✅ Create user
     const user = await User.create({
       name:     name.trim(),
+      username: generateUsername(name), 
       email:    normalizedEmail,
       password,
       college:  college.trim(),

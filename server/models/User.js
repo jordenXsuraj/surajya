@@ -4,7 +4,16 @@ const mongoose = require('mongoose')
 const bcrypt   = require('bcryptjs')
 
 const ProjectSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
+  name:     { type: String, required: true, trim: true, maxlength: 60 },
+username: {
+  type:      String,
+  unique:    true,
+  sparse:    true,   // allows null until user sets it
+  lowercase: true,
+  trim:      true,
+  match:     [/^[a-z0-9_.]{3,20}$/, 'Username: 3-20 chars, only letters/numbers/._'],
+},
+
   link: { type: String, trim: true, default: '' }
 }, { _id: false })
 

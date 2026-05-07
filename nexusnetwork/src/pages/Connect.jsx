@@ -141,6 +141,9 @@ export default function Connect() {
   const [suggests, setSuggests]= useState([])
   const [requests, setReqs]    = useState([])
   const [loading,  setLoading] = useState(true)
+  const [page,    setPage]    = useState(1)
+const [hasMore, setHasMore] = useState(true)
+const [loadingMore, setLoadingMore] = useState(false)
   const [sentIds,  setSentIds] = useState(
     (user?.sentRequests || []).map(c => c?._id?.toString() || c?.toString() || c)
   )
@@ -191,17 +194,28 @@ useEffect(() => {
 
   let request
 
-  if (tab === 'find') {
-    const sp  = skill !== 'All' ? `?skill=${skill}` : ''
-    const url = scope === 'global'
-      ? `${base}/users/all${sp}`
-      : `${base}/users${sp}`
+if (tab === 'find') {
+  const sp = new URLSearchParams()
+  if (skill !== 'All') sp.set('skill', skill)
+  sp.set('page', page)
 
-    request = axios.get(url, {
-      headers: h,
-      signal: controller.signal
-    }).then(r => setUsers(Array.isArray(r.data) ? r.data : []))
-  }
+  const url = scope === 'global'
+    ? `${base}/users/all?${sp}`
+    : `${base}/users?${sp}`
+
+  const isFirstPage = page === 1
+  if (isFirstPage) setLoading(true)
+  else setLoadingMore(true)
+
+  axios.get(url, { headers: h })
+    .then(r => {
+      const data = Array.isArray(r.data) ? r.data : []
+      if (data.length < 20) setHasMore(false)
+      setUsers(prev => isFirstPage ? data : [...prev, ...data])
+    })
+    .catch(() => show('❌ Could not load students'))
+    .finally(() => { setLoading(false); setLoadingMore(false) })
+}
 
   if (tab === 'suggestions') {
     request = axios.get(`${base}/users/suggestions`, {
@@ -228,16 +242,25 @@ useEffect(() => {
   return () => controller.abort()
 }, [tab, skill, scope])
 
+useEffect(() => {
+  setPage(1)
+  setHasMore(true)
+  setUsers([])
+}, [tab, skill, scope])
 
   // Search filter
-  const filtered = users.filter(u => {
-    const q = search.trim().toLowerCase()
-    if (!q) return true
-    return (
-      u.name?.toLowerCase().includes(q) ||
-      (u.skills || []).some(s => s?.toLowerCase().includes(q))
-    )
-  })
+const filtered = users.filter(u => {
+  const q = search.trim().toLowerCase()
+  if (!q) return true
+  return (
+    u.name?.toLowerCase().includes(q)     ||
+    u.username?.toLowerCase().includes(q) ||  // ← ADD
+    u.branch?.toLowerCase().includes(q)   ||
+    u.year?.toLowerCase().includes(q)     ||
+    (u.skills || []).some(s => s.toLowerCase().includes(q))
+  )
+})
+
 
   async function handleFollow(u) {
     if (sentIds.includes(u._id.toString()) || u.isFollowing) return
@@ -386,6 +409,37 @@ useEffect(() => {
           ))}
         </div>
       )}
+
+
+      {/* Load more */}
+{tab === 'find' && !loading && hasMore && (
+  <div style={{ padding:'12px 14px' }}>
+    <button
+      onClick={() => setPage(p => p + 1)}
+      disabled={loadingMore}
+      style={{
+        width:'100%', padding:'12px',
+        background:'var(--bg2)',
+        border:'1.5px solid var(--br2)',
+        borderRadius:12,
+        color:'var(--muted)',
+        fontFamily:'Outfit,sans-serif',
+        fontSize:'.8rem', fontWeight:700,
+        cursor: loadingMore ? 'not-allowed' : 'pointer'
+      }}
+    >
+      {loadingMore ? 'Loading…' : 'Load More Students'}
+    </button>
+  </div>
+)}
+{tab === 'find' && !loading && !hasMore && users.length > 0 && (
+  <div style={{
+    textAlign:'center', padding:'16px',
+    color:'var(--dim)', fontSize:'.72rem'
+  }}>
+    All students loaded ✓
+  </div>
+)}
 
       {/* ── SUGGESTIONS TAB ── */}
       {tab === 'suggestions' && (

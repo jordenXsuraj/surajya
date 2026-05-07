@@ -597,6 +597,7 @@ export default function Profile() {
   const [newPN,      setNewPN]    = useState('')
   const [newPL,      setNewPL]    = useState('')
   const [customSk,   setCustom]   = useState('')
+const [eUsername, setEUsername] = useState('')
 
 useEffect(() => {
   setLP(true)
@@ -684,6 +685,7 @@ const res = await fetch(`${base}/users/me/cover`, {
 
   function openEdit() {
     setEName(user?.name     || '')
+    setEUsername(user?.username || '')
     setEBio(user?.bio       || '')
     setEYear(user?.year     || '1st')
     setEBranch(user?.branch || 'CS')
@@ -703,7 +705,8 @@ const res = await fetch(`${base}/users/me/cover`, {
         name: eName.trim(), bio: eBio,
         year: eYear, branch: eBranch,
         skills: eSkills, projects: eProjects,
-        roadmap: eRoadmap, mediaItems: eMedia
+        roadmap: eRoadmap, mediaItems: eMedia,
+          username: eUsername.trim()     
       })
       updateUser(res.data)
       setEdit(false)
@@ -815,6 +818,10 @@ const res = await fetch(`${base}/users/me/cover`, {
             <p className="prof-handle">
               @{user?.name?.toLowerCase().replace(/\s+/g, '.')} · {user?.year} yr {user?.branch}
             </p>
+<p className="prof-handle">
+  @{user?.username || user?.name?.toLowerCase().replace(/\s+/g, '.')} · {user?.year} yr {user?.branch}
+</p>
+            
             <p className="prof-bio" style={{ whiteSpace:'pre-wrap' }}>
               {user?.bio || 'No bio yet. Tap Edit Profile to add one.'}
             </p>
@@ -889,7 +896,36 @@ const res = await fetch(`${base}/users/me/cover`, {
             maxLength={250} />
           <div style={{ fontSize:'.65rem', color:'var(--dim)', textAlign:'right', marginTop:-6, marginBottom:10 }}>
             {eBio.length}/250
+          
+          
           </div>
+
+
+<label className="edit-label">Username</label>
+<div style={{ position:'relative' }}>
+  <span style={{
+    position:'absolute', left:12, top:'50%',
+    transform:'translateY(-50%)',
+    color:'var(--dim)', fontSize:'.85rem'
+  }}>@</span>
+  <input
+    className="edit-input"
+    style={{ paddingLeft:24 }}
+    placeholder="yourname.123"
+    value={eUsername}
+    onChange={e => setEUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+    maxLength={20}
+  />
+</div>
+{eUsername && (
+  <div style={{ fontSize:'.65rem', marginTop:-8, marginBottom:4,
+    color: /^[a-z0-9_.]{3,20}$/.test(eUsername) ? 'var(--green)' : 'var(--accent)' }}>
+    {/^[a-z0-9_.]{3,20}$/.test(eUsername)
+      ? `✅ @${eUsername}`
+      : '⚠️ 3-20 chars, only letters/numbers/._'}
+  </div>
+)}
+
           <div className="edit-row2">
             <div>
               <label className="edit-label">Year</label>

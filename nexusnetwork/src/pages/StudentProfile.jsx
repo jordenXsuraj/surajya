@@ -637,6 +637,9 @@ useEffect(() => {
       <div className="prof-info">
         <h2 className="prof-name">{profile.name}</h2>
         <p className="prof-handle">{profile.year} yr {profile.branch} · {profile.college}</p>
+        <p className="prof-handle">
+  {profile.username ? `@${profile.username} · ` : ''}{profile.year} yr {profile.branch} · {profile.college}
+</p>
         {profile.bio && (
           <p className="prof-bio" style={{ whiteSpace:'pre-wrap' }}>{profile.bio}</p>
         )}

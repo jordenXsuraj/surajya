@@ -48,7 +48,7 @@ router.get('/me', protect, async (req, res) => {
 router.put('/me', protect, async (req, res) => {
   try {
     
-const { name, bio, year, branch, skills, projects, roadmap, youtubeUrl, mediaItems } = req.body
+const { name, bio, year, branch, skills, projects, roadmap, youtubeUrl, mediaItems, username } = req.body
     if (name !== undefined && !name.trim()) {
       return res.status(400).json({ message: 'Name cannot be empty' })
     }
@@ -59,6 +59,16 @@ const { name, bio, year, branch, skills, projects, roadmap, youtubeUrl, mediaIte
     if (branch   !== undefined) updates.branch   = branch.trim()
     if (roadmap  !== undefined) updates.roadmap  = roadmap.trim()
 
+
+if (username !== undefined) {
+  const clean = username.toLowerCase().trim().replace(/[^a-z0-9_.]/g, '')
+  if (clean.length < 3) return res.status(400).json({ message: 'Username too short' })
+  if (clean.length > 20) return res.status(400).json({ message: 'Username too long' })
+  // Check uniqueness
+  const taken = await User.findOne({ username: clean, _id: { $ne: req.user._id } })
+  if (taken) return res.status(400).json({ message: 'Username already taken' })
+  updates.username = clean
+}
 
 if (youtubeUrl  !== undefined) updates.youtubeUrl  = youtubeUrl.trim()
 if (mediaItems  !== undefined) updates.mediaItems  = Array.isArray(mediaItems)
@@ -216,7 +226,7 @@ router.get('/suggestions', protect, async (req, res) => {
       college: me.college,
       _id: { $nin: excludeIds }
     })
-      .select('name year branch skills college bio avatar following followers projects')
+      .select('name username year branch skills college bio avatar following followers projects')
       .limit(30)
       .lean()
 
@@ -258,17 +268,32 @@ router.get('/suggestions', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 router.get('/', protect, async (req, res) => {
   try {
-    const { skill } = req.query
-    const filter = { college: req.user.college, _id: { $ne: req.user._id } }
-    if (skill && skill !== 'All' && skill.trim()) {
-      filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
-    }
+const { skill, search } = req.query
+const filter = { college: collegeRegex(req.user.college), _id: { $ne: req.user._id } }
 
-    const users = await User.find(filter)
-      .select('name year branch bio skills projects following followers sentRequests college avatar coverImage')
-      .sort({ year: -1, createdAt: -1 })
-      .limit(20)
-      .lean()
+if (skill && skill !== 'All' && skill.trim()) {
+  filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
+}
+
+// Search by name OR username
+if (search && search.trim()) {
+  const q = search.trim()
+  filter.$or = [
+    { name:     { $regex: q, $options: 'i' } },
+    { username: { $regex: q, $options: 'i' } },
+  ]
+}
+
+const page  = parseInt(req.query.page)  || 1
+const limit = 20
+const skip  = (page - 1) * limit
+
+const users = await User.find(filter)
+  .select('name username year branch bio skills projects following followers sentRequests college avatar coverImage')
+  .sort({ year: -1, createdAt: -1 })
+  .skip(skip)
+  .limit(limit)
+  .lean()
 
     const myFollowing = (req.user.following    || []).map(id => id.toString())
     const mySent      = (req.user.sentRequests || []).map(id => id.toString())
@@ -304,11 +329,16 @@ router.get('/all', protect, async (req, res) => {
       filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
     }
 
-    const users = await User.find(filter)
-      .select('name year branch bio skills projects following followers sentRequests college avatar')
-      .sort({ college: 1, year: -1 })
-      .limit(20)
-      .lean()
+const page  = parseInt(req.query.page)  || 1
+const limit = 20
+const skip  = (page - 1) * limit
+
+const users = await User.find(filter)
+  .select('name username year branch bio skills projects following followers sentRequests college avatar coverImage')
+  .sort({ year: -1, createdAt: -1 })
+  .skip(skip)
+  .limit(limit)
+  .lean()
 
     const myFollowing = (req.user.following    || []).map(id => id.toString())
     const mySent      = (req.user.sentRequests || []).map(id => id.toString())
@@ -316,6 +346,7 @@ router.get('/all', protect, async (req, res) => {
     res.json(users.map(u => ({
       _id:            u._id,
       name:           u.name,
+      username:       u.username || '',
       year:           u.year,
       branch:         u.branch,
       bio:            u.bio || '',
