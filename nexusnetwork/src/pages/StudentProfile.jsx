@@ -635,11 +635,11 @@ useEffect(() => {
 
       {/* Info */}
       <div className="prof-info">
-         <p className="prof-handle">
+        <h2 className="prof-name">{profile.name}</h2>
+        
+        <p className="prof-handle">
   {profile.username ? `@${profile.username} · ` : ''}
 </p>
-        
-   
         {profile.bio && (
           <p className="prof-bio" style={{ whiteSpace:'pre-wrap' }}>{profile.bio}</p>
         )}

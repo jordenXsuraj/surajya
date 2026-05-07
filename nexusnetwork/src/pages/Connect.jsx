@@ -208,11 +208,22 @@ if (tab === 'find') {
   else setLoadingMore(true)
 
   axios.get(url, { headers: h })
-    .then(r => {
-      const data = Array.isArray(r.data) ? r.data : []
-      if (data.length < 20) setHasMore(false)
-      setUsers(prev => isFirstPage ? data : [...prev, ...data])
-    })
+.then(r => {
+  const data = Array.isArray(r.data) ? r.data : []
+
+  if (data.length < 20) setHasMore(false)
+
+  setUsers(prev => isFirstPage ? data : [...prev, ...data])
+
+  if (!isFirstPage) {
+    setTimeout(() => {
+      window.scrollBy({
+        top: 300,
+        behavior: 'smooth'
+      })
+    }, 50)
+  }
+})
     .catch(() => show('❌ Could not load students'))
     .finally(() => { setLoading(false); setLoadingMore(false) })
 }
@@ -246,7 +257,7 @@ useEffect(() => {
   setPage(1)
   setHasMore(true)
   setUsers([])
-}, [tab, skill, scope, page])
+}, [tab, skill, scope])
 
   // Search filter
 const filtered = users.filter(u => {
