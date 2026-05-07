@@ -411,35 +411,6 @@ const filtered = users.filter(u => {
       )}
 
 
-      {/* Load more */}
-{tab === 'find' && !loading && hasMore && (
-  <div style={{ padding:'12px 14px' }}>
-    <button
-      onClick={() => setPage(p => p + 1)}
-      disabled={loadingMore}
-      style={{
-        width:'100%', padding:'12px',
-        background:'var(--bg2)',
-        border:'1.5px solid var(--br2)',
-        borderRadius:12,
-        color:'var(--muted)',
-        fontFamily:'Outfit,sans-serif',
-        fontSize:'.8rem', fontWeight:700,
-        cursor: loadingMore ? 'not-allowed' : 'pointer'
-      }}
-    >
-      {loadingMore ? 'Loading…' : 'Load More Students'}
-    </button>
-  </div>
-)}
-{tab === 'find' && !loading && !hasMore && users.length > 0 && (
-  <div style={{
-    textAlign:'center', padding:'16px',
-    color:'var(--dim)', fontSize:'.72rem'
-  }}>
-    All students loaded ✓
-  </div>
-)}
 
       {/* ── SUGGESTIONS TAB ── */}
       {tab === 'suggestions' && (
@@ -474,6 +445,35 @@ const filtered = users.filter(u => {
         </div>
       )}
 
+      {/* Load more */}
+{tab === 'find' && !loading && hasMore && (
+  <div style={{ padding:'12px 14px' }}>
+    <button
+      onClick={() => setPage(p => p + 1)}
+      disabled={loadingMore}
+      style={{
+        width:'100%', padding:'12px',
+        background:'var(--bg2)',
+        border:'1.5px solid var(--br2)',
+        borderRadius:12,
+        color:'var(--muted)',
+        fontFamily:'Outfit,sans-serif',
+        fontSize:'.8rem', fontWeight:700,
+        cursor: loadingMore ? 'not-allowed' : 'pointer'
+      }}
+    >
+      {loadingMore ? 'Loading…' : 'Load More Students'}
+    </button>
+  </div>
+)}
+{tab === 'find' && !loading && !hasMore && users.length > 0 && (
+  <div style={{
+    textAlign:'center', padding:'16px',
+    color:'var(--dim)', fontSize:'.72rem'
+  }}>
+    All students loaded ✓
+  </div>
+)}
       {/* ── REQUESTS TAB ── */}
       {tab === 'requests' && (
         <div style={{ padding:'12px 14px', display:'flex', flexDirection:'column', gap:10 }}>
