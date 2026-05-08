@@ -44,6 +44,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   process.env.CLIENT_URL,
   process.env.FRONTEND_URL,
+  "https://www.themeetnet.com/"
 ].filter(Boolean)
 
 const corsOptions = {
