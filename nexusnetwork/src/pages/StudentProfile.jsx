@@ -526,7 +526,7 @@ export default function StudentProfile() {
 
 useEffect(() => {
   const token = localStorage.getItem('nx_token')
-  const base = import.meta.env.VITE_API_URL + '/api'
+  const base = import.meta.env.VITE_API_URL 
   const h     = { Authorization: `Bearer ${token}` }
 
   setLoading(true)
@@ -664,7 +664,7 @@ useEffect(() => {
          onClick={async () => {
                 if (following.length === 0) {
                    const token = localStorage.getItem('nx_token')
-                    const base = import.meta.env.VITE_API_URL + '/api'
+                    const base = import.meta.env.VITE_API_URL 
                    const res = await axios.get(`${base}/users/${id}/following`, {
                    headers: { Authorization: `Bearer ${token}` }
                  })
@@ -682,7 +682,7 @@ useEffect(() => {
          onClick={async () => {
               if (followers.length === 0) {
                   const token = localStorage.getItem('nx_token')
-                  const base = import.meta.env.VITE_API_URL + '/api'
+                  const base = import.meta.env.VITE_API_URL 
                   const res = await axios.get(`${base}/users/${id}/followers`, {
                   headers: { Authorization: `Bearer ${token}` }
                })

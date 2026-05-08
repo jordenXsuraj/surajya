@@ -154,7 +154,7 @@ const [loadingMore, setLoadingMore] = useState(false)
   const h     = { Authorization: `Bearer ${token}` }
 */
 const token = localStorage.getItem('nx_token')
-const base  = import.meta.env.VITE_API_URL + '/api'
+const base  = import.meta.env.VITE_API_URL 
 const h     = { Authorization: `Bearer ${token}` }
   // Load students / suggestions / requests based on tab
   /*

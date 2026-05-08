@@ -634,7 +634,7 @@ async function handleAvatarFile(e) {
        headers:{ Authorization:`Bearer ${token}` }, 
        body:fd
     })*/
-   const base = import.meta.env.VITE_API_URL + '/api'
+   const base = import.meta.env.VITE_API_URL 
 
 const res = await fetch(`${base}/users/me/avatar`, {
   method:'POST',
@@ -666,7 +666,7 @@ async function handleCoverFile(e) {
     const res   = await fetch(`${base}/users/me/cover`, {
       method:'POST', headers:{ Authorization:`Bearer ${token}` }, body:fd
     })*/
-const base = import.meta.env.VITE_API_URL + '/api'
+const base = import.meta.env.VITE_API_URL 
 
 const res = await fetch(`${base}/users/me/cover`, {
   method:'POST',

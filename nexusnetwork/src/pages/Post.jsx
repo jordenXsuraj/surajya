@@ -154,7 +154,7 @@ useEffect(() => {
       formData.append('image', compressed)
 
       const token = localStorage.getItem('nx_token')
-       const base = import.meta.env.VITE_API_URL + '/api'
+       const base = import.meta.env.VITE_API_URL 
 
       // XHR for real progress %
       const url = await new Promise((resolve, reject) => {
