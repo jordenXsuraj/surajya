@@ -82,6 +82,11 @@ const COLLEGES = [
   'Sinhgad Institute of Technology, Lonavala',
   'Sinhgad Institute of Technology and Science, Pune',
   'Sinhgad Technical Education Society, Pune',
+  'Smt. Kashibai Navale College of Pharmacy (SKNCOP) ',
+  'Sinhgad College of Pharmacy, Vadgaon (Bk.), Pune',
+  'Sinhgad Institute of Pharmacy, Narhe, Pune',
+  'Sinhgad Institute of Pharmaceutical Sciences, Lonavala',
+
   'College of Engineering Pune (COEP)',
   'Pune Institute of Computer Technology (PICT)',
   'Vishwakarma Institute of Technology (VIT Pune)',
@@ -444,12 +449,14 @@ const cleanLink = projLink.trim().slice(0, 200)
     setSkills(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s])
   }
 
-  function addCustom() {
-    const s = customSkill.trim()
-    if (!s) return
-    if (!skills.includes(s)) if (skills.length >= 10) return
-    setCustom('')
-  }
+function addCustom() {
+  const s = customSkill.trim()
+  if (!s) return
+  if (skills.includes(s)) { setCustom(''); return }  // already added
+  if (skills.length >= 10) return                      // max 10 skills
+  setSkills(p => [...p, s])                            // ← actually add it
+  setCustom('')
+}
 
   function handleCustomKey(e) {
     if (e.key === 'Enter') { e.preventDefault(); addCustom() }
