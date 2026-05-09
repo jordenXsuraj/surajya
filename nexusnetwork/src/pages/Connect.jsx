@@ -259,6 +259,14 @@ useEffect(() => {
   setUsers([])
 }, [tab, skill, scope])
 
+
+// Load request count on mount so badge shows immediately
+useEffect(() => {
+  axios.get(`${base}/users/requests`, { headers: h })
+    .then(r => setReqs(Array.isArray(r.data) ? r.data : []))
+    .catch(() => {})
+}, [])  // runs once on mount
+
   // Search filter
 const filtered = users.filter(u => {
   const q = search.trim().toLowerCase()
