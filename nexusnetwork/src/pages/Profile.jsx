@@ -334,7 +334,7 @@ function MediaTab({ mediaItems, isOwn, onAdd, onRemove }) {
 
       {mediaItems?.length === 0 && isOwn && (
         <div style={{ textAlign:'center', padding:'16px 0 8px', color:'var(--dim)', fontSize:'.8rem' }}>
-          Add YouTube videos, Shorts, Instagram posts and Reels
+          Add YouTube videos, Shorts, Instagram  profile etc
         </div>
       )}
 
