@@ -8,8 +8,8 @@ import { useToast } from '../hooks/useToast'
 import axios from 'axios'
 
 const SKILL_FILTERS = [
-  'All','React','Python','UI/UX','ML',
-  'Flutter','DSA','Node.js','C++','Figma','Java'
+  'All','React','Python','ML','Java','DSA','Node.js','C++',
+  'Flutter','Figma','UI/UX'
 ]
 
 const COLORS = [
