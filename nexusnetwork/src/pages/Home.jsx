@@ -353,7 +353,8 @@ export default function Home() {
 const location = useLocation()
   const [posts,    setPosts]   = useState([])
   const [category, setCat]     = useState('all')
-  const [scope,    setScope]   = useState('college')
+ // const [scope,    setScope]   = useState('college')
+ const [scope, setScope] = useState('global')
   const [search,   setSearch]  = useState('')
   const [loading,  setLoading] = useState(true)
   const [savedIds, setSaved]   = useState([])
@@ -565,8 +566,8 @@ useEffect(() => {
       <div className="cat-row">
         <div className="scope-select-wrap">
           <select className="scope-select" value={scope} onChange={e => setScope(e.target.value)}>
-            <option value="college">🏫 My College</option>
             <option value="global">🌐 All</option>
+            <option value="college">🏫 My College</option>
           </select>
           <span className="scope-arrow">▾</span>
         </div>
