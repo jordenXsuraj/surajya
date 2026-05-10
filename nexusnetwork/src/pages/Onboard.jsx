@@ -347,9 +347,20 @@ function StepAuth({ onNext }) {
         const res = await login({email: form.email.trim().toLowerCase(), password: form.password })
         authLogin(res.data.user, res.data.token)
         nav('/home')
-      } else {
+    /*  } else {
         onNext(form)
-      }
+      }*/
+     } else {
+  const res = await signup({
+    ...form,
+    skills: [],
+    projects: [],
+    roadmap: ''
+  })
+
+  authLogin(res.data.user, res.data.token)
+  nav('/home')
+}
     } catch (e) {
       setErr(e?.response?.data?.message || e.message || 'Something went wrong')
     } finally {

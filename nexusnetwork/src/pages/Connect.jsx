@@ -8,7 +8,7 @@ import { useToast } from '../hooks/useToast'
 import axios from 'axios'
 
 const SKILL_FILTERS = [
-  'All','React','Python','ML','Java','DSA','Node.js','C++',
+  'All','React','Python','ML','Java','DSA','Embedded System','Node.js','C++','VLSI',
   'Flutter','Figma','UI/UX'
 ]
 
