@@ -423,39 +423,8 @@ function StepAuth({ onNext }) {
 
         <input className="ob-inp" name="email" type="email"
           placeholder="Enter your Email" value={form.email} onChange={f} />
-
-        {/* Password with show/hide toggle */}
-<div style={{ position:'relative', width:'100%' }}>
-  <input
-    className="ob-inp"
-    name="password"
-    type={showPass ? 'text' : 'password'}
-    placeholder="Password (min 6)"
-    value={form.password}
-    onChange={f}
-    style={{ paddingRight: 44 }}
-  />
-  <button
-    type="button"
-    onClick={() => setShowPass(p => !p)}
-    style={{
-      position:   'absolute',
-      right:      12,
-      top:        '50%',
-      transform:  'translateY(-50%)',
-      background: 'none',
-      border:     'none',
-      cursor:     'pointer',
-      fontSize:   '1.1rem',
-      color:      'var(--dim)',
-      padding:    0,
-      lineHeight: 1,
-    }}
-  >
-    {showPass ? '🙈' : '👁️'}
-  </button>
-</div>
-
+        <input className="ob-inp" name="password" type="password"
+          placeholder="Password (min 6)" value={form.password} onChange={f} />
 
         {err && <div className="ob-err">{err}</div>}
 
@@ -480,8 +449,6 @@ function StepProfile({ authData }) {
   const [roadmap,     setRoadmap]  = useState('')
   const [loading,     setLoading]  = useState(false)
   const [err,         setErr]      = useState('')
-
-
 
   const { login: authLogin } = useAuth()
   const nav = useNavigate()
@@ -635,9 +602,7 @@ function addCustom() {
 
 export default function Onboard() {
   const [step,     setStep]    = useState(1)
-   const [showPass, setShowPass] = useState(false)
   const [authData, setAuthData]= useState(null)
- 
   const { user } = useAuth()
   const nav = useNavigate()
 
