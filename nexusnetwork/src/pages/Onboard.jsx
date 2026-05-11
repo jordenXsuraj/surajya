@@ -456,8 +456,7 @@ function StepAuth({ onNext }) {
   </button>
 </div>
 
-onClick={() => { setMode('signup'); setErr(''); setShowPass(false) }}
-onClick={() => { setMode('login');  setErr(''); setShowPass(false) }}
+
 
         {err && <div className="ob-err">{err}</div>}
 
