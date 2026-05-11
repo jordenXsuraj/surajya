@@ -456,7 +456,8 @@ function StepAuth({ onNext }) {
   </button>
 </div>
 
-
+onClick={() => { setMode('signup'); setErr(''); setShowPass(false) }}
+onClick={() => { setMode('login');  setErr(''); setShowPass(false) }}
 
         {err && <div className="ob-err">{err}</div>}
 
@@ -481,7 +482,7 @@ function StepProfile({ authData }) {
   const [roadmap,     setRoadmap]  = useState('')
   const [loading,     setLoading]  = useState(false)
   const [err,         setErr]      = useState('')
-const [showPass, setShowPass] = useState(false)
+
 
 
   const { login: authLogin } = useAuth()
@@ -636,7 +637,9 @@ function addCustom() {
 
 export default function Onboard() {
   const [step,     setStep]    = useState(1)
+   const [showPass, setShowPass] = useState(false)
   const [authData, setAuthData]= useState(null)
+ 
   const { user } = useAuth()
   const nav = useNavigate()
 
