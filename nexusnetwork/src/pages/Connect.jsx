@@ -188,11 +188,6 @@ const h     = { Authorization: `Bearer ${token}` }
 */
 
 
-useEffect(() => {
-  const t = setTimeout(() => setSearchDebounced(search), 300)
-  return () => clearTimeout(t)
-}, [search])
-
 
 useEffect(() => {
   const controller = new AbortController()
@@ -261,12 +256,18 @@ if (tab === 'find') {
 
 useEffect(() => {
   if (tab !== 'find') return
-  setUsers([])
-  setUserPage(1)
+
+  setPage(1)
   setHasMore(true)
-}, [searchDebounced, skill, scope, tab])
+  setUsers([])
+}, [tab, skill, scope ,  search,searchDebounced])
 
 
+
+useEffect(() => {
+  const t = setTimeout(() => setSearchDebounced(search), 300)
+  return () => clearTimeout(t)
+}, [search])
 
 
 
