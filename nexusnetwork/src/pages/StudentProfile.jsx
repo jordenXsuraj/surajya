@@ -178,7 +178,7 @@ function MediaCard({ item, isOwn, onRemove }) {
   const [fullscreen, setFullscreen] = useState(false)
 
   // ── YouTube ─────────────────────────────
-  if (item.type === 'yt-video' || item.type === 'yt-short') {
+  if (item.type === 'yt-video' ||item.type === 'yt-short' ||item.type === 'youtube'  ){
     const ytId = getYouTubeId(item.url)
     const short = item.type === 'yt-short'
     if (!ytId) return null
@@ -311,8 +311,11 @@ function MediaSection({ mediaItems }) {
   }
 
  // const ytItems = mediaItems.filter(m => m.type === 'youtube')
- const ytItems = mediaItems.filter(
-  m => m.type === 'yt-video' || m.type === 'yt-short'
+const ytItems = mediaItems.filter(
+  m =>
+    m.type === 'yt-video' ||
+    m.type === 'yt-short' ||
+    m.type === 'youtube'   // 🔥 IMPORTANT
 )
   const igItems = mediaItems.filter(m => m.type === 'instagram')
 
