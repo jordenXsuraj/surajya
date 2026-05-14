@@ -449,7 +449,7 @@ useEffect(() => {
         )}
 
         {/* ── Tags — NEW comma-separated input ── */}
-        <label className="field-label">
+{/*        <label className="field-label">
           Tags <span className="field-optional">— comma separated, max 5</span>
         </label>
         <input
@@ -458,7 +458,7 @@ useEffect(() => {
           value={tags}
           onChange={e => setTags(e.target.value)}
         />
-
+*/}
         {/* ── Link ── */}
         <label className="field-label">
           Link <span className="field-optional">— optional</span>

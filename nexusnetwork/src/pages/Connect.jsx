@@ -141,6 +141,7 @@ export default function Connect() {
   const [suggests, setSuggests]= useState([])
   const [requests, setReqs]    = useState([])
   const [loading,  setLoading] = useState(true)
+  const [searchDebounced, setSearchDebounced] = useState('')
   const [page,    setPage]    = useState(1)
 const [hasMore, setHasMore] = useState(true)
 const [loadingMore, setLoadingMore] = useState(false)
@@ -251,13 +252,24 @@ if (tab === 'find') {
     .finally(() => setLoading(false))
 
   return () => controller.abort()
- }, [tab, skill, scope, page])
+ }, [tab, skill, scope, page,search , searchDebounced])
 
 useEffect(() => {
+  if (tab !== 'find') return
+
   setPage(1)
   setHasMore(true)
   setUsers([])
-}, [tab, skill, scope])
+}, [tab, skill, scope ,  search,searchDebounced])
+
+
+
+useEffect(() => {
+  const t = setTimeout(() => setSearchDebounced(search), 300)
+  return () => clearTimeout(t)
+}, [search])
+
+
 
 
 // Load request count on mount so badge shows immediately
@@ -266,6 +278,10 @@ useEffect(() => {
     .then(r => setReqs(Array.isArray(r.data) ? r.data : []))
     .catch(() => {})
 }, [])  // runs once on mount
+
+
+
+
 
   // Search filter
 const filtered = users.filter(u => {

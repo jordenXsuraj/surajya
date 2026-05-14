@@ -87,6 +87,8 @@ const COLLEGES = [
   'Sinhgad Institute of Pharmacy, Narhe, Pune',
   'Sinhgad Institute of Pharmaceutical Sciences, Lonavala',
 
+'Yashoda Technical Campus, Satara (YSPM)',
+
   'College of Engineering Pune (COEP)',
   'Pune Institute of Computer Technology (PICT)',
   'Vishwakarma Institute of Technology (VIT Pune)',
