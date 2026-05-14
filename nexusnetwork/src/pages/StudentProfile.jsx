@@ -95,17 +95,18 @@ function timeAgo(d) {
 }
 
 // ── Single media card — iframe only loads on tap ──
-function MediaCard({ item }) {
+/*function MediaCard({ item }) {
   const [playing, setPlaying] = useState(false)
-
+  const [fullscreen,   setFullscreen]   = useState(false) 
+  
   if (item.type === 'youtube') {
     const ytId  = getYouTubeId(item.url)
     const short = isShort(item.url)
     if (!ytId) return null
     return (
       <div
-        className={`media-card ${short ? 'media-short' : 'media-video'}`}
-        onClick={() => setPlaying(true)}
+        className={`media-card ${isShort ? 'media-short' : 'media-video'}`}
+onClick={() => setFullscreen(true)}
       >
         {playing ? (
           <div className="media-player-wrap">
@@ -170,6 +171,133 @@ function MediaCard({ item }) {
   return null
 }
 
+*/
+
+
+function MediaCard({ item, isOwn, onRemove }) {
+  const [fullscreen, setFullscreen] = useState(false)
+
+  // ── YouTube ─────────────────────────────
+  if (item.type === 'yt-video' || item.type === 'yt-short') {
+    const ytId = getYouTubeId(item.url)
+    const short = item.type === 'yt-short'
+    if (!ytId) return null
+
+    return (
+      <>
+        {fullscreen && (
+          <FullscreenModal
+            item={item}
+            onClose={() => setFullscreen(false)}
+          />
+        )}
+
+        <div
+          className={`media-card ${short ? 'media-short' : 'media-video'}`}
+          onClick={() => setFullscreen(true)}
+        >
+          <img
+            src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+            alt="thumbnail"
+            className="media-thumb"
+            loading="lazy"
+          />
+
+          <div className="media-play-overlay">
+            <div className="media-play-btn">▶</div>
+          </div>
+
+          <div className="media-type-badge yt-badge">▶ YT</div>
+
+          {short && <div className="media-short-badge">Short</div>}
+
+          {isOwn && (
+            <button
+              className="media-remove-btn"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemove(item)
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </>
+    )
+  }
+
+  // ── Instagram (keep your existing logic) ─────────
+  if (item.type === 'instagram') {
+    const igId = getInstagramId(item.url)
+    if (!igId) return null
+
+    return (
+      <div className="media-card media-ig">
+        <iframe
+          src={`https://www.instagram.com/p/${igId}/embed/`}
+          title="Instagram"
+        />
+      </div>
+    )
+  }
+
+  return null
+}
+
+function FullscreenModal({ item, onClose }) {
+  const ytId = getYouTubeId(item?.url)
+  const igId = getInstagramId(item?.url)
+
+  useEffect(() => {
+    // Prevent body scroll when modal open
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  return (
+    <div
+      className="fs-overlay"
+      onClick={onClose}
+    >
+      <button className="fs-close" onClick={onClose}>✕</button>
+
+      <div
+        className="fs-content"
+        onClick={e => e.stopPropagation()}
+      >
+        {item?.type === 'yt-video' || item?.type === 'yt-short' ? (
+          <div className="fs-player">
+            <iframe
+              src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`}
+              title="YouTube"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allowFullScreen
+              style={{ width:'100%', height:'100%', border:'none', display:'block' }}
+            />
+          </div>
+        ) : item?.type === 'instagram' ? (
+          <div className="fs-player" style={{ aspectRatio:'9/16', maxHeight:'85vh' }}>
+            <iframe
+              src={`https://www.instagram.com/p/${igId}/embed/`}
+              title="Instagram"
+              frameBorder="0"
+              scrolling="no"
+              allowTransparency
+              style={{ width:'100%', height:'100%', border:'none', display:'block' }}
+            />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+
+
+
+
 // ── Media section (read-only, no add/remove) ──────
 function MediaSection({ mediaItems }) {
   if (!mediaItems?.length) {
@@ -182,7 +310,10 @@ function MediaSection({ mediaItems }) {
     )
   }
 
-  const ytItems = mediaItems.filter(m => m.type === 'youtube')
+ // const ytItems = mediaItems.filter(m => m.type === 'youtube')
+ const ytItems = mediaItems.filter(
+  m => m.type === 'yt-video' || m.type === 'yt-short'
+)
   const igItems = mediaItems.filter(m => m.type === 'instagram')
 
   return (
@@ -191,8 +322,14 @@ function MediaSection({ mediaItems }) {
         <>
           <div className="media-section-label">YouTube</div>
           <div className="media-grid">
-            {ytItems.map((item, i) => <MediaCard key={i} item={item} />)}
+
+            {ytItems.map((item, i) => (
+  <MediaCard key={item._id || i} item={item} />
+))}
+
+
           </div>
+
         </>
       )}
       {igItems.length > 0 && (
