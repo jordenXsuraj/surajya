@@ -110,7 +110,7 @@ function FullscreenModal({ item, onClose }) {
     <div className="fs-overlay" onClick={onClose}>
       <button className="fs-close" onClick={onClose}>✕</button>
       <div className="fs-content" onClick={e => e.stopPropagation()}>
-        {(item?.type === 'yt-video' || item?.type === 'yt-short') && (
+        {(item?.type === 'yt-video' || item?.type === 'yt-short' || item?.type === 'youtube') && (
           <div className="fs-player">
             <iframe
               src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`}
@@ -146,7 +146,7 @@ function FullscreenModal({ item, onClose }) {
 function MediaCard({ item }) {
   const [fullscreen, setFullscreen] = useState(false)
 
-  if (item.type === 'yt-video' || item.type === 'yt-short') {
+  if (item.type === 'yt-video' || item.type === 'yt-short' ||  item.type === 'youtube' ) {
     const ytId  = getYouTubeId(item.url)
     const short = isShort(item.url)
     if (!ytId) return null
@@ -176,33 +176,31 @@ function MediaCard({ item }) {
     )
   }
 
-  if (item.type === 'instagram') {
-    const igId = getInstagramId(item.url)
-    if (!igId) return null
+ if (item.type === 'instagram') {
+  const username = getInstagramUsername(item.url)
+  if (!username) return null
 
-    return (
-      <>
-        {fullscreen && (
-          <FullscreenModal item={item} onClose={() => setFullscreen(false)} />
-        )}
-        <div
-          className="media-card media-short"
-          onClick={() => setFullscreen(true)}
-        >
-          <div className="media-ig-placeholder">
-            <div style={{ fontSize:'1.8rem' }}>📸</div>
-            <div style={{ fontSize:'.7rem', marginTop:6, color:'white', fontWeight:700 }}>
-              Instagram
-            </div>
-            <div style={{ fontSize:'.6rem', color:'rgba(255,255,255,.7)', marginTop:3 }}>
-              Tap to view
-            </div>
-          </div>
-          <div className="media-type-badge ig-badge">📸 IG</div>
+  return (
+    <div className="ig-profile-card">
+      <div className="ig-profile-left">
+        <div className="ig-profile-icon">📸</div>
+        <div>
+          <div className="ig-profile-name">@{username}</div>
+          <div className="ig-profile-sub">Instagram Profile</div>
         </div>
-      </>
-    )
-  }
+      </div>
+      <a
+        href={`https://instagram.com/${username}`}
+        target="_blank"
+        rel="noreferrer"
+        className="ig-visit-btn"
+        onClick={e => e.stopPropagation()}
+      >
+        Visit ↗️
+      </a>
+    </div>
+  )
+}
 
   return null
 }
@@ -219,8 +217,14 @@ function MediaSection({ mediaItems }) {
     )
   }
 
-  const ytItems = mediaItems.filter(m => m.type === 'youtube')
-  const igItems = mediaItems.filter(m => m.type === 'instagram')
+ // const ytItems = mediaItems.filter(m => m.type === 'youtube')
+
+const ytItems = mediaItems.filter(m =>
+  m.type === 'yt-video' || m.type === 'yt-short' ||
+  m.type === 'yt-playlist' || m.type === 'yt-channel' ||
+  m.type === 'youtube'  // fallback for old saved items
+)
+const igItems = mediaItems.filter(m => m.type === 'instagram')
 
   return (
     <div style={{ padding:'14px' }}>
@@ -579,8 +583,15 @@ useEffect(() => {
 
   // 2️⃣ Load posts separately (non-blocking)
 //  axios.get(`${base}/users/${id}/posts`, { headers: h })
-  axios.get(`${base}/users/${id}/posts?page=1&limit=10`, { headers: h })
-    .then(r => setPosts(r.data || []))
+// 2️⃣ Load posts + following + followers (non-blocking)
+axios.get(`${base}/users/${id}/posts?page=1&limit=10`, { headers: h })
+  .then(r => setPosts(r.data || []))
+
+axios.get(`${base}/users/${id}/following`, { headers: h })
+  .then(r => setFollowing(r.data || [])).catch(() => {})
+
+axios.get(`${base}/users/${id}/followers`, { headers: h })
+  .then(r => setFollowers(r.data || [])).catch(() => {})
 
 }, [id])
 
