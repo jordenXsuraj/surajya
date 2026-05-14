@@ -7,6 +7,7 @@ import {
   getMyPosts, getSavedPosts,
   getFollowing, getFollowers,
   updateProfile, deletePost, savePost,
+  likePost,
   addReply, deleteReply
 } from '../services/api'
 import Toast from '../components/Toast'
@@ -155,9 +156,11 @@ async function compressImage(file, maxWidth = 800, quality = 0.72) {
 function MediaItem({ item, onRemove, isOwn }) {
   const [showPlayer, setShowPlayer] = useState(false)
 
-  if (item.type === 'youtube') {
-    const ytId    = getYouTubeId(item.url)
-    const isShort = isYouTubeShort(item.url)
+ if (item.type === 'youtube' || item.type === 'yt-video' ||
+    item.type === 'yt-short' || item.type === 'yt-channel' ||
+    item.type === 'yt-playlist') {
+  const ytId    = getYouTubeId(item.url)
+  const isShort = isYouTubeShort(item.url) || item.type === 'yt-short'
     if (!ytId) return null
 
     return (
@@ -257,8 +260,10 @@ function MediaTab({ mediaItems, isOwn, onAdd, onRemove }) {
     setNewUrl(''); setUrlError(''); setShowInput(false)
   }
 
-  const ytItems = (mediaItems || []).filter(m => m.type === 'youtube')
-  const igItems = (mediaItems || []).filter(m => m.type === 'instagram')
+const ytItems = (mediaItems || []).filter(m =>
+  ['youtube','yt-video','yt-short','yt-channel','yt-playlist'].includes(m.type)
+)
+const igItems = (mediaItems || []).filter(m => m.type === 'instagram')
 
   if (mediaItems?.length === 0 && !isOwn) {
     return (
@@ -365,6 +370,32 @@ function MediaTab({ mediaItems, isOwn, onAdd, onRemove }) {
   )
 }
 
+function LikeBtn({ post, currentUser }) {
+  const myId = currentUser?._id?.toString() || ''
+  const [liked,     setLiked]     = useState(
+    (post.likes || []).map(l => l?.toString()).includes(myId)
+  )
+  const [likeCount, setLikeCount] = useState(post.likes?.length || 0)
+
+  async function handleLike() {
+    setLiked(p => !p)
+    setLikeCount(p => liked ? p - 1 : p + 1)
+    try { await likePost(post._id) }
+    catch {
+      setLiked(p => !p)
+      setLikeCount(p => liked ? p + 1 : p - 1)
+    }
+  }
+
+  return (
+    <button
+      className={`mp-like-btn ${liked ? 'on' : ''}`}
+      onClick={handleLike}
+    >
+      {liked ? '❤️' : '🤍'} {likeCount}
+    </button>
+  )
+}
 
 
 function MiniPost({ post, canDelete, onDelete, currentUserId, canUnsave, onUnsave, currentUser }) {
@@ -450,8 +481,8 @@ function MiniPost({ post, canDelete, onDelete, currentUserId, canUnsave, onUnsav
         </a>
       )}
 
-      <div className="mp-footer" style={{ gap:7, paddingTop:8, alignItems:'center' }}>
-        <span style={{ fontSize:'.72rem', color:'var(--dim)' }}>❤️ {post.likes?.length || 0}</span>
+<div className="mp-footer" style={{ gap:7, paddingTop:8, alignItems:'center' }}>
+  <LikeBtn post={post} currentUser={currentUser} />
         <button className="mp-action-btn" onClick={() => setShowBox(b => !b)}>
           {post.type === 'qa' ? '✍️ Answer' : '💬 Reply'}
         </button>
