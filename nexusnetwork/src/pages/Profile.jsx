@@ -15,6 +15,20 @@ import { useToast } from '../hooks/useToast'
 
 // ── Branch skills ─────────────────────────────────
 const BRANCH_SKILLS = {
+  'AI': [
+  'Python',
+  'Machine Learning',
+  'Deep Learning',
+  'Data Science',
+  'TensorFlow',
+  'PyTorch',
+  'NLP',
+  'Computer Vision',
+  'Generative AI',
+  'Prompt Engineering',
+  'MLOps',
+  'SQL'
+],
   'CS':          ['React','Node.js','Python','Java','C++','DSA','MongoDB','MySQL','TypeScript','Next.js','Django','Flutter','Android','DevOps','ML / AI','UI / UX','Figma','Firebase','Spring Boot','Git'],
   'IT':          ['React','Node.js','Python','Java','Networking','Cybersecurity','Cloud (AWS)','Docker','Linux','MySQL','MongoDB','PHP','Django','TypeScript','Git','UI / UX','Figma','DevOps'],
   'Civil':       ['AutoCAD','STAAD Pro','Revit','SketchUp','MS Project','Primavera','ETABS','SAP2000','Surveying','Estimation & Costing','GIS','MATLAB','Concrete Design','Steel Design'],

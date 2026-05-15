@@ -5,6 +5,20 @@ import { signup, login } from '../services/api'
 import { useState, useEffect, useRef } from 'react'
 // ── Branch → Skills mapping ──────────────────────
 const BRANCH_SKILLS = {
+  'AI': [
+  'Python',
+  'Machine Learning',
+  'Deep Learning',
+  'Data Science',
+  'TensorFlow',
+  'PyTorch',
+  'NLP',
+  'Computer Vision',
+  'Generative AI',
+  'Prompt Engineering',
+  'MLOps',
+  'SQL'
+],
   'CS': [
     'React','Node.js','Python','Java','C++','DSA',
     'MongoDB','MySQL','TypeScript','Next.js','Django',
@@ -61,7 +75,7 @@ const BRANCH_SKILLS = {
   ]
 }
 
-const BRANCHES = [
+const BRANCHES = ['AI',
   'CS','IT','Civil','Mechanical',
   'Electrical','Electronics','ENTC','Chemical','Other'
 ]
