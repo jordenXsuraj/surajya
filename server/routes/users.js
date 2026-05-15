@@ -318,13 +318,32 @@ const users = await User.find(filter)
     res.status(500).json({ message: 'Server error' })
   }
 })
-
+/*
 
 router.get('/all', protect, async (req, res) => {
   try {
     const { skill } = req.query
     const filter = { _id: { $ne: req.user._id } }
+*/
+router.get('/all', protect, async (req, res) => {
+  try {
+    const { skill, search, page = 1, limit = 20 } = req.query
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const filter = { _id: { $ne: req.user._id } }
 
+    // Skill filter
+    if (skill && skill !== 'All' && skill.trim()) {
+      filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
+    }
+
+    // Search by name or username — same as /users route
+    if (search && search.trim()) {
+      const q = search.trim()
+      filter.$or = [
+        { name:     { $regex: q, $options: 'i' } },
+        { username: { $regex: q, $options: 'i' } },
+      ]
+    }
     if (skill && skill !== 'All' && skill.trim()) {
       filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
     }
