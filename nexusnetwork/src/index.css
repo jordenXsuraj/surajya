@@ -31,7 +31,16 @@
   --ol:      rgba(249,115,22,.1);
   --nav:     68px;
 }
-html, body { height: 100%; }
+
+
+#root {
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;        /* ← centres content */
+  min-height: 100vh;
+  position: relative;
+} 
+html, body { height: 100%;  width: 100%;}
 body {
   font-family: 'Outfit', sans-serif;
   background: var(--bg);
