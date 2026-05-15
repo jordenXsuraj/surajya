@@ -327,30 +327,11 @@ router.get('/all', protect, async (req, res) => {
 */
 router.get('/all', protect, async (req, res) => {
   try {
-    const { skill, search, page = 1, limit = 20 } = req.query
-    const skip = (parseInt(page) - 1) * parseInt(limit)
-    const filter = { _id: { $ne: req.user._id } }
-
-    // Skill filter
-    if (skill && skill !== 'All' && skill.trim()) {
-      filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
-    }
-
-    // Search by name or username — same as /users route
-    if (search && search.trim()) {
-      const q = search.trim()
-      filter.$or = [
-        { name:     { $regex: q, $options: 'i' } },
-        { username: { $regex: q, $options: 'i' } },
-      ]
-    }
-    if (skill && skill !== 'All' && skill.trim()) {
-      filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
-    }
-
-const page  = parseInt(req.query.page)  || 1
-const limit = 20
+   const page  = parseInt(req.query.page)  || 1
+const limit = parseInt(req.query.limit) || 20
 const skip  = (page - 1) * limit
+
+const { skill, search } = req.query
 
 const users = await User.find(filter)
   .select('name username year branch bio skills projects following followers sentRequests college avatar coverImage')

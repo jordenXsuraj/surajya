@@ -205,7 +205,7 @@ if (tab === 'find') {
     ? `${base}/users/all?${sp}`
     : `${base}/users?${sp}`
 
-  const isFirstPage = page === 1
+  const isFirstPage = page === 1 || search.trim()
   if (isFirstPage) setLoading(true)
   else setLoadingMore(true)
 
