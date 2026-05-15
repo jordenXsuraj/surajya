@@ -318,27 +318,39 @@ const users = await User.find(filter)
     res.status(500).json({ message: 'Server error' })
   }
 })
-/*
+
+
+
 
 router.get('/all', protect, async (req, res) => {
   try {
-    const { skill } = req.query
+    const { skill, search } = req.query
+    const page  = parseInt(req.query.page)  || 1
+    const limit = 20
+    const skip  = (page - 1) * limit
+
     const filter = { _id: { $ne: req.user._id } }
-*/
-router.get('/all', protect, async (req, res) => {
-  try {
-   const page  = parseInt(req.query.page)  || 1
-const limit = parseInt(req.query.limit) || 20
-const skip  = (page - 1) * limit
 
-const { skill, search } = req.query
+    // Skill filter
+    if (skill && skill !== 'All' && skill.trim()) {
+      filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
+    }
 
-const users = await User.find(filter)
-  .select('name username year branch bio skills projects following followers sentRequests college avatar coverImage')
-  .sort({ year: -1, createdAt: -1 })
-  .skip(skip)
-  .limit(limit)
-  .lean()
+    // Search by name OR username
+    if (search && search.trim()) {
+      const q = search.trim()
+      filter.$or = [
+        { name:     { $regex: q, $options: 'i' } },
+        { username: { $regex: q, $options: 'i' } },
+      ]
+    }
+
+    const users = await User.find(filter)
+      .select('name username year branch bio skills projects following followers sentRequests college avatar')
+      .sort({ year: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
 
     const myFollowing = (req.user.following    || []).map(id => id.toString())
     const mySent      = (req.user.sentRequests || []).map(id => id.toString())
