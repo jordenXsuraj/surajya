@@ -197,7 +197,8 @@ useEffect(() => {
 
 if (tab === 'find') {
   const sp = new URLSearchParams()
-  if (skill !== 'All') sp.set('skill', skill)
+  if (skill !== 'All')       sp.set('skill',  skill)
+  if (search.trim())         sp.set('search', search.trim())  // ← ADD THIS
   sp.set('page', page)
 
   const url = scope === 'global'
@@ -424,14 +425,14 @@ const filtered = users.filter(u => {
       {tab === 'find' && (
         <div className="people-list">
           {loading && <div className="list-loading">Loading…</div>}
-          {!loading && filtered.length === 0 && (
+         {!loading && users.length === 0 && !loadingMore && (
             <div className="conn-empty">
               <div style={{ fontSize:'2.2rem' }}>🔍</div>
               <h3>No students found</h3>
               <p>{users.length === 0 ? 'No students from this college yet' : 'Try a different search'}</p>
             </div>
           )}
-          {!loading && filtered.map((u, i) => (
+          {!loading && users.map((u, i) => (
             <PersonCard
               key={u._id}
               u={u}
@@ -481,7 +482,7 @@ const filtered = users.filter(u => {
       )}
 
       {/* Load more */}
-{tab === 'find' && !loading && hasMore && (
+{tab === 'find' && !loading && !search.trim() && hasMore && (
   <div style={{ padding:'12px 14px' }}>
     <button
       onClick={() => setPage(p => p + 1)}
@@ -501,7 +502,7 @@ const filtered = users.filter(u => {
     </button>
   </div>
 )}
-{tab === 'find' && !loading && !hasMore && users.length > 0 && (
+{tab === 'find' && !loading && !search.trim() && !hasMore && users.length > 0 && (
   <div style={{
     textAlign:'center', padding:'16px',
     color:'var(--dim)', fontSize:'.72rem'
