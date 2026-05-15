@@ -39,7 +39,7 @@ const BRANCH_SKILLS = {
   'Chemical':    ['MATLAB','Aspen Plus','HYSYS','AutoCAD','ChemCAD','ANSYS Fluent','MS Excel (Advanced)','Process Design','Safety Engineering','Python'],
   'Other':       ['MS Office','Research','Technical Writing','Data Analysis','Python','MATLAB','Project Management','Communication','Leadership','Teamwork']
 }
-const BRANCHES = ['CS','IT','Civil','Mechanical','Electrical','Electronics','ENTC','Chemical','Other']
+const BRANCHES = ['AI','CS','IT','Civil','Mechanical','Electrical','Electronics','ENTC','Chemical','Other']
 
 const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },
