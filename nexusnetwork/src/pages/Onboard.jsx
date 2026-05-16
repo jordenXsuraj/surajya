@@ -31,6 +31,20 @@ const BRANCH_SKILLS = {
     'MySQL','MongoDB','PHP','Django','TypeScript',
     'Git','UI / UX','Figma','DevOps'
   ],
+  'CyberSecurity': [
+  'Networking',
+  'Linux',
+  'Ethical Hacking',
+  'Penetration Testing',
+  'Web Security',
+  'Cryptography',
+  'OWASP Top 10',
+  'Nmap',
+  'Burp Suite',
+  'Metasploit',
+  'Cloud Security',
+  'Python'
+],
   'Civil': [
     'AutoCAD','STAAD Pro','Revit','SketchUp',
     'MS Project','Primavera','ETABS','SAP2000',
@@ -76,7 +90,7 @@ const BRANCH_SKILLS = {
 }
 
 const BRANCHES = ['AI',
-  'CS','IT','Civil','Mechanical',
+  'CS','IT','CyberSecurity','Civil','Mechanical',
   'Electrical','Electronics','ENTC','Chemical','Other'
 ]
 

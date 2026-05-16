@@ -31,6 +31,20 @@ const BRANCH_SKILLS = {
 ],
   'CS':          ['React','Node.js','Python','Java','C++','DSA','MongoDB','MySQL','TypeScript','Next.js','Django','Flutter','Android','DevOps','ML / AI','UI / UX','Figma','Firebase','Spring Boot','Git'],
   'IT':          ['React','Node.js','Python','Java','Networking','Cybersecurity','Cloud (AWS)','Docker','Linux','MySQL','MongoDB','PHP','Django','TypeScript','Git','UI / UX','Figma','DevOps'],
+    'CyberSecurity': [
+  'Networking',
+  'Linux',
+  'Ethical Hacking',
+  'Penetration Testing',
+  'Web Security',
+  'Cryptography',
+  'OWASP Top 10',
+  'Nmap',
+  'Burp Suite',
+  'Metasploit',
+  'Cloud Security',
+  'Python'
+],
   'Civil':       ['AutoCAD','STAAD Pro','Revit','SketchUp','MS Project','Primavera','ETABS','SAP2000','Surveying','Estimation & Costing','GIS','MATLAB','Concrete Design','Steel Design'],
   'Mechanical':  ['AutoCAD','SolidWorks','CATIA','ANSYS','Fusion 360','MATLAB','Pro-E','CNC Programming','Thermodynamics','FEA','CAM','3D Printing','PLC Programming','Hydraulics','Robotics'],
   'Electrical':  ['MATLAB','Simulink','PLC Programming','AutoCAD Electrical','Circuit Design','Power Systems','SCADA','Arduino','Embedded Systems','Control Systems','PSPICE','Relay Protection'],
@@ -39,7 +53,7 @@ const BRANCH_SKILLS = {
   'Chemical':    ['MATLAB','Aspen Plus','HYSYS','AutoCAD','ChemCAD','ANSYS Fluent','MS Excel (Advanced)','Process Design','Safety Engineering','Python'],
   'Other':       ['MS Office','Research','Technical Writing','Data Analysis','Python','MATLAB','Project Management','Communication','Leadership','Teamwork']
 }
-const BRANCHES = ['AI','CS','IT','Civil','Mechanical','Electrical','Electronics','ENTC','Chemical','Other']
+const BRANCHES = ['AI','CS','IT','CyberSecurity','Civil','Mechanical','Electrical','Electronics','ENTC','Chemical','Other']
 
 const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },
