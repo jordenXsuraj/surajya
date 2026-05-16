@@ -380,6 +380,58 @@ async function handleReport(reason) {
         <button className={`act-btn ${saved ? 'saved' : ''}`} onClick={() => onSave(post._id)}>
           🔖
         </button>
+          {/* ── REPORT BUTTON — ADD THIS ── */}
+  <div style={{ position:'relative' }}>
+    <button
+      className="act-btn"
+      onClick={() => setShowReport(b => !b)}
+      disabled={reported}
+      style={{ color: reported ? 'var(--green)' : 'var(--muted)' }}
+    >
+      {reported ? '✓' : '🚩'}
+    </button>
+
+    {showReport && !reported && (
+      <div style={{
+        position:'absolute', bottom:'110%', right:0,
+        background:'var(--card)', border:'1px solid var(--br2)',
+        borderRadius:12, padding:8, zIndex:200,
+        minWidth:160, boxShadow:'0 8px 24px rgba(0,0,0,.5)',
+        display:'flex', flexDirection:'column', gap:4
+      }}>
+        <div style={{ fontSize:'.65rem', fontWeight:700, color:'var(--dim)',
+          padding:'2px 8px', marginBottom:2 }}>
+          Why are you reporting?
+        </div>
+        {[
+          ['spam',           '🗑️ Spam'],
+          ['hate',           '😡 Hate speech'],
+          ['harassment',     '🚫 Harassment'],
+          ['misinformation', '❌ Misinformation'],
+          ['other',          '⚠️ Other'],
+        ].map(([val, label]) => (
+          <button key={val}
+            onClick={() => handleReport(val)}
+            disabled={reportBusy}
+            style={{
+              background:'none', border:'none', textAlign:'left',
+              padding:'7px 10px', borderRadius:8, cursor:'pointer',
+              fontSize:'.75rem', fontWeight:600, color:'var(--muted)',
+              fontFamily:'Outfit,sans-serif',
+            }}>
+            {label}
+          </button>
+        ))}
+        <button onClick={() => setShowReport(false)}
+          style={{ background:'none', border:'none', color:'var(--dim)',
+            fontSize:'.68rem', cursor:'pointer', padding:'4px',
+            fontFamily:'Outfit,sans-serif' }}>
+          Cancel
+        </button>
+      </div>
+    )}
+  </div>
+  {/* ── END REPORT BUTTON ── */}
       </div>
 
       {/* ── Reply box ── */}
