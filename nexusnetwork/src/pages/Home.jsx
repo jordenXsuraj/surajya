@@ -581,59 +581,6 @@ useEffect(() => {
     try { await savePost(postId); show(already ? 'Bookmark removed' : '🔖 Saved!') }
     catch { setSaved(p => already ? [...p, postId] : p.filter(id => id !== postId)) }
   }
-// IN pc-actions div, add this AFTER the bookmark button:
-<div style={{ position:'relative' }}>
-  <button
-    className="act-btn"
-    onClick={() => setShowReport(b => !b)}
-    style={{ color: reported ? 'var(--dim)' : 'var(--muted)', fontSize:'.8rem' }}
-    title="Report post"
-    disabled={reported}
-  >
-    {reported ? '✓ Reported' : '🚩'}
-  </button>
-
-  {showReport && !reported && (
-    <div style={{
-      position:'absolute', bottom:'110%', right:0,
-      background:'var(--card)', border:'1px solid var(--br2)',
-      borderRadius:12, padding:'8px', zIndex:200,
-      minWidth:160, boxShadow:'0 8px 24px rgba(0,0,0,.5)',
-      display:'flex', flexDirection:'column', gap:4
-    }}>
-      <div style={{ fontSize:'.65rem', fontWeight:700, color:'var(--dim)',
-        padding:'2px 8px', marginBottom:2 }}>Why are you reporting?</div>
-      {[
-        ['spam',           '🗑️ Spam'],
-        ['hate',           '😡 Hate speech'],
-        ['harassment',     '🚫 Harassment'],
-        ['misinformation', '❌ Misinformation'],
-        ['other',          '⚠️ Other'],
-      ].map(([val, label]) => (
-        <button key={val}
-          onClick={() => handleReport(val)}
-          disabled={reportBusy}
-          style={{
-            background:'none', border:'none', textAlign:'left',
-            padding:'7px 10px', borderRadius:8, cursor:'pointer',
-            fontSize:'.75rem', fontWeight:600, color:'var(--muted)',
-            fontFamily:'Outfit,sans-serif', transition:'all .15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--al)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'none'}
-        >
-          {label}
-        </button>
-      ))}
-      <button onClick={() => setShowReport(false)}
-        style={{ background:'none', border:'none', color:'var(--dim)',
-          fontSize:'.68rem', cursor:'pointer', padding:'4px',
-          fontFamily:'Outfit,sans-serif' }}>
-        Cancel
-      </button>
-    </div>
-  )}
-</div>
 
   async function handleDelete(postId) {
     try {
