@@ -590,9 +590,11 @@ useEffect(() => {
           {category !== 'all' && (
             <span className="af-pill">{CATEGORIES.find(c => c.id === category)?.label}</span>
           )}
+        {/* 
           <button className="af-clear" onClick={() => { setCat('all'); setScope('college') }}>
             Clear ✕
           </button>
+*/}
         </div>
       )}
 
