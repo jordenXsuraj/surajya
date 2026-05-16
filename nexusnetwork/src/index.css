@@ -282,9 +282,6 @@ body {
   background: var(--bg);
   position: sticky; top: 0; z-index: 100;
     will-change: transform; 
-      position: fixed;
-  width: 100%;
-  max-width: 430px;
 }
 .home-logo {
   font-family: 'Fraunces', serif;
