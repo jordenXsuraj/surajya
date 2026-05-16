@@ -415,6 +415,7 @@ body {
   max-height: 420px;
   object-fit: contain;    /* ← was cover, now contain = no cropping */
   background: #0d0d0d;    /* fills empty space around image */
+    border-radius: 14px;  
 }
 
 /* IMAGE */
@@ -446,6 +447,7 @@ body {
   border-radius: 12px;
   display: block;
   background: #0d0d0d;
+    border-radius: 14px; 
 }
 
 .posts-grid {
