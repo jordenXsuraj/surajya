@@ -210,41 +210,10 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
     finally { setConnBusy(false) }
   }
 
-  return (
-
-
-
-    
+   return (
     <article className="post-card">
 
-
-
-{post.imageUrl && (
-  <>
-    <div className="pc-image-wrap" onClick={() => setImgOpen(true)}>
-      <div className="pc-image-bg"
-        style={{ backgroundImage: `url(${post.imageUrl})` }} />
-      <img src={post.imageUrl} alt="post" className="pc-image-main" />
-      {/* Tap hint */}
-      <div className="img-tap-hint">🔍 Tap to expand</div>
-    </div>
-
-    {/* Fullscreen viewer */}
-    {imgOpen && (
-      <div className="img-fs-overlay" onClick={() => setImgOpen(false)}>
-        <button className="img-fs-close" onClick={() => setImgOpen(false)}>✕</button>
-        <img
-          src={post.imageUrl}
-          alt="post"
-          className="img-fs-main"
-          onClick={e => e.stopPropagation()}
-        />
-      </div>
-    )}
-  </>
-)}
-
-
+      {/* ── Head — author + tag ── */}
       <div className="pc-head">
         <div
           className={`pc-author-wrap ${!post.isAnonymous && post.postedBy ? 'clickable' : ''}`}
@@ -274,6 +243,7 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
         </div>
       </div>
 
+      {/* ── Today Only badge ── */}
       {post.expiresAt && (
         <span style={{
           fontSize:'.65rem', color:'var(--orange)', fontWeight:700,
@@ -284,14 +254,41 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
         </span>
       )}
 
+      {/* ── Body — text, image, tags, link ── */}
       <div className="pc-body">
         <p className="pc-text">{post.text}</p>
+
+        {/* Image with tap-to-expand */}
+        {post.imageUrl && (
+          <>
+            <div className="pc-image-wrap" onClick={() => setImgOpen(true)}>
+              <div className="pc-image-bg"
+                style={{ backgroundImage: `url(${post.imageUrl})` }} />
+              <img src={post.imageUrl} alt="post" className="pc-image-main" loading="lazy" />
+              <div className="img-tap-hint">🔍 Tap to expand</div>
+            </div>
+
+            {/* Fullscreen viewer */}
+            {imgOpen && (
+              <div className="img-fs-overlay" onClick={() => setImgOpen(false)}>
+                <button className="img-fs-close" onClick={() => setImgOpen(false)}>✕</button>
+                <img
+                  src={post.imageUrl}
+                  alt="post"
+                  className="img-fs-main"
+                  onClick={e => e.stopPropagation()}
+                />
+              </div>
+            )}
+          </>
+        )}
 
         {post.tags?.length > 0 && (
           <div className="pc-tags">
             {post.tags.map(tg => <span key={tg} className="post-tag">#{tg}</span>)}
           </div>
         )}
+
         {post.link?.length > 0 && (
           <a className="pc-link"
             href={post.link.startsWith('http') ? post.link : `https://${post.link}`}
@@ -301,14 +298,14 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
         )}
       </div>
 
+      {/* ── Actions ── */}
       <div className="pc-actions">
-       
-  <button
-    className={`act-btn ${liked ? 'liked' : ''}`}
-    onClick={() => onLike(post._id)}
-  >
-    {liked ? '❤️' : '🤍'} {(post.likes || []).length}
-  </button>
+        <button
+          className={`act-btn ${liked ? 'liked' : ''}`}
+          onClick={() => onLike(post._id)}
+        >
+          {liked ? '❤️' : '🤍'} {(post.likes || []).length}
+        </button>
 
         {post.type === 'partner' ? (
           <>
@@ -326,26 +323,35 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
             {replies.length > 0 && ` (${replies.length})`}
           </button>
         )}
+
         {replies.length > 0 && (
           <button className="act-btn" onClick={() => setShowR(b => !b)}>
             {showReplies ? '▲' : `▼ ${replies.length}`}
           </button>
         )}
+
         <div style={{ flex:1 }}/>
+
         {showConn && (
           <button className={`post-connect-btn ${reqSent ? 'sent' : ''}`}
             onClick={handleConnect} disabled={reqSent || connBusy}>
             {connBusy ? '…' : reqSent ? '⏳' : '🤝 Connect'}
           </button>
         )}
-        <button className={`act-btn ${saved ? 'saved' : ''}`} onClick={() => onSave(post._id)}>🔖</button>
+
+        <button className={`act-btn ${saved ? 'saved' : ''}`} onClick={() => onSave(post._id)}>
+          🔖
+        </button>
       </div>
 
+      {/* ── Reply box ── */}
       {showReplyBox && (
         <ReplyBox postId={post._id} postType={post.type}
           onAdded={r => { setReplies(p => [...p, r]); setShowR(true) }}
           onClose={() => setReplyBox(false)}/>
       )}
+
+      {/* ── Replies list ── */}
       {showReplies && replies.length > 0 && (
         <div className="replies-list">
           {replies.map(r => (
@@ -355,8 +361,8 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
           ))}
         </div>
       )}
+
     </article>
-    
   )
 }
 
