@@ -376,10 +376,10 @@ async function handleReport(reason) {
             {connBusy ? '…' : reqSent ? '⏳' : '🤝 Connect'}
           </button>
         )}
-
+{/* 
         <button className={`act-btn ${saved ? 'saved' : ''}`} onClick={() => onSave(post._id)}>
           🔖
-        </button>
+        </button>*/}
           {/* ── REPORT BUTTON — ADD THIS ── */}
   <div style={{ position:'relative' }}>
     <button
