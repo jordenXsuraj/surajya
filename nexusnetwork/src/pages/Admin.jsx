@@ -8,61 +8,27 @@ export default function Admin() {
   const { user } = useAuth()
   const nav      = useNavigate()
 
-  const [stats,   setStats]   = useState(null)
-  const [reports, setReports] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [tab,     setTab]     = useState('stats') // 'stats' | 'reports'
+  const [stats,      setStats]     = useState(null)
+  const [reports,    setReports]   = useState([])
+  const [loading,    setLoading]   = useState(true)
+  const [tab,        setTab]       = useState('stats')
+  const [adminKey,   setAdminKey]  = useState(sessionStorage.getItem('admin_key') || '')
+  const [keyEntered, setKeyEntered]= useState(!!sessionStorage.getItem('admin_key'))
 
-  const token        = localStorage.getItem('nx_token')
-  const base         = import.meta.env.VITE_API_URL
-  const ADMIN_EMAIL  = import.meta.env.VITE_ADMIN_EMAIL
+  const token       = localStorage.getItem('nx_token')
+  const base        = import.meta.env.VITE_API_URL
+  const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL
 
-
-const [adminKey, setAdminKey] = useState(
-  sessionStorage.getItem('admin_key') || ''
-)
-const [keyEntered, setKeyEntered] = useState(
-  !!sessionStorage.getItem('admin_key')
-)
-
-// Show key input before loading anything
-if (!keyEntered) return (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center',
-    justifyContent:'center', minHeight:'100vh', background:'#0d0d0d', gap:12,
-    padding:24 }}>
-    <div style={{ fontFamily:'Fraunces,serif', fontSize:'1.3rem',
-      fontWeight:800, color:'#f0f0f0' }}>🛡️ Admin Access</div>
-    <input
-      type="password"
-      placeholder="Enter admin key"
-      value={adminKey}
-      onChange={e => setAdminKey(e.target.value)}
-      style={{ width:'100%', maxWidth:300, height:46, background:'#141414',
-        border:'1.5px solid #2a2a2a', borderRadius:12, padding:'0 14px',
-        color:'#f0f0f0', fontFamily:'Outfit,sans-serif', fontSize:'.9rem',
-        outline:'none' }}
-      onKeyDown={e => {
-        if (e.key === 'Enter') {
-          sessionStorage.setItem('admin_key', adminKey)
-          setKeyEntered(true)
-        }
-      }}
-    />
-    <button
-      onClick={() => { sessionStorage.setItem('admin_key', adminKey); setKeyEntered(true) }}
-      style={{ padding:'10px 28px', background:'#a73333', border:'none',
-        borderRadius:12, color:'white', fontWeight:700, cursor:'pointer',
-        fontFamily:'Outfit,sans-serif' }}>
-      Enter
-    </button>
-  </div>
-)
-
+  // ── ALL hooks BEFORE any conditional return ──
   useEffect(() => {
+    if (!keyEntered) return          // guard INSIDE useEffect — fine
     if (!user) return
     if (user.email !== ADMIN_EMAIL) { nav('/home'); return }
 
-    const h = { Authorization: `Bearer ${token}`,  'x-admin-key': adminKey  }
+    const h = {
+      Authorization: `Bearer ${token}`,
+      'x-admin-key': adminKey
+    }
 
     Promise.all([
       axios.get(`${base}/posts/admin/stats`,   { headers: h }),
@@ -74,26 +40,43 @@ if (!keyEntered) return (
       })
       .catch(() => nav('/home'))
       .finally(() => setLoading(false))
-  }, [user])
+  }, [user, keyEntered])   // ← add keyEntered as dep
 
-  async function deletePost(postId, reportId) {
-    if (!confirm('Delete this post permanently?')) return
-    try {
-      const h = { Authorization: `Bearer ${token}` }
-      await axios.delete(`${base}/posts/${postId}`, { headers: h })
-      await axios.post(`${base}/posts/admin/dismiss/${reportId}`, {}, { headers: h })
-      setReports(p => p.filter(r => r._id !== reportId))
-      setStats(s => s ? { ...s, totalPosts: s.totalPosts - 1 } : s)
-    } catch { alert('Failed to delete') }
-  }
-
-  async function dismiss(reportId) {
-    try {
-      await axios.post(`${base}/posts/admin/dismiss/${reportId}`, {},
-        { headers: { Authorization: `Bearer ${token}` } })
-      setReports(p => p.filter(r => r._id !== reportId))
-    } catch { alert('Failed') }
-  }
+  // ── conditional returns AFTER all hooks ──
+  if (!keyEntered) return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center',
+      justifyContent:'center', minHeight:'100vh', background:'#0d0d0d',
+      gap:12, padding:24 }}>
+      <div style={{ fontFamily:'Fraunces,serif', fontSize:'1.3rem',
+        fontWeight:800, color:'#f0f0f0' }}>🛡️ Admin Access</div>
+      <input
+        type="password"
+        placeholder="Enter admin key"
+        value={adminKey}
+        onChange={e => setAdminKey(e.target.value)}
+        style={{ width:'100%', maxWidth:300, height:46, background:'#141414',
+          border:'1.5px solid #2a2a2a', borderRadius:12, padding:'0 14px',
+          color:'#f0f0f0', fontFamily:'Outfit,sans-serif', fontSize:'.9rem',
+          outline:'none' }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            sessionStorage.setItem('admin_key', adminKey)
+            setKeyEntered(true)
+          }
+        }}
+      />
+      <button
+        onClick={() => {
+          sessionStorage.setItem('admin_key', adminKey)
+          setKeyEntered(true)
+        }}
+        style={{ padding:'10px 28px', background:'#a73333', border:'none',
+          borderRadius:12, color:'white', fontWeight:700, cursor:'pointer',
+          fontFamily:'Outfit,sans-serif' }}>
+        Enter
+      </button>
+    </div>
+  )
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center',
@@ -102,6 +85,7 @@ if (!keyEntered) return (
     </div>
   )
 
+  // ... rest of your JSX stays exactly the same
   return (
     <div style={{ maxWidth:430, margin:'0 auto', background:'#0d0d0d',
       minHeight:'100vh', padding:'0 0 40px' }}>
