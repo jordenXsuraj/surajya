@@ -172,6 +172,8 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
   const [replies,      setReplies]  = useState(post.replies || [])
   const [interested,   setInt]      = useState(false)
   const [connBusy,     setConnBusy] = useState(false)
+  const [imgOpen, setImgOpen] = useState(false)
+
 
   const t        = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
   const liked    = (post.likes || []).map(l => l?.toString()).includes(currentUserId)
@@ -209,7 +211,40 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
   }
 
   return (
+
+
+
+    
     <article className="post-card">
+
+
+
+{post.imageUrl && (
+  <>
+    <div className="pc-image-wrap" onClick={() => setImgOpen(true)}>
+      <div className="pc-image-bg"
+        style={{ backgroundImage: `url(${post.imageUrl})` }} />
+      <img src={post.imageUrl} alt="post" className="pc-image-main" />
+      {/* Tap hint */}
+      <div className="img-tap-hint">🔍 Tap to expand</div>
+    </div>
+
+    {/* Fullscreen viewer */}
+    {imgOpen && (
+      <div className="img-fs-overlay" onClick={() => setImgOpen(false)}>
+        <button className="img-fs-close" onClick={() => setImgOpen(false)}>✕</button>
+        <img
+          src={post.imageUrl}
+          alt="post"
+          className="img-fs-main"
+          onClick={e => e.stopPropagation()}
+        />
+      </div>
+    )}
+  </>
+)}
+
+
       <div className="pc-head">
         <div
           className={`pc-author-wrap ${!post.isAnonymous && post.postedBy ? 'clickable' : ''}`}
@@ -340,6 +375,7 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
         </div>
       )}
     </article>
+    
   )
 }
 
