@@ -11,7 +11,7 @@ import StudentProfile from './pages/StudentProfile'
 import ConnectionFeed from './pages/ConnectionFeed'
  import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-
+import Admin from './pages/Admin'
 
 function Guard({ children }) {
   const { user } = useAuth()
@@ -39,6 +39,7 @@ useEffect(() => {
         <Route path="/connect"     element={<Guard><Connect /></Guard>} />
         <Route path="/profile"     element={<Guard><Profile /></Guard>} />
         <Route path="/profile/:id" element={<Guard><StudentProfile /></Guard>} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="*"            element={<Navigate to="/" replace />} />
       </Routes>
       {user && <BottomNav />}

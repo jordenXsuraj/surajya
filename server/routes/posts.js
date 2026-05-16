@@ -405,4 +405,137 @@ router.post('/:id/interested', protect, async (req, res) => {
   }
 })
 
+// POST /api/posts/:id/report
+router.post('/:id/report', protect, async (req, res) => {
+  try {
+    const { reason, note } = req.body
+    const validReasons = ['spam','hate','harassment','misinformation','other']
+    if (!validReasons.includes(reason)) {
+      return res.status(400).json({ message: 'Invalid reason' })
+    }
+
+    const post = await Post.findById(req.params.id).select('_id')
+    if (!post) return res.status(404).json({ message: 'Post not found' })
+
+    const Report = require('../models/Report')
+    await Report.create({
+      post:       req.params.id,
+      reportedBy: req.user._id,
+      reason,
+      note: note?.trim() || ''
+    })
+
+    res.json({ message: 'Report submitted. Thank you.' })
+  } catch (err) {
+    // duplicate key = already reported
+    if (err.code === 11000) {
+      return res.status(400).json({ message: 'You already reported this post' })
+    }
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// GET /api/posts/admin/reports  (only you can access this — add your email check)
+router.get('/admin/reports', protect, async (req, res) => {
+  try {
+    // Only allow your own account
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL // set this in your .env
+   if (
+  req.user.email !== process.env.ADMIN_EMAIL ||
+  req.headers['x-admin-key'] !== process.env.ADMIN_SECRET_KEY
+) {
+  return res.status(403).json({ message: 'Not authorized' })
+}
+
+    const Report = require('../models/Report')
+    const reports = await Report.find({ status: 'pending' })
+      .populate('post', 'text imageUrl type postedBy college createdAt')
+      .populate('reportedBy', 'name college')
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean()
+
+    res.json(reports)
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// POST /api/posts/admin/dismiss/:reportId
+router.post('/admin/dismiss/:reportId', protect, async (req, res) => {
+  try {
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL
+   if (
+  req.user.email !== process.env.ADMIN_EMAIL ||
+  req.headers['x-admin-key'] !== process.env.ADMIN_SECRET_KEY
+) {
+  return res.status(403).json({ message: 'Not authorized' })
+}
+    const Report = require('../models/Report')
+    await Report.findByIdAndUpdate(req.params.reportId, { status: 'dismissed' })
+    res.json({ message: 'Dismissed' })
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+router.get('/admin/stats', protect, async (req, res) => {
+  try {
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL
+   if (
+  req.user.email !== process.env.ADMIN_EMAIL ||
+  req.headers['x-admin-key'] !== process.env.ADMIN_SECRET_KEY
+) {
+  return res.status(403).json({ message: 'Not authorized' })
+
+    }
+
+    const User = require('../models/User')
+    const Report = require('../models/Report')
+
+    const now = new Date()
+    const today     = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const thisWeek  = new Date(now - 7  * 24 * 60 * 60 * 1000)
+    const thisMonth = new Date(now - 30 * 24 * 60 * 60 * 1000)
+
+    const [
+      totalUsers,
+      totalPosts,
+      usersToday,
+      postsToday,
+      usersThisWeek,
+      postsThisWeek,
+      pendingReports,
+      // top colleges
+      collegeStats,
+    ] = await Promise.all([
+      User.countDocuments(),
+      Post.countDocuments(),
+      User.countDocuments({ createdAt: { $gte: today } }),
+      Post.countDocuments({ createdAt: { $gte: today } }),
+      User.countDocuments({ createdAt: { $gte: thisWeek } }),
+      Post.countDocuments({ createdAt: { $gte: thisWeek } }),
+      Report.countDocuments({ status: 'pending' }),
+      User.aggregate([
+        { $group: { _id: '$college', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 }
+      ]),
+    ])
+
+    res.json({
+      totalUsers,
+      totalPosts,
+      usersToday,
+      postsToday,
+      usersThisWeek,
+      postsThisWeek,
+      pendingReports,
+      topColleges: collegeStats.map(c => ({ college: c._id, count: c.count })),
+    })
+  } catch (err) {
+    console.error('Admin stats error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
 module.exports = router
