@@ -5,10 +5,7 @@
   margin: 0; padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
-   backface-visibility: hidden;
- 
 }
-
 :root {
   --bg:      #0d0d0d;
   --bg2:     #141414;
@@ -35,9 +32,6 @@
   --nav:     68px;
 }
 
-html {
-  scroll-behavior: smooth;
-}
 
 #root {
   width: 100%;
@@ -274,14 +268,14 @@ body {
 
 /* ── HOME ─────────────────────────────────────────── */
 .home-header {
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 430px;
-  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--br);
   background: var(--bg);
+  position: sticky; top: 0; z-index: 100;
+    will-change: transform; 
 }
 .home-logo {
   font-family: 'Fraunces', serif;
@@ -295,9 +289,6 @@ body {
   background: var(--accent); border-radius: 50%;
   box-shadow: 0 0 10px var(--accent);
   animation: dotPulse 2s infinite;
-}
-.home-search svg {
-  transform: none !important;
 }
 .home-search {
   flex: 1;
