@@ -286,26 +286,7 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
 
       <div className="pc-body">
         <p className="pc-text">{post.text}</p>
-        {post.imageUrl && (
 
-
- <div className="pc-image-wrap">
-
-  {/* Background blur */}
-  <div
-    className="pc-image-bg"
-    style={{ backgroundImage: `url(${post.imageUrl})` }}
-  />
-
-  {/* Main image */}
-  <img
-    src={post.imageUrl}
-    alt="post"
-    className="pc-image-main"
-  />
-
-</div>
-)}
         {post.tags?.length > 0 && (
           <div className="pc-tags">
             {post.tags.map(tg => <span key={tg} className="post-tag">#{tg}</span>)}
