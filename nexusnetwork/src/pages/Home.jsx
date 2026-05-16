@@ -583,21 +583,21 @@ useEffect(() => {
           ))}
         </div>
       </div>
-
+{/* 
       {(category !== 'all' || scope === 'global') && (
         <div className="active-filter-bar">
           {scope === 'global' && <span className="af-pill">🌐 All colleges</span>}
           {category !== 'all' && (
             <span className="af-pill">{CATEGORIES.find(c => c.id === category)?.label}</span>
           )}
-        {/* 
+        
           <button className="af-clear" onClick={() => { setCat('all'); setScope('college') }}>
             Clear ✕
           </button>
-*/}
+
         </div>
       )}
-
+*/}
       {loading && page === 1 && <div className="feed-loading">Loading posts…</div>}
 
       {!loading && visible.length === 0 && (
