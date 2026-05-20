@@ -45,6 +45,28 @@ const BRANCH_SKILLS = {
   'Cloud Security',
   'Python'
 ],
+  'Robotics': [
+  'C++',
+  'Python',
+  'Embedded Systems',
+  'Microcontrollers',
+  'Arduino',
+  'Raspberry Pi',
+  'ROS (Robot Operating System)',
+  'Control Systems',
+  'Sensors & Actuators',
+  'Computer Vision',
+  'Machine Learning',
+  'Kinematics',
+  'SLAM',
+  'IoT',
+  'PCB Design',
+  'Electronics',
+  'Mechatronics',
+  'Autonomous Systems',
+  'Path Planning',
+  'Simulation (Gazebo)'
+],
   'Civil':       ['AutoCAD','STAAD Pro','Revit','SketchUp','MS Project','Primavera','ETABS','SAP2000','Surveying','Estimation & Costing','GIS','MATLAB','Concrete Design','Steel Design'],
   'Mechanical':  ['AutoCAD','SolidWorks','CATIA','ANSYS','Fusion 360','MATLAB','Pro-E','CNC Programming','Thermodynamics','FEA','CAM','3D Printing','PLC Programming','Hydraulics','Robotics'],
   'Electrical':  ['MATLAB','Simulink','PLC Programming','AutoCAD Electrical','Circuit Design','Power Systems','SCADA','Arduino','Embedded Systems','Control Systems','PSPICE','Relay Protection'],
@@ -53,7 +75,7 @@ const BRANCH_SKILLS = {
   'Chemical':    ['MATLAB','Aspen Plus','HYSYS','AutoCAD','ChemCAD','ANSYS Fluent','MS Excel (Advanced)','Process Design','Safety Engineering','Python'],
   'Other':       ['MS Office','Research','Technical Writing','Data Analysis','Python','MATLAB','Project Management','Communication','Leadership','Teamwork']
 }
-const BRANCHES = ['AI','CS','IT','CyberSecurity','Civil','Mechanical','Electrical','Electronics','ENTC','Chemical','Other']
+const BRANCHES = ['AI','CS','IT','CyberSecurity','Robotics','Civil','Mechanical','Electrical','ENTC','Chemical','Other']
 
 const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },

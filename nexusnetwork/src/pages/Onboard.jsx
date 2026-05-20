@@ -63,17 +63,13 @@ const BRANCH_SKILLS = {
     'Arduino','Embedded Systems','Control Systems',
     'PSPICE','Relay Protection','Transformer Design','ETAP'
   ],
-  'Electronics': [
-    'Arduino','Raspberry Pi','MATLAB','Embedded Systems',
-    'PCB Design','VLSI','Verilog / VHDL',
-    'Circuit Design','8051 / ARM','IoT',
-    'Multisim','LabVIEW','Signal Processing','FPGA'
-  ],
+
   'ENTC': [
     'Arduino','Embedded Systems','PCB Design','MATLAB',
     'Raspberry Pi','IoT','Signal Processing',
     'Verilog','8051','Communication Systems',
-    'LabVIEW','VLSI','Antenna Design'
+    'LabVIEW','VLSI','Antenna Design',
+    'Circuit Design'
   ],
   'Chemical': [
     'MATLAB','Aspen Plus','HYSYS','AutoCAD',
@@ -81,6 +77,28 @@ const BRANCH_SKILLS = {
     'Process Design','PFD / P&ID','Safety Engineering',
     'Python','R Programming'
   ],
+  'Robotics': [
+  'C++',
+  'Python',
+  'Embedded Systems',
+  'Microcontrollers',
+  'Arduino',
+  'Raspberry Pi',
+  'ROS (Robot Operating System)',
+  'Control Systems',
+  'Sensors & Actuators',
+  'Computer Vision',
+  'Machine Learning',
+  'Kinematics',
+  'SLAM',
+  'IoT',
+  'PCB Design',
+  'Electronics',
+  'Mechatronics',
+  'Autonomous Systems',
+  'Path Planning',
+  'Simulation (Gazebo)'
+],
   'Other': [
     'MS Office','Research','Technical Writing',
     'Data Analysis','Python','MATLAB',
@@ -90,8 +108,8 @@ const BRANCH_SKILLS = {
 }
 
 const BRANCHES = ['AI',
-  'CS','IT','CyberSecurity','Civil','Mechanical',
-  'Electrical','Electronics','ENTC','Chemical','Other'
+  'CS','IT','CyberSecurity','Civil','Robotics','Mechanical',
+  'Electrical','ENTC','Chemical','Other'
 ]
 
 
