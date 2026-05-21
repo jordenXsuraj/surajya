@@ -222,29 +222,17 @@ useEffect(() => {
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  // ── Publish — NEW tag parsing logic kept ────────
-  async function handlePublish() {
-    if (publishing) return
-
-    if (!text.trim())        { show('⚠️ Write something first'); return }
-    if (text.trim().length < 5) { show('⚠️ Too short'); return }
-    if (uploading)           { show('⏳ Wait for image upload'); return }
-    if (imgPreview && !cloudUrl) { show('❌ Image upload failed. Remove it or try again.'); return }
+  
 
 
 
 
-async function handlePdfSelect(e) {
+
+  async function handlePdfSelect(e) {
   const file = e.target.files[0]
   if (!file) return
-  if (file.type !== 'application/pdf') {
-    show('⚠️ Only PDF files allowed')
-    return
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    show('⚠️ PDF must be under 10MB')
-    return
-  }
+  if (file.type !== 'application/pdf') { show('⚠️ Only PDF files allowed'); return }
+  if (file.size > 10 * 1024 * 1024)   { show('⚠️ PDF must be under 10MB'); return }
 
   setPdfUploading(true)
   setPdfProgress(0)
@@ -276,6 +264,24 @@ function removePdf() {
   setPdfProgress(0)
   if (pdfRef.current) pdfRef.current.value = ''
 }
+
+
+
+
+
+
+
+  // ── Publish — NEW tag parsing logic kept ────────
+  async function handlePublish() {
+    if (publishing) return
+
+    if (!text.trim())        { show('⚠️ Write something first'); return }
+    if (text.trim().length < 5) { show('⚠️ Too short'); return }
+    if (uploading)           { show('⏳ Wait for image upload'); return }
+    if (imgPreview && !cloudUrl) { show('❌ Image upload failed. Remove it or try again.'); return }
+
+
+
 
 
 
