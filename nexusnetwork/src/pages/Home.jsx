@@ -361,21 +361,22 @@ async function handleReport(reason) {
     <div style={{ display:'flex', gap:6, flexShrink:0 }}>
       {/* View in browser */}
       <a
-        href={post.pdfUrl}
-        target="_blank"
-        rel="noreferrer"
-        onClick={e => e.stopPropagation()}
-        style={{
-          padding:'6px 12px', borderRadius:8,
-          background:'var(--bl)',
-          border:'1px solid rgba(59,130,246,.25)',
-          color:'var(--blue)',
-          fontSize:'.72rem', fontWeight:700,
-          textDecoration:'none', whiteSpace:'nowrap',
-        }}
-      >
-        👁 View
-      </a>
+
+  href={post.pdfUrl.replace('/upload/', '/upload/fl_inline/')}
+  target="_blank"
+  rel="noreferrer"
+  onClick={e => e.stopPropagation()}
+  style={{
+    padding:'6px 12px', borderRadius:8,
+    background:'var(--bl)',
+    border:'1px solid rgba(59,130,246,.25)',
+    color:'var(--blue)',
+    fontSize:'.72rem', fontWeight:700,
+    textDecoration:'none', whiteSpace:'nowrap',
+  }}
+>
+  👁 View
+</a>
       {/* Download */}
       <a
         href={post.pdfUrl}

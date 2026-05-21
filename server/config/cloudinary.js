@@ -50,6 +50,7 @@ const pdfStorage = new CloudinaryStorage({
     folder:         'meetnet_pdfs',
     resource_type:  'raw',          // ← IMPORTANT: PDFs must use 'raw' not 'image'
     allowed_formats: ['pdf'],
+     flags:           'inline', 
     public_id:      `pdf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
   }),
 })
