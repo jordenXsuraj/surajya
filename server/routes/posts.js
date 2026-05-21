@@ -198,7 +198,7 @@ router.post('/', protect, async (req, res) => {
     if (!text?.trim()) return res.status(400).json({ message: 'Post text required' })
     if (text.trim().length < 5) return res.status(400).json({ message: 'Post too short' })
 
-    const validTypes = ['social','placement','qa','partner','project','confession']
+    const validTypes = ['social','placement','qa','study','project','confession']
     if (!validTypes.includes(type)) return res.status(400).json({ message: 'Invalid type' })
 
     const cleanTags = Array.isArray(tags)
@@ -404,7 +404,7 @@ router.post('/:id/interested', protect, async (req, res) => {
     const post = await Post.findById(req.params.id).populate('postedBy', 'name _id')
     if (!post) return res.status(404).json({ message: 'Post not found' })
 
-    if (!['partner','project'].includes(post.type)) {
+    if (!['project'].includes(post.type)) {
       return res.status(400).json({ message: 'Only for partner/project posts' })
     }
 
