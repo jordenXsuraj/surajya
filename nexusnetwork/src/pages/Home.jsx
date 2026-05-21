@@ -364,7 +364,7 @@ async function handleReport(reason) {
       <a
 
 
-  href={post.pdfUrl}
+  href={post.pdfUrl.replace('/upload/', '/upload/fl_inline/')}
   download={post.pdfName || 'document.pdf'}
   onClick={e => e.stopPropagation()}
   style={{
