@@ -173,21 +173,20 @@ router.post('/upload-image', protect, upload.single('image'), (req, res) => {
 })
 
 
+// ── PDF Upload ─────────────────────────────────
 router.post('/upload-pdf', protect, pdfUpload.single('pdf'), (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No PDF received' })
-
     return res.json({
-      url:  req.file.path,           // Cloudinary URL
-      name: req.file.originalname,   // original filename
-      size: req.file.size,           // bytes
+      url:  req.file.path,
+      name: req.file.originalname,
+      size: req.file.size,
     })
   } catch (err) {
     console.error('PDF upload error:', err.message)
     return res.status(500).json({ message: err.message })
   }
 })
-
 
 // ─────────────────────────────────────────────────
 // POST /api/posts — Create post

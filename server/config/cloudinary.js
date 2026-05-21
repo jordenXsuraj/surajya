@@ -66,6 +66,6 @@ const pdfUpload = multer({
   },
 })
 
-module.exports = { upload, pdfUpload }  // ← add pdfUpload to existing exports
+//module.exports = { }  // ← add pdfUpload to existing exports
 
-module.exports = { cloudinary, upload }
+module.exports = { cloudinary, upload , upload, pdfUpload}
