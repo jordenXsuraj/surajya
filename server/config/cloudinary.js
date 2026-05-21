@@ -33,7 +33,8 @@ const upload = multer({
   }
 })
 
-// ── PDF storage ───────────────────────────────────
+// ── PDF storage ────────────────────────────────
+// ───
 const pdfStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({

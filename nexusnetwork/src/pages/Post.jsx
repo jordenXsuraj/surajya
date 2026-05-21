@@ -188,7 +188,7 @@ useEffect(() => {
 
         xhr.onerror   = () => reject(new Error('Network error. Check your connection.'))
         xhr.ontimeout = () => reject(new Error('Upload timed out. Try again.'))
-        xhr.timeout   = 60000
+        xhr.timeout   = 30000
 
         xhr.open('POST', `${base}/posts/upload-image`)
         xhr.setRequestHeader('Authorization', `Bearer ${token}`)
@@ -232,7 +232,7 @@ useEffect(() => {
   const file = e.target.files[0]
   if (!file) return
   if (file.type !== 'application/pdf') { show('⚠️ Only PDF files allowed'); return }
-  if (file.size > 10 * 1024 * 1024)   { show('⚠️ PDF must be under 10MB'); return }
+  if (file.size > 15 * 1024 * 1024)   { show('⚠️ PDF must be under 15MB'); return }
 
   setPdfUploading(true)
   setPdfProgress(0)

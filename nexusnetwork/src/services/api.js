@@ -85,7 +85,7 @@ export const uploadPdf = (formData, onProgress) => {
 
     xhr.onerror   = () => reject(new Error('Network error'))
     xhr.ontimeout = () => reject(new Error('Upload timed out'))
-    xhr.timeout   = 60000  // 60s for larger PDFs
+    xhr.timeout   = 120000  // 120s for larger PDFs
 
     xhr.open('POST', `${base}/posts/upload-pdf`)
     xhr.setRequestHeader('Authorization', `Bearer ${token}`)
