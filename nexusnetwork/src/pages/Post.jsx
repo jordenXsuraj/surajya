@@ -21,10 +21,10 @@ const POST_TYPES = [
   { id:'social',     em:'🔥', label:'Social',       desc:'Hackathon, Events, Achievements, Announcements' },
  
     { id:'confession', em:'🤫', label:'Confession',   desc:'Anonymous, private, safe' },
-      { id:'project',    em:'🚀', label:'Project',      desc:'Share what you built' },
+      { id:'study',    em:'📚', label:'Study Meterial',      desc:'Share what you Have which help other' },
   { id:'qa',         em:'❓', label:'Q&A',          desc:'Ask anything, get answers' },
 
-  { id:'partner',    em:'🤝', label:'Need Partner', desc:'Find project teammates' },
+  { id:'project',    em:'🚀/🤝', label:'Project/Need Partner', desc:'Find project teammates,hare what you built' },
 
 
 ]
@@ -414,7 +414,7 @@ function removePdf() {
           placeholder={
             type === 'placement'  ? 'Share placement experience, tips, or opportunity…' :
             type === 'qa'         ? 'Ask your question. More detail = better answers.' :
-            type === 'partner'    ? 'What are you building? What skill do you need?' :
+            type === 'study'    ? 'Share notes, PDF link, or study resource. Add a Google Drive or GitHub link below.' :
             type === 'project'    ? 'Describe your project, what you built…' :
             type === 'social'        ? 'Share a useful tip or insight social life just chill and share anything…' :
             "Say what you feel. No one will know it's you 🤫"

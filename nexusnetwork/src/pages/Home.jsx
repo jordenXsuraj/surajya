@@ -12,21 +12,22 @@ import { useToast } from '../hooks/useToast'
 
 const CATEGORIES = [
   { id:'all',        label:'All',           color:'var(--text)'   },
-  { id:'placement',  label:'💼 Placement',  color:'var(--blue)'   },
   { id:'social',     label:'🔥 Social',     color:'var(--orange)' },
+  { id:'study',    label:'📚 Study Meterial',    color:'var(--green)'  },
+   { id:'placement',  label:'💼 Placement',  color:'var(--blue)'   },
   { id:'confession', label:'🤫 Confession', color:'var(--accent)' },
-  { id:'project',    label:'🚀 Project',    color:'var(--yellow)' },
+  { id:'project',    label:'🚀Project',    color:'var(--yellow)' },
   { id:'qa',         label:'❓ Q&A',         color:'var(--purple)' },
-  { id:'partner',    label:'🤝 Partner',    color:'var(--green)'  },
+  
 ]
 
 const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },
   social:     { label:'🔥 Social',     cls:'tag-orange' },
   confession: { label:'🤫 Confession', cls:'tag-red'    },
-  project:    { label:'🚀 Project',    cls:'tag-yellow' },
+  project:    { label:'🚀Project/partner',    cls:'tag-yellow' },
   qa:         { label:'❓ Q&A',         cls:'tag-purple' },
-  partner:    { label:'🤝 Partner',    cls:'tag-green'  },
+  study:    { label:'Study Meterial',    cls:'tag-green'  },
 }
 
 function timeAgo(d) {
@@ -362,12 +363,13 @@ async function handleReport(reason) {
       {/* View in browser */}
       <a
 
-  href={post.pdfUrl.replace('/upload/', '/upload/fl_inline/')}
+
+  href={post.pdfUrl}
   target="_blank"
   rel="noreferrer"
   onClick={e => e.stopPropagation()}
   style={{
-    padding:'6px 12px', borderRadius:8,
+    padding:'6px 14px', borderRadius:8,
     background:'var(--bl)',
     border:'1px solid rgba(59,130,246,.25)',
     color:'var(--blue)',
@@ -375,24 +377,8 @@ async function handleReport(reason) {
     textDecoration:'none', whiteSpace:'nowrap',
   }}
 >
-  👁 View
+  📄 Open / Download ⬇ 
 </a>
-      {/* Download */}
-      <a
-        href={post.pdfUrl}
-        download={post.pdfName || 'document.pdf'}
-        onClick={e => e.stopPropagation()}
-        style={{
-          padding:'6px 12px', borderRadius:8,
-          background:'var(--gl)',
-          border:'1px solid rgba(34,197,94,.25)',
-          color:'var(--green)',
-          fontSize:'.72rem', fontWeight:700,
-          textDecoration:'none', whiteSpace:'nowrap',
-        }}
-      >
-        ⬇ Save
-      </a>
     </div>
   </div>
 )}

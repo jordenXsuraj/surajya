@@ -11,7 +11,7 @@ import axios from 'axios'
 const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },
   qa:         { label:'❓ Q&A',         cls:'tag-purple' },
-  partner:    { label:'🤝 Partner',    cls:'tag-green'  },
+  study:    { label:'📚 Study Meterial',    cls:'tag-green'  },
   project:    { label:'🚀 Project',    cls:'tag-yellow' },
   tip:        { label:'💡 Tip',        cls:'tag-orange' },
   social:     { label:'🔥 Social',     cls:'tag-orange' },
@@ -312,7 +312,7 @@ function StudentPostCard({ post, currentUserId }) {
   const TYPE_TAG_LOCAL = {
     placement:  { label:'💼 Placement',  cls:'tag-blue'   },
     qa:         { label:'❓ Q&A',         cls:'tag-purple' },
-    partner:    { label:'🤝 Partner',    cls:'tag-green'  },
+    study:    { label:'📚 Study Meterial',    cls:'tag-green'  },
     project:    { label:'🚀 Project',    cls:'tag-yellow' },
     tip:        { label:'💡 Tip',        cls:'tag-orange' },
     social:     { label:'🔥 Social',     cls:'tag-orange' },
@@ -452,38 +452,24 @@ function LikeButton({ post, currentUserId }) {
     {/* Action buttons */}
     <div style={{ display:'flex', gap:6, flexShrink:0 }}>
       {/* View in browser */}
-      <a
-        href={post.pdfUrl}
-        target="_blank"
-        rel="noreferrer"
-        onClick={e => e.stopPropagation()}
-        style={{
-          padding:'6px 12px', borderRadius:8,
-          background:'var(--bl)',
-          border:'1px solid rgba(59,130,246,.25)',
-          color:'var(--blue)',
-          fontSize:'.72rem', fontWeight:700,
-          textDecoration:'none', whiteSpace:'nowrap',
-        }}
-      >
-        👁 View
-      </a>
-      {/* Download */}
-      <a
-        href={post.pdfUrl}
-        download={post.pdfName || 'document.pdf'}
-        onClick={e => e.stopPropagation()}
-        style={{
-          padding:'6px 12px', borderRadius:8,
-          background:'var(--gl)',
-          border:'1px solid rgba(34,197,94,.25)',
-          color:'var(--green)',
-          fontSize:'.72rem', fontWeight:700,
-          textDecoration:'none', whiteSpace:'nowrap',
-        }}
-      >
-        ⬇ Save
-      </a>
+     <a
+
+
+  href={post.pdfUrl}
+  target="_blank"
+  rel="noreferrer"
+  onClick={e => e.stopPropagation()}
+  style={{
+    padding:'6px 14px', borderRadius:8,
+    background:'var(--bl)',
+    border:'1px solid rgba(59,130,246,.25)',
+    color:'var(--blue)',
+    fontSize:'.72rem', fontWeight:700,
+    textDecoration:'none', whiteSpace:'nowrap',
+  }}
+>
+  📄 Open / Download ⬇ 
+</a>
     </div>
   </div>
 )}

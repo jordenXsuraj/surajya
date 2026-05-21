@@ -25,7 +25,7 @@ const ReplySchema = new mongoose.Schema({
 const PostSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['social','placement','qa','partner','project','confession'],
+    enum: ['social','placement','qa','project','study','confession'],
     required: true
   },
   text: {
