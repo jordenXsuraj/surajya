@@ -321,6 +321,81 @@ async function handleReport(reason) {
   </>
 )}
 
+
+
+{post.pdfUrl?.length > 0 && (
+  <div style={{
+    display:'flex', alignItems:'center', gap:12,
+    padding:'12px 14px',
+    background:'var(--bg2)',
+    border:'1.5px solid var(--br2)',
+    borderRadius:12,
+    margin:'10px 0',
+    transition:'border-color .2s',
+  }}
+    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--br2)'}
+  >
+    {/* PDF icon */}
+    <div style={{
+      width:42, height:42, borderRadius:10,
+      background:'rgba(239,68,68,.12)',
+      border:'1px solid rgba(239,68,68,.25)',
+      display:'flex', alignItems:'center',
+      justifyContent:'center', fontSize:'1.3rem', flexShrink:0
+    }}>📄</div>
+
+    {/* Name + size */}
+    <div style={{ flex:1, minWidth:0 }}>
+      <div style={{ fontSize:'.82rem', fontWeight:700, color:'var(--text)',
+        overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+        marginBottom:2 }}>
+        {post.pdfName || 'Document.pdf'}
+      </div>
+      <div style={{ fontSize:'.65rem', color:'var(--dim)' }}>
+        PDF{post.pdfSize > 0 ? ` · ${(post.pdfSize / 1024).toFixed(0)} KB` : ''}
+      </div>
+    </div>
+
+    {/* Action buttons */}
+    <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+      {/* View in browser */}
+      <a
+        href={post.pdfUrl}
+        target="_blank"
+        rel="noreferrer"
+        onClick={e => e.stopPropagation()}
+        style={{
+          padding:'6px 12px', borderRadius:8,
+          background:'var(--bl)',
+          border:'1px solid rgba(59,130,246,.25)',
+          color:'var(--blue)',
+          fontSize:'.72rem', fontWeight:700,
+          textDecoration:'none', whiteSpace:'nowrap',
+        }}
+      >
+        👁 View
+      </a>
+      {/* Download */}
+      <a
+        href={post.pdfUrl}
+        download={post.pdfName || 'document.pdf'}
+        onClick={e => e.stopPropagation()}
+        style={{
+          padding:'6px 12px', borderRadius:8,
+          background:'var(--gl)',
+          border:'1px solid rgba(34,197,94,.25)',
+          color:'var(--green)',
+          fontSize:'.72rem', fontWeight:700,
+          textDecoration:'none', whiteSpace:'nowrap',
+        }}
+      >
+        ⬇ Save
+      </a>
+    </div>
+  </div>
+)}
+
         {post.tags?.length > 0 && (
           <div className="pc-tags">
             {post.tags.map(tg => <span key={tg} className="post-tag">#{tg}</span>)}

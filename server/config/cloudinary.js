@@ -44,4 +44,28 @@ const upload = multer({
   }
 })
 
+const pdfStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => ({
+    folder:         'meetnet_pdfs',
+    resource_type:  'raw',          // ← IMPORTANT: PDFs must use 'raw' not 'image'
+    allowed_formats: ['pdf'],
+    public_id:      `pdf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  }),
+})
+
+const pdfUpload = multer({
+  storage: pdfStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true)
+    } else {
+      cb(new Error('Only PDF files allowed'), false)
+    }
+  },
+})
+
+module.exports = { upload, pdfUpload }  // ← add pdfUpload to existing exports
+
 module.exports = { cloudinary, upload }

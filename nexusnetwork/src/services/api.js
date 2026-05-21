@@ -60,6 +60,40 @@ export const getSavedPosts = ()  => API.get('/users/me/saved')
 export const uploadAvatar = formData => API.post('/users/me/avatar', formData)
 export const uploadCover  = formData => API.post('/users/me/cover',  formData)
 
+
+export const uploadPdf = (formData, onProgress) => {
+  return new Promise((resolve, reject) => {
+    const token = localStorage.getItem('nx_token')
+    const base  = import.meta.env.VITE_API_URL
+    const xhr   = new XMLHttpRequest()
+
+    xhr.upload.onprogress = ev => {
+      if (ev.lengthComputable && onProgress) {
+        onProgress(Math.round((ev.loaded / ev.total) * 100))
+      }
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)) }
+        catch { reject(new Error('Bad server response')) }
+      } else {
+        try { reject(new Error(JSON.parse(xhr.responseText).message || 'Upload failed')) }
+        catch { reject(new Error(`Upload failed (${xhr.status})`)) }
+      }
+    }
+
+    xhr.onerror   = () => reject(new Error('Network error'))
+    xhr.ontimeout = () => reject(new Error('Upload timed out'))
+    xhr.timeout   = 60000  // 60s for larger PDFs
+
+    xhr.open('POST', `${base}/posts/upload-pdf`)
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+    xhr.send(formData)
+  })
+}
+
+
 // ── Follow system ─────────────────────────────────
 export const connectUser    = id => API.post(`/users/${id}/connect`)   // send request
 export const followUser     = id => API.post(`/users/${id}/connect`)   // alias

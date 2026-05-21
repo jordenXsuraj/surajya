@@ -6,7 +6,7 @@ import { createPost } from '../services/api'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import { useEffect } from 'react'
-
+import { uploadPdf } from '../services/api'
 
 // ── NEW logical content from this file ────────────
 // - tip type added
@@ -86,6 +86,13 @@ export default function Post() {
   const [cloudUrl,   setCloudUrl]  = useState('')
   const [imgPreview, setPreview]   = useState('')
 
+  const [pdfFile,     setPdfFile]     = useState(null)
+const [pdfUrl,      setPdfUrl]      = useState('')
+const [pdfName,     setPdfName]     = useState('')
+const [pdfSize,     setPdfSize]     = useState(0)
+const [pdfUploading,setPdfUploading]= useState(false)
+const [pdfProgress, setPdfProgress] = useState(0)
+const pdfRef = useRef(null)
 
 useEffect(() => {
   return () => {
@@ -102,6 +109,8 @@ useEffect(() => {
   const [uploading,  setUploading] = useState(false)
   const [uploadPct,  setUploadPct] = useState(0)
   const [publishing, setPublishing]= useState(false)
+
+
 
 
 const [todayOnly, setTodayOnly] = useState(false)
@@ -222,6 +231,55 @@ useEffect(() => {
     if (uploading)           { show('⏳ Wait for image upload'); return }
     if (imgPreview && !cloudUrl) { show('❌ Image upload failed. Remove it or try again.'); return }
 
+
+
+
+async function handlePdfSelect(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  if (file.type !== 'application/pdf') {
+    show('⚠️ Only PDF files allowed')
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    show('⚠️ PDF must be under 10MB')
+    return
+  }
+
+  setPdfUploading(true)
+  setPdfProgress(0)
+  setPdfFile(file)
+  setPdfName(file.name)
+  setPdfSize(file.size)
+
+  try {
+    const fd = new FormData()
+    fd.append('pdf', file)
+    const data = await uploadPdf(fd, pct => setPdfProgress(pct))
+    setPdfUrl(data.url)
+    show('✅ PDF ready!')
+  } catch (err) {
+    show('❌ ' + err.message)
+    setPdfFile(null)
+    setPdfUrl('')
+  } finally {
+    setPdfUploading(false)
+    if (pdfRef.current) pdfRef.current.value = ''
+  }
+}
+
+function removePdf() {
+  setPdfFile(null)
+  setPdfUrl('')
+  setPdfName('')
+  setPdfSize(0)
+  setPdfProgress(0)
+  if (pdfRef.current) pdfRef.current.value = ''
+}
+
+
+
+
     // NEW: comma-separated tag parsing
   const cleanTags = [...new Set(
   tags
@@ -238,7 +296,10 @@ useEffect(() => {
         tags:        cleanTags,
         link:        link.trim().slice(0, 200),
         isAnonymous: type === 'confession' ? true : anon,  // NEW: confession always anon
-        imageUrl:    cloudUrl || '',
+        imageUrl:    cloudUrl || '', pdfUrl,   
+     pdfName,   
+     pdfSize,   
+
          todayOnly   
       })
 
@@ -447,6 +508,106 @@ useEffect(() => {
             <button className="ipz-remove" onClick={removeImage}>✕</button>
           </div>
         )}
+
+
+
+{/* ── PDF Upload ───────────────────────────── */}
+<div style={{ marginBottom:18 }}>
+  <label className="field-label">
+    PDF <span className="field-optional">— optional, max 10MB</span>
+  </label>
+
+  <input
+    type="file"
+    accept="application/pdf"
+    ref={pdfRef}
+    style={{ display:'none' }}
+    onChange={handlePdfSelect}
+  />
+
+  {/* No PDF selected yet */}
+  {!pdfFile && !pdfUrl && (
+    <div
+      className="img-upload-zone"
+      onClick={() => pdfRef.current?.click()}
+      style={{ cursor:'pointer' }}
+    >
+      <div className="iuz-icon">📄</div>
+      <div>
+        <div className="iuz-title">Tap to add a PDF</div>
+        <div className="iuz-sub">Notes, syllabus, question paper — max 10MB</div>
+      </div>
+      <div className="iuz-badge">Optional</div>
+    </div>
+  )}
+
+  {/* Uploading progress */}
+  {pdfUploading && (
+    <div style={{
+      background:'var(--bg2)', border:'1.5px solid var(--br2)',
+      borderRadius:12, padding:'14px 16px',
+      display:'flex', flexDirection:'column', gap:8
+    }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+        <div style={{ fontSize:'1.4rem' }}>📄</div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:'.82rem', fontWeight:700, color:'var(--text)',
+            marginBottom:4, overflow:'hidden', textOverflow:'ellipsis',
+            whiteSpace:'nowrap' }}>
+            {pdfName}
+          </div>
+          {/* Progress bar */}
+          <div style={{ height:4, background:'var(--br2)', borderRadius:4, overflow:'hidden' }}>
+            <div style={{
+              height:'100%', borderRadius:4,
+              background:'linear-gradient(90deg, var(--accent), #f97316)',
+              width: `${pdfProgress}%`,
+              transition:'width 0.2s ease'
+            }}/>
+          </div>
+        </div>
+        <div style={{ fontSize:'.72rem', fontWeight:700,
+          color:'var(--accent)', flexShrink:0 }}>
+          {pdfProgress}%
+        </div>
+      </div>
+      <div style={{ fontSize:'.68rem', color:'var(--dim)', textAlign:'center' }}>
+        Uploading PDF… do not close this page
+      </div>
+    </div>
+  )}
+
+  {/* PDF uploaded successfully */}
+  {!pdfUploading && pdfUrl && (
+    <div style={{
+      background:'var(--bg2)', border:'1.5px solid var(--green)',
+      borderRadius:12, padding:'12px 14px',
+      display:'flex', alignItems:'center', gap:12
+    }}>
+      <div style={{ fontSize:'1.6rem' }}>📄</div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:'.82rem', fontWeight:700, color:'var(--text)',
+          overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          {pdfName}
+        </div>
+        <div style={{ fontSize:'.68rem', color:'var(--dim)', marginTop:2 }}>
+          {(pdfSize / 1024).toFixed(0)} KB · Ready to post
+        </div>
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+        <span style={{ fontSize:'.7rem', color:'var(--green)', fontWeight:700 }}>✓</span>
+        <button onClick={removePdf}
+          style={{ background:'none', border:'none', cursor:'pointer',
+            color:'var(--muted)', fontSize:'.85rem', padding:3 }}>
+          ✕
+        </button>
+      </div>
+    </div>
+  )}
+</div>
+
+
+
 
         {/* ── Tags — NEW comma-separated input ── */}
 {/*        <label className="field-label">

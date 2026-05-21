@@ -6,10 +6,10 @@ const Post         = require('../models/Post')
 const User         = require('../models/User')
 const Notification = require('../models/Notification')
 const protect      = require('../middleware/auth')
-const { upload }   = require('../config/cloudinary')
+//const { upload }   = require('../config/cloudinary')
 
 
-
+const { upload, pdfUpload } = require('../config/cloudinary')
 
 
 function collegeRegex(college) {
@@ -172,12 +172,29 @@ router.post('/upload-image', protect, upload.single('image'), (req, res) => {
   }
 })
 
+
+router.post('/upload-pdf', protect, pdfUpload.single('pdf'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No PDF received' })
+
+    return res.json({
+      url:  req.file.path,           // Cloudinary URL
+      name: req.file.originalname,   // original filename
+      size: req.file.size,           // bytes
+    })
+  } catch (err) {
+    console.error('PDF upload error:', err.message)
+    return res.status(500).json({ message: err.message })
+  }
+})
+
+
 // ─────────────────────────────────────────────────
 // POST /api/posts — Create post
 // ─────────────────────────────────────────────────
 router.post('/', protect, async (req, res) => {
   try {
-    const { type, text, tags, link, imageUrl, isAnonymous, todayOnly } = req.body
+    const { type, text, tags, link, imageUrl, pdfUrl, pdfName, pdfSize, isAnonymous, todayOnly } = req.body
 
     if (!text?.trim()) return res.status(400).json({ message: 'Post text required' })
     if (text.trim().length < 5) return res.status(400).json({ message: 'Post too short' })
@@ -204,7 +221,10 @@ const post = await Post.create({
   isAnonymous: Boolean(isAnonymous),
   expiresAt,
   postedBy:    req.user._id,
-  college:     req.user.college.trim()
+  college:     req.user.college.trim(),
+  pdfUrl:  pdfUrl  || '',
+  pdfName: pdfName || '',
+ pdfSize: pdfSize || 0,
 })
 
     await post.populate('postedBy', 'name year branch college avatar')
