@@ -365,14 +365,13 @@ async function handleReport(reason) {
 
 
   href={post.pdfUrl}
-  target="_blank"
-  rel="noreferrer"
+  download={post.pdfName || 'document.pdf'}
   onClick={e => e.stopPropagation()}
   style={{
-    padding:'6px 14px', borderRadius:8,
-    background:'var(--bl)',
-    border:'1px solid rgba(59,130,246,.25)',
-    color:'var(--blue)',
+    padding:'6px 12px', borderRadius:8,
+    background:'var(--gl)',
+    border:'1px solid rgba(34,197,94,.25)',
+    color:'var(--green)',
     fontSize:'.72rem', fontWeight:700,
     textDecoration:'none', whiteSpace:'nowrap',
   }}
