@@ -364,14 +364,15 @@ async function handleReport(reason) {
       <a
 
 
-  href={post.pdfUrl.replace('/upload/', '/upload/fl_inline/')}
-  download={post.pdfName || 'document.pdf'}
+  href={post.pdfUrl}
+  target="_blank"
+  rel="noreferrer"
   onClick={e => e.stopPropagation()}
   style={{
-    padding:'6px 12px', borderRadius:8,
-    background:'var(--gl)',
-    border:'1px solid rgba(34,197,94,.25)',
-    color:'var(--green)',
+    padding:'6px 14px', borderRadius:8,
+    background:'var(--bl)',
+    border:'1px solid rgba(59,130,246,.25)',
+    color:'var(--blue)',
     fontSize:'.72rem', fontWeight:700,
     textDecoration:'none', whiteSpace:'nowrap',
   }}
