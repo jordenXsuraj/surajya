@@ -402,12 +402,42 @@ function LikeButton({ post, currentUserId }) {
         )}
       </div>
 
-      {/* Image */}
-      {post.imageUrl?.length > 0 && (
-        <img src={post.imageUrl} alt="post" loading="lazy"
-          style={{ width:'100%', aspectRatio:'16/9', objectFit:'cover',
-            marginTop:8, borderRadius:10, display:'block' }} />
-      )}
+
+{/* Image with tap-to-expand */}
+{post.imageUrl && (
+  <>
+    <div className="pc-image-wrap" onClick={() => setImgOpen(true)}>
+      <div className="pc-image-bg"
+        style={{ backgroundImage: `url(${post.imageUrl})` }} />
+      <img src={post.imageUrl} alt="post" className="pc-image-main" loading="lazy" />
+      <div className="img-tap-hint">🔍 Tap to expand</div>
+    </div>
+
+    {/* Portal — renders directly on body, outside all cards */}
+    {imgOpen && createPortal(
+      <div
+        className="img-fs-overlay"
+        onClick={() => setImgOpen(false)}
+      >
+        <button
+          className="img-fs-close"
+          onClick={e => { e.stopPropagation(); setImgOpen(false) }}
+        >
+          ✕
+        </button>
+        <img
+          src={post.imageUrl}
+          alt="post"
+          className="img-fs-main"
+          onClick={e => e.stopPropagation()}
+        />
+      </div>,
+      document.body
+    )}
+  </>
+)}
+
+
 
       {/* Text */}
       <p className="mp-text" style={{ padding:'8px 12px 0', whiteSpace:'pre-wrap' }}>

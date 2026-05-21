@@ -276,14 +276,42 @@ function PostCard({ post: initialPost, currentUserId, liked, saved, onLike, onSa
       <div className="pc-body">
         <p className="pc-text" style={{ whiteSpace:'pre-wrap' }}>{post.text}</p>
 
-        {post.imageUrl && (
-          <div className="pc-image-wrap">
-            <div className="pc-image-bg"
-              style={{ backgroundImage: `url(${post.imageUrl})` }} />
-            <img src={`${post.imageUrl}?f_auto&q_auto&w=900`} alt="post"
-              className="pc-image-main" />
-          </div>
-        )}
+
+{/* Image with tap-to-expand */}
+{post.imageUrl && (
+  <>
+    <div className="pc-image-wrap" onClick={() => setImgOpen(true)}>
+      <div className="pc-image-bg"
+        style={{ backgroundImage: `url(${post.imageUrl})` }} />
+      <img src={post.imageUrl} alt="post" className="pc-image-main" loading="lazy" />
+      <div className="img-tap-hint">🔍 Tap to expand</div>
+    </div>
+
+    {/* Portal — renders directly on body, outside all cards */}
+    {imgOpen && createPortal(
+      <div
+        className="img-fs-overlay"
+        onClick={() => setImgOpen(false)}
+      >
+        <button
+          className="img-fs-close"
+          onClick={e => { e.stopPropagation(); setImgOpen(false) }}
+        >
+          ✕
+        </button>
+        <img
+          src={post.imageUrl}
+          alt="post"
+          className="img-fs-main"
+          onClick={e => e.stopPropagation()}
+        />
+      </div>,
+      document.body
+    )}
+  </>
+)}
+
+
 
 {post.pdfUrl?.length > 0 && (
   <div style={{
