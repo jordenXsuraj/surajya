@@ -188,7 +188,7 @@ useEffect(() => {
 
         xhr.onerror   = () => reject(new Error('Network error. Check your connection.'))
         xhr.ontimeout = () => reject(new Error('Upload timed out. Try again.'))
-        xhr.timeout   = 30000
+        xhr.timeout   = 60000
 
         xhr.open('POST', `${base}/posts/upload-image`)
         xhr.setRequestHeader('Authorization', `Bearer ${token}`)
