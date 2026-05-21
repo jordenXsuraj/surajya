@@ -118,6 +118,7 @@ export default function ConnectionFeed() {
 
   const [posts,   setPosts]   = useState([])
   const [loading, setLoading] = useState(true)
+   const [imgOpen, setImgOpen] = useState(false)
   const [savedIds, setSaved]  = useState([])
   const [search,  setSearch]  = useState('')
 
@@ -232,6 +233,7 @@ function PostCard({ post: initialPost, currentUserId, liked, saved, onLike, onSa
   const [post,         setPost]       = useState(initialPost)
   const [replies,      setReplies]    = useState(initialPost.replies || [])
   const [showReplies,  setShowR]      = useState(false)
+   const [imgOpen, setImgOpen] = useState(false)
   const [showReplyBox, setReplyBox]   = useState(false)
 
   const t     = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }

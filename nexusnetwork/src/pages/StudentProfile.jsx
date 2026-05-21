@@ -308,7 +308,7 @@ function StudentPostCard({ post, currentUserId }) {
   const [showBox,  setShowBox] = useState(false)
   const [rt,       setRt]      = useState('')
   const [sub,      setSub]     = useState(false)
-
+ const [imgOpen, setImgOpen] = useState(false)
   const TYPE_TAG_LOCAL = {
     placement:  { label:'💼 Placement',  cls:'tag-blue'   },
     qa:         { label:'❓ Q&A',         cls:'tag-purple' },
@@ -403,6 +403,7 @@ function LikeButton({ post, currentUserId }) {
       </div>
 
 
+
 {/* Image with tap-to-expand */}
 {post.imageUrl && (
   <>
@@ -436,7 +437,6 @@ function LikeButton({ post, currentUserId }) {
     )}
   </>
 )}
-
 
 
       {/* Text */}
@@ -608,6 +608,7 @@ export default function StudentProfile() {
   const [tab,       setTab]      = useState('posts')
   const [loading,   setLoading]  = useState(true)
   const [btnBusy,   setBtnBusy]  = useState(false)
+   const [imgOpen, setImgOpen] = useState(false)
   const [sheet,     setSheet]    = useState(null) // 'following' | 'followers' | null
 
 

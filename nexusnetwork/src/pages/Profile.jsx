@@ -453,6 +453,7 @@ function MiniPost({ post, canDelete, onDelete, currentUserId, canUnsave, onUnsav
   const [showR,    setShowR]   = useState(false)
   const [showBox,  setShowBox] = useState(false)
   const [rt,       setRt]      = useState('')
+   const [imgOpen, setImgOpen] = useState(false)
   const [sub,      setSub]     = useState(false)
   const t = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
 
