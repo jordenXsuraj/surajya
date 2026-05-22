@@ -187,7 +187,7 @@ const [reportBusy,  setReportBusy]  = useState(false)
   const reqSent  = authorId && mySentReqs.includes(authorId)
   const showConn = !isOwn && !post.isAnonymous && authorId && !isConn
 
-
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
 
 
@@ -323,7 +323,7 @@ async function handleReport(reason) {
 )}
 
 
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
 
 {post.pdfUrl?.length > 0 && (
   <div style={{
