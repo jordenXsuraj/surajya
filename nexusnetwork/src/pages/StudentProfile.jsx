@@ -303,6 +303,7 @@ function PeopleSheet({ title, people, onClose, onView }) {
 
 
 function StudentPostCard({ post, currentUserId }) {
+  const [expanded, setExpanded] = useState(false)
   const [replies,  setReplies] = useState(post.replies || [])
   const [showR,    setShowR]   = useState(false)
   const [showBox,  setShowBox] = useState(false)

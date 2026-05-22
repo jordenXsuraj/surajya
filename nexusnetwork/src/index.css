@@ -546,7 +546,7 @@ body {
 .pc-link {
   display: block;
   font-size: 0.8rem;
-  color: var(--accent);
+  color: var(--blue);
   text-decoration: none;
 
   word-break: break-word;
