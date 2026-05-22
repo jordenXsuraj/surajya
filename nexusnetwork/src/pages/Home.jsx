@@ -323,78 +323,102 @@ async function handleReport(reason) {
 )}
 
 
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
 {post.pdfUrl?.length > 0 && (
   <div style={{
-    display:'flex', alignItems:'center', gap:12,
+    display:'flex',
+    alignItems:'center',
+    gap:12,
     padding:'12px 14px',
     background:'var(--bg2)',
     border:'1.5px solid var(--br2)',
-    borderRadius:12,
+    borderRadius:14,
     margin:'10px 0',
+    boxShadow:'0 4px 14px rgba(0,0,0,0.25)'
   }}>
-    
-    <div style={{
-      width:42, height:42, borderRadius:10,
-      background:'rgba(239,68,68,.12)',
-      border:'1px solid rgba(239,68,68,.25)',
-      display:'flex', alignItems:'center',
-      justifyContent:'center', fontSize:'1.3rem', flexShrink:0
-    }}>📄</div>
 
+    {/* ICON */}
+    <div style={{
+      width:44,
+      height:44,
+      borderRadius:12,
+      background:'linear-gradient(135deg, rgba(239,68,68,.15), rgba(239,68,68,.05))',
+      border:'1px solid rgba(239,68,68,.25)',
+      display:'flex',
+      alignItems:'center',
+      justifyContent:'center',
+      fontSize:'1.4rem',
+      flexShrink:0
+    }}>
+      📄
+    </div>
+
+    {/* FILE INFO */}
     <div style={{ flex:1, minWidth:0 }}>
       <div style={{
-        fontSize:'.82rem', fontWeight:700, color:'var(--text)',
-        overflow:'hidden', textOverflow:'ellipsis',
-        whiteSpace:'nowrap', marginBottom:2
+        fontSize:'.85rem',
+        fontWeight:700,
+        color:'var(--text)',
+        overflow:'hidden',
+        textOverflow:'ellipsis',
+        whiteSpace:'nowrap'
       }}>
         {post.pdfName || 'Document.pdf'}
       </div>
 
-      <div style={{ fontSize:'.65rem', color:'var(--dim)' }}>
-        PDF{post.pdfSize > 0 ? ` · ${(post.pdfSize / 1024).toFixed(0)} KB` : ''}
+      <div style={{
+        fontSize:'.65rem',
+        color:'var(--dim)',
+        marginTop:2
+      }}>
+        PDF {post.pdfSize > 0 ? `· ${(post.pdfSize / 1024).toFixed(0)} KB` : ''}
       </div>
     </div>
 
+    {/* ACTION BUTTONS */}
     <div style={{ display:'flex', gap:6, flexShrink:0 }}>
 
       {/* VIEW */}
       <a
-        href={`https://docs.google.com/viewer?url=${encodeURIComponent(post.pdfUrl)}`}
+        href={`https://docs.google.com/viewer?url=${encodeURIComponent(post.pdfUrl)}&embedded=true`}
         target="_blank"
         rel="noreferrer"
         onClick={e => e.stopPropagation()}
         style={{
-          padding:'6px 12px', borderRadius:8,
-          background:'var(--bl)',
+          padding:'6px 12px',
+          borderRadius:8,
+          background:'rgba(59,130,246,.12)',
           border:'1px solid rgba(59,130,246,.25)',
-          color:'var(--blue)',
-          fontSize:'.72rem', fontWeight:700,
-          textDecoration:'none', whiteSpace:'nowrap',
+          color:'#3b82f6',
+          fontSize:'.72rem',
+          fontWeight:700,
+          textDecoration:'none',
+          whiteSpace:'nowrap'
         }}
       >
         👁 View
       </a>
 
-
-
-
-
-      {/* DOWNLOAD */}
+      {/* DOWNLOAD / OPEN */}
       <a
         href={post.pdfUrl}
         target="_blank"
         rel="noreferrer"
         onClick={e => e.stopPropagation()}
         style={{
-          padding:'6px 12px', borderRadius:8,
-          background:'var(--gl)',
+          padding:'6px 12px',
+          borderRadius:8,
+          background:'rgba(34,197,94,.12)',
           border:'1px solid rgba(34,197,94,.25)',
-          color:'var(--green)',
-          fontSize:'.72rem', fontWeight:700,
-          textDecoration:'none', whiteSpace:'nowrap',
+          color:'#22c55e',
+          fontSize:'.72rem',
+          fontWeight:700,
+          textDecoration:'none',
+          whiteSpace:'nowrap'
         }}
       >
-        ⬇ Save
+        {isMobile ? '📂 Open' : '⬇ Save'}
       </a>
 
     </div>
