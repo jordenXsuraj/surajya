@@ -449,6 +449,9 @@ function LikeBtn({ post, currentUser }) {
 
 
 function MiniPost({ post, canDelete, onDelete, currentUserId, canUnsave, onUnsave, currentUser }) {
+  // ADD this state inside PostCard alongside other states:
+const [expanded, setExpanded] = useState(false)
+const isLong = post.text?.length > 200  // posts longer than 200 chars get truncated
   const [replies,  setReplies] = useState(post.replies || [])
   const [showR,    setShowR]   = useState(false)
   const [showBox,  setShowBox] = useState(false)
@@ -541,7 +544,34 @@ function MiniPost({ post, canDelete, onDelete, currentUserId, canUnsave, onUnsav
 
 
 
-<p className="mp-text" style={{ padding:'9px 12px 0', whiteSpace:'pre-wrap' }}>{post.text}</p>
+<div>
+  <p className="pc-text" style={{
+    overflow: expanded ? 'visible' : 'hidden',
+    display: expanded ? 'block' : '-webkit-box',
+    WebkitLineClamp: expanded ? 'unset' : 4,
+    WebkitBoxOrient: 'vertical',
+    marginBottom: isLong ? 4 : 0,
+  }}>
+    {post.text}
+  </p>
+  {isLong && (
+    <button
+      onClick={e => { e.stopPropagation(); setExpanded(b => !b) }}
+      style={{
+        background: 'none',
+        border: 'none',
+        color: 'var(--accent)',
+        fontSize: '.78rem',
+        fontWeight: 700,
+        cursor: 'pointer',
+        padding: '2px 0',
+        fontFamily: 'Outfit, sans-serif',
+      }}
+    >
+      {expanded ? '▲ See less' : '▼ See more'}
+    </button>
+  )}
+</div>
 
 
 

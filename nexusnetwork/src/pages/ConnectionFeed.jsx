@@ -232,6 +232,8 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 // Extracted into component so each card owns its own
 // reply/show-replies state without polluting parent
 function PostCard({ post: initialPost, currentUserId, liked, saved, onLike, onSave, onNav }) {
+  const [expanded, setExpanded] = useState(false)
+const isLong = post.text?.length > 500  // posts longer than 200 chars get truncated
   const [post,         setPost]       = useState(initialPost)
   const [replies,      setReplies]    = useState(initialPost.replies || [])
   const [showReplies,  setShowR]      = useState(false)
@@ -279,7 +281,34 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
       {/* Body */}
       <div className="pc-body">
-        <p className="pc-text" style={{ whiteSpace:'pre-wrap' }}>{post.text}</p>
+        <div>
+  <p className="pc-text" style={{
+    overflow: expanded ? 'visible' : 'hidden',
+    display: expanded ? 'block' : '-webkit-box',
+    WebkitLineClamp: expanded ? 'unset' : 4,
+    WebkitBoxOrient: 'vertical',
+    marginBottom: isLong ? 4 : 0,
+  }}>
+    {post.text}
+  </p>
+  {isLong && (
+    <button
+      onClick={e => { e.stopPropagation(); setExpanded(b => !b) }}
+      style={{
+        background: 'none',
+        border: 'none',
+        color: 'var(--accent)',
+        fontSize: '.78rem',
+        fontWeight: 700,
+        cursor: 'pointer',
+        padding: '2px 0',
+        fontFamily: 'Outfit, sans-serif',
+      }}
+    >
+      {expanded ? '▲ See less' : '▼ See more'}
+    </button>
+  )}
+</div>
 
 
 {/* Image with tap-to-expand */}
