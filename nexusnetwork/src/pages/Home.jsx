@@ -359,7 +359,7 @@ async function handleReport(reason) {
 
       {/* VIEW */}
       <a
-        href={`https://docs.google.com/viewer?url=${encodeURIComponent(post.pdfUrl)}&embedded=true`}
+        href={`https://docs.google.com/viewer?url=${encodeURIComponent(post.pdfUrl)}`}
         target="_blank"
         rel="noreferrer"
         onClick={e => e.stopPropagation()}
@@ -374,6 +374,10 @@ async function handleReport(reason) {
       >
         👁 View
       </a>
+
+
+
+
 
       {/* DOWNLOAD */}
       <a

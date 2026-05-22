@@ -39,12 +39,11 @@ const pdfStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
     folder:        'meetnet_pdfs',
-    resource_type: 'image',      // ← change from 'raw' to 'image'
-    format:        'pdf',         // ← explicitly set format as pdf
-    public_id:     `pdf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    resource_type: 'raw',
+    public_id:     `pdf_${Date.now()}`,
+    // NO .pdf extension — let Cloudinary handle it
   }),
 })
-
 const pdfUpload = multer({
   storage: pdfStorage,
   limits:  { fileSize: 12 * 1024 * 1024 },
