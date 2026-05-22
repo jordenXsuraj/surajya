@@ -1,4 +1,4 @@
-
+const { cloudinary } = require('../config/cloudinary')
 
 const express      = require('express')
 const router       = express.Router()
@@ -174,17 +174,52 @@ router.post('/upload-image', protect, upload.single('image'), (req, res) => {
 
 
 // ── PDF Upload ─────────────────────────────────
-router.post('/upload-pdf', protect, pdfUpload.single('pdf'), (req, res) => {
+const multer  = require('multer')
+const path    = require('path')
+const fs      = require('fs')
+
+// Store in memory and upload directly to Cloudinary using upload_stream
+router.post('/upload-pdf', protect, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'No PDF received' })
-    return res.json({
-      url:  req.file.path,
-      name: req.file.originalname,
-      size: req.file.size,
+    const multerMemory = multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 12 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/pdf') cb(null, true)
+        else cb(new Error('Only PDF files allowed'), false)
+      }
+    }).single('pdf')
+
+    multerMemory(req, res, async (err) => {
+      if (err) return res.status(400).json({ message: err.message })
+      if (!req.file) return res.status(400).json({ message: 'No PDF received' })
+
+      // Upload buffer directly to Cloudinary
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder:        'meetnet_pdfs',
+            resource_type: 'raw',
+            public_id:     `pdf_${Date.now()}.pdf`,
+            format:        'pdf',
+          },
+          (error, result) => {
+            if (error) reject(error)
+            else resolve(result)
+          }
+        )
+        uploadStream.end(req.file.buffer)
+      })
+
+      return res.json({
+        url:  result.secure_url,
+        name: req.file.originalname,
+        size: req.file.size,
+      })
     })
   } catch (err) {
-    console.error('PDF upload error:', err.message)
-    return res.status(500).json({ message: err.message })
+    console.error('PDF upload error:', err)
+    res.status(500).json({ message: err.message })
   }
 })
 
