@@ -543,6 +543,15 @@ body {
 .pc-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
 .post-tag { padding: 3px 9px; background: var(--bg3); border: 1px solid var(--br2); border-radius: 7px; font-size: .68rem; font-weight: 600; color: var(--muted); }
 .pc-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 9px; padding: 6px 12px; background: var(--bg3); border: 1px solid var(--br2); border-radius: 9px; font-size: .7rem; font-weight: 600; color: var(--blue); cursor: pointer; transition: all .2s; }
+.pc-link {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--accent);
+  text-decoration: none;
+
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 .pc-link:hover { border-color: var(--blue); background: var(--bl); }
 .pc-actions { display: flex; gap: 6px; padding: 10px 14px 13px; align-items: center; }
 .act-btn {

@@ -386,6 +386,17 @@ function LikeButton({ post, currentUserId }) {
     } catch { alert('Could not delete') }
   }
 
+
+function splitText(text, limit = 70) {
+  const words = text.split(' ')
+  return {
+    short: words.slice(0, limit).join(' '),
+    full: text,
+    isLong: words.length > limit
+  }
+}
+
+
   return (
     <div className="mini-post">
       {/* Header */}
@@ -440,10 +451,25 @@ function LikeButton({ post, currentUserId }) {
 )}
 
 
-      {/* Text */}
-      <p className="mp-text" style={{ padding:'8px 12px 0', whiteSpace:'pre-wrap' }}>
-        {post.text}
-      </p>
+const [expanded, setExpanded] = useState(false)
+const { short, full, isLong } = splitText(post.text, 70)
+
+<p className="mp-text">
+  {expanded || !isLong ? full : short + '... '}
+
+  {isLong && (
+    <span
+      onClick={() => setExpanded(e => !e)}
+      style={{
+        color: 'var(--accent)',
+        fontWeight: 600,
+        cursor: 'pointer'
+      }}
+    >
+      {expanded ? 'See less' : 'See more'}
+    </span>
+  )}
+</p>
 
 
 
