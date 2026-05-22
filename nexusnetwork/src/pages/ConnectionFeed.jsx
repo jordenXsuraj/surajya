@@ -232,14 +232,14 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 // Extracted into component so each card owns its own
 // reply/show-replies state without polluting parent
 function PostCard({ post: initialPost, currentUserId, liked, saved, onLike, onSave, onNav }) {
-  const [expanded, setExpanded] = useState(false)
-const isLong = post.text?.length > 500  // posts longer than 200 chars get truncated
+
   const [post,         setPost]       = useState(initialPost)
   const [replies,      setReplies]    = useState(initialPost.replies || [])
   const [showReplies,  setShowR]      = useState(false)
    const [imgOpen, setImgOpen] = useState(false)
   const [showReplyBox, setReplyBox]   = useState(false)
-
+  const [expanded, setExpanded] = useState(false)
+const isLong = post.text?.length > 500  // posts longer than 200 chars get truncated
   const t     = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
   const isOwn = post.postedBy?._id?.toString() === currentUserId
 

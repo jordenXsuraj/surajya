@@ -305,7 +305,7 @@ function PeopleSheet({ title, people, onClose, onView }) {
 function StudentPostCard({ post, currentUserId }) {
   // ADD this state inside PostCard alongside other states:
 const [expanded, setExpanded] = useState(false)
-const isLong = post.text?.length > 200  // posts longer than 200 chars get truncated
+const isLong = post.text?.length > 500  // posts longer than 500 chars get truncated
   const [replies,  setReplies] = useState(post.replies || [])
   const [showR,    setShowR]   = useState(false)
   const [showBox,  setShowBox] = useState(false)
