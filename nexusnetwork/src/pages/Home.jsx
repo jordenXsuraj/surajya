@@ -399,10 +399,10 @@ async function handleReport(reason) {
         style={{
           padding:'6px 12px',
           borderRadius:8,
-          background:'rgba(59,130,246,.12)',
-          border:'1px solid rgba(59,130,246,.25)',
+             background:'rgba(249,115,22,.06)',        // ← orange tint background
+    border:'1.5px solid rgba(249,115,22,.4)', // ← orange border
           color:'#3b82f6',
-          fontSize:'.72rem',
+          fontSize:'1rem',
           fontWeight:700,
           textDecoration:'none',
           whiteSpace:'nowrap'
@@ -420,10 +420,10 @@ async function handleReport(reason) {
           style={{
             padding:'6px 12px',
             borderRadius:8,
-            background:'rgba(34,197,94,.12)',
-            border:'1px solid rgba(34,197,94,.25)',
+                background:'rgba(249,115,22,.06)',        // ← orange tint background
+    border:'1.5px solid rgba(249,115,22,.4)', // ← orange border
             color:'#22c55e',
-            fontSize:'.72rem',
+            fontSize:'1rem',
             fontWeight:700,
             textDecoration:'none',
             whiteSpace:'nowrap'
