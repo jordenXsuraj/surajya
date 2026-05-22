@@ -324,7 +324,6 @@ async function handleReport(reason) {
 
 
 
-
 {post.pdfUrl?.length > 0 && (
   <div style={{
     display:'flex',
@@ -374,12 +373,19 @@ async function handleReport(reason) {
       }}>
         PDF {post.pdfSize > 0 ? `· ${(post.pdfSize / 1024).toFixed(0)} KB` : ''}
       </div>
+
+      {/* 🔥 SMALL MESSAGE */}
+      <div style={{
+        fontSize:'.6rem',
+        color:'var(--dim)',
+        marginTop:3
+      }}>
+        Download available on laptop 💻
+      </div>
     </div>
 
-    {/* ACTION BUTTONS */}
-    <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-
-      {/* VIEW */}
+    {/* ONLY VIEW BUTTON */}
+    <div style={{ flexShrink:0 }}>
       <a
         href={`https://docs.google.com/viewer?url=${encodeURIComponent(post.pdfUrl)}&embedded=true`}
         target="_blank"
@@ -399,29 +405,8 @@ async function handleReport(reason) {
       >
         👁 View
       </a>
-
-      {/* DOWNLOAD / OPEN */}
-      <a
-        href={post.pdfUrl}
-        target="_blank"
-        rel="noreferrer"
-        onClick={e => e.stopPropagation()}
-        style={{
-          padding:'6px 12px',
-          borderRadius:8,
-          background:'rgba(34,197,94,.12)',
-          border:'1px solid rgba(34,197,94,.25)',
-          color:'#22c55e',
-          fontSize:'.72rem',
-          fontWeight:700,
-          textDecoration:'none',
-          whiteSpace:'nowrap'
-        }}
-      >
-        {isMobile ? '📂 Open' : '⬇ Save'}
-      </a>
-
     </div>
+
   </div>
 )}
 
