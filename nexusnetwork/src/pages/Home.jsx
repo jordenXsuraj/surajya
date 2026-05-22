@@ -292,7 +292,7 @@ async function handleReport(reason) {
   <p className="pc-text" style={{
     overflow: expanded ? 'visible' : 'hidden',
     display: expanded ? 'block' : '-webkit-box',
-    WebkitLineClamp: expanded ? 'unset' : 4,
+    WebkitLineClamp: expanded ? 'unset' : 6,
     WebkitBoxOrient: 'vertical',
     marginBottom: isLong ? 4 : 0,
   }}>
