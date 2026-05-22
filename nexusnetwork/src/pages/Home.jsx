@@ -324,7 +324,7 @@ async function handleReport(reason) {
 
 
 
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
 
 {post.pdfUrl?.length > 0 && (
   <div style={{
