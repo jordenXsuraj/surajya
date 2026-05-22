@@ -303,7 +303,9 @@ function PeopleSheet({ title, people, onClose, onView }) {
 
 
 function StudentPostCard({ post, currentUserId }) {
-  const [expanded, setExpanded] = useState(false)
+ const [expanded, setExpanded] = useState(false)
+
+const { short, full, isLong } = splitText(post.text, 70)
   const [replies,  setReplies] = useState(post.replies || [])
   const [showR,    setShowR]   = useState(false)
   const [showBox,  setShowBox] = useState(false)
@@ -452,10 +454,8 @@ function splitText(text, limit = 70) {
 )}
 
 
-const [expanded, setExpanded] = useState(false)
-const { short, full, isLong } = splitText(post.text, 70)
 
-<p className="mp-text">
+<p className="mp-text" style={{ whiteSpace: 'pre-wrap' }}>
   {expanded || !isLong ? full : short + '... '}
 
   {isLong && (
