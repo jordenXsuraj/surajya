@@ -39,10 +39,9 @@ const pdfStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
     folder:        'meetnet_pdfs',
-    resource_type: 'raw',          // must be raw for PDFs
+    resource_type: 'image',      // ← change from 'raw' to 'image'
+    format:        'pdf',         // ← explicitly set format as pdf
     public_id:     `pdf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    // NO allowed_formats — causes issues with some accounts
-    // NO flags — apply fl_inline in frontend URL instead
   }),
 })
 
