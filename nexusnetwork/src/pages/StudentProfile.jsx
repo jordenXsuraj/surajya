@@ -308,7 +308,7 @@ function StudentPostCard({ post, currentUserId }) {
   const [showBox,  setShowBox] = useState(false)
   const [rt,       setRt]      = useState('')
   const [sub,      setSub]     = useState(false)
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+ 
  const [imgOpen, setImgOpen] = useState(false)
   const TYPE_TAG_LOCAL = {
     placement:  { label:'💼 Placement',  cls:'tag-blue'   },
@@ -446,7 +446,7 @@ function LikeButton({ post, currentUserId }) {
       </p>
 
 
-
+ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
 {post.pdfUrl?.length > 0 && (
   <div style={{

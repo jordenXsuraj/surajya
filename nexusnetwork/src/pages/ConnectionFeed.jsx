@@ -236,7 +236,7 @@ function PostCard({ post: initialPost, currentUserId, liked, saved, onLike, onSa
   const [showReplies,  setShowR]      = useState(false)
    const [imgOpen, setImgOpen] = useState(false)
   const [showReplyBox, setReplyBox]   = useState(false)
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
   const t     = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
   const isOwn = post.postedBy?._id?.toString() === currentUserId
 
@@ -316,7 +316,7 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
 
 
-
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
 {post.pdfUrl?.length > 0 && (
   <div style={{

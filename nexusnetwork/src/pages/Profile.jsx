@@ -455,8 +455,9 @@ function MiniPost({ post, canDelete, onDelete, currentUserId, canUnsave, onUnsav
   const [rt,       setRt]      = useState('')
    const [imgOpen, setImgOpen] = useState(false)
   const [sub,      setSub]     = useState(false)
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
   const t = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
+ 
 
   function ago(d) {
     const h = Math.floor((Date.now() - new Date(d)) / 3600000)
@@ -540,10 +541,11 @@ function MiniPost({ post, canDelete, onDelete, currentUserId, canUnsave, onUnsav
 
 
 
-      <p className="mp-text" style={{ padding:'9px 12px 0', whiteSpace:'pre-wrap' }}>{post.text}</p>
+<p className="mp-text" style={{ padding:'9px 12px 0', whiteSpace:'pre-wrap' }}>{post.text}</p>
 
 
-
+ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+ 
 {post.pdfUrl?.length > 0 && (
   <div style={{
     display:'flex',
