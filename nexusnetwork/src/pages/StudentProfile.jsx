@@ -303,9 +303,6 @@ function PeopleSheet({ title, people, onClose, onView }) {
 
 
 function StudentPostCard({ post, currentUserId }) {
- const [expanded, setExpanded] = useState(false)
-
-const { short, full, isLong } = splitText(post.text, 70)
   const [replies,  setReplies] = useState(post.replies || [])
   const [showR,    setShowR]   = useState(false)
   const [showBox,  setShowBox] = useState(false)
@@ -322,16 +319,6 @@ const { short, full, isLong } = splitText(post.text, 70)
     social:     { label:'🔥 Social',     cls:'tag-orange' },
     confession: { label:'🤫 Confession', cls:'tag-red'    },
   }
-  
-function splitText(text, limit = 70) {
-  const words = text.split(' ')
-  return {
-    short: words.slice(0, limit).join(' '),
-    full: text,
-    isLong: words.length > limit
-  }
-}
-
   const t = TYPE_TAG_LOCAL[post.type] || { label: post.type, cls:'tag-dim' }
 
   const hasExpiry = !!post.expiresAt
@@ -399,8 +386,6 @@ function LikeButton({ post, currentUserId }) {
     } catch { alert('Could not delete') }
   }
 
-
-
   return (
     <div className="mini-post">
       {/* Header */}
@@ -455,23 +440,10 @@ function LikeButton({ post, currentUserId }) {
 )}
 
 
-
-<p className="mp-text" style={{ whiteSpace: 'pre-wrap' }}>
-  {expanded || !isLong ? full : short + '... '}
-
-  {isLong && (
-    <span
-      onClick={() => setExpanded(e => !e)}
-      style={{
-        color: 'var(--accent)',
-        fontWeight: 600,
-        cursor: 'pointer'
-      }}
-    >
-      {expanded ? 'See less' : 'See more'}
-    </span>
-  )}
-</p>
+      {/* Text */}
+      <p className="mp-text" style={{ padding:'8px 12px 0', whiteSpace:'pre-wrap' }}>
+        {post.text}
+      </p>
 
 
 
