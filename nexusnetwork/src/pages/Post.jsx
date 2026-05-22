@@ -232,7 +232,7 @@ useEffect(() => {
   const file = e.target.files[0]
   if (!file) return
   if (file.type !== 'application/pdf') { show('⚠️ Only PDF files allowed'); return }
-  if (file.size > 15 * 1024 * 1024)   { show('⚠️ PDF must be under 15MB'); return }
+  if (file.size > 15 * 1024 * 1024)   {  show('⚠️ Large file, may take time to upload'); return }
 
   setPdfUploading(true)
   setPdfProgress(0)
