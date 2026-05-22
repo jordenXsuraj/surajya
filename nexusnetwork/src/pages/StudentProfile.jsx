@@ -322,6 +322,16 @@ const { short, full, isLong } = splitText(post.text, 70)
     social:     { label:'🔥 Social',     cls:'tag-orange' },
     confession: { label:'🤫 Confession', cls:'tag-red'    },
   }
+  
+function splitText(text, limit = 70) {
+  const words = text.split(' ')
+  return {
+    short: words.slice(0, limit).join(' '),
+    full: text,
+    isLong: words.length > limit
+  }
+}
+
   const t = TYPE_TAG_LOCAL[post.type] || { label: post.type, cls:'tag-dim' }
 
   const hasExpiry = !!post.expiresAt
@@ -389,15 +399,6 @@ function LikeButton({ post, currentUserId }) {
     } catch { alert('Could not delete') }
   }
 
-
-function splitText(text, limit = 70) {
-  const words = text.split(' ')
-  return {
-    short: words.slice(0, limit).join(' '),
-    full: text,
-    isLong: words.length > limit
-  }
-}
 
 
   return (
