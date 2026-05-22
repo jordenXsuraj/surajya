@@ -331,8 +331,8 @@ async function handleReport(reason) {
     alignItems:'center',
     gap:12,
     padding:'12px 14px',
-    background:'var(--bg2)',
-    border:'1.5px solid var(--br2)',
+ background:'rgba(249,115,22,.06)',        // ← orange tint background
+    border:'1.5px solid rgba(249,115,22,.4)', // ← orange border
     borderRadius:14,
     margin:'10px 0',
     boxShadow:'0 4px 14px rgba(0,0,0,0.25)'
@@ -343,8 +343,8 @@ async function handleReport(reason) {
       width:44,
       height:44,
       borderRadius:12,
-      background:'linear-gradient(135deg, rgba(239,68,68,.15), rgba(239,68,68,.05))',
-      border:'1px solid rgba(239,68,68,.25)',
+  background:'rgba(249,115,22,.15)',       // ← orange
+      border:'1px solid rgba(249,115,22,.3)',  // ← orange
       display:'flex',
       alignItems:'center',
       justifyContent:'center',
