@@ -168,6 +168,9 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
 
 function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myConnections, mySentReqs, onConnect }) {
   const nav = useNavigate()
+  // ADD this state inside PostCard alongside other states:
+const [expanded, setExpanded] = useState(false)
+const isLong = post.text?.length > 200  // posts longer than 200 chars get truncated
   const [showReplies,  setShowR]    = useState(false)
   const [showReplyBox, setReplyBox] = useState(false)
   const [replies,      setReplies]  = useState(post.replies || [])
@@ -285,7 +288,34 @@ async function handleReport(reason) {
 
       {/* ── Body — text, image, tags, link ── */}
       <div className="pc-body">
-        <p className="pc-text">{post.text}</p>
+        <div>
+  <p className="pc-text" style={{
+    overflow: expanded ? 'visible' : 'hidden',
+    display: expanded ? 'block' : '-webkit-box',
+    WebkitLineClamp: expanded ? 'unset' : 4,
+    WebkitBoxOrient: 'vertical',
+    marginBottom: isLong ? 4 : 0,
+  }}>
+    {post.text}
+  </p>
+  {isLong && (
+    <button
+      onClick={e => { e.stopPropagation(); setExpanded(b => !b) }}
+      style={{
+        background: 'none',
+        border: 'none',
+        color: 'var(--accent)',
+        fontSize: '.78rem',
+        fontWeight: 700,
+        cursor: 'pointer',
+        padding: '2px 0',
+        fontFamily: 'Outfit, sans-serif',
+      }}
+    >
+      {expanded ? '▲ See less' : '▼ See more'}
+    </button>
+  )}
+</div>
 
 
 {/* Image with tap-to-expand */}
