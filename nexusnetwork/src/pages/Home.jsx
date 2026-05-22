@@ -331,8 +331,8 @@ async function handleReport(reason) {
     alignItems:'center',
     gap:12,
     padding:'12px 14px',
- background:'rgba(249,115,22,.06)',        // ← orange tint background
-    border:'1.5px solid rgba(249,115,22,.4)', // ← orange border
+    background:'var(--bg2)',
+    border:'1.5px solid rgba(199, 107, 15, 0.4)',
     borderRadius:14,
     margin:'10px 0',
     boxShadow:'0 4px 14px rgba(0,0,0,0.25)'
@@ -343,8 +343,8 @@ async function handleReport(reason) {
       width:44,
       height:44,
       borderRadius:12,
-  background:'rgba(249,115,22,.15)',       // ← orange
-      border:'1px solid rgba(249,115,22,.3)',  // ← orange
+      background:'linear-gradient(135deg, rgba(239,68,68,.15), rgba(239,68,68,.05))',
+      border:'1px solid rgba(249,115,22,.3)',
       display:'flex',
       alignItems:'center',
       justifyContent:'center',
@@ -399,10 +399,10 @@ async function handleReport(reason) {
         style={{
           padding:'6px 12px',
           borderRadius:8,
-             background:'rgba(249,115,22,.06)',        // ← orange tint background
-    border:'1.5px solid rgba(249,115,22,.4)', // ← orange border
+          background:'rgba(59,130,246,.12)',
+          border:'1px solid rgba(249,115,22,.3)',
           color:'#3b82f6',
-          fontSize:'1rem',
+          fontSize:'.72rem',
           fontWeight:700,
           textDecoration:'none',
           whiteSpace:'nowrap'
@@ -420,10 +420,10 @@ async function handleReport(reason) {
           style={{
             padding:'6px 12px',
             borderRadius:8,
-                background:'rgba(249,115,22,.06)',        // ← orange tint background
-    border:'1.5px solid rgba(249,115,22,.4)', // ← orange border
+            background:'rgba(34,197,94,.12)',
+            border:'1px solid rgba(249,115,22,.3)',
             color:'#22c55e',
-            fontSize:'1rem',
+            fontSize:'.72rem',
             fontWeight:700,
             textDecoration:'none',
             whiteSpace:'nowrap'
