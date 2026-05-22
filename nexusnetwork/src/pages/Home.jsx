@@ -170,7 +170,7 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
   const nav = useNavigate()
   // ADD this state inside PostCard alongside other states:
 const [expanded, setExpanded] = useState(false)
-const isLong = post.text?.length > 500  // posts longer than 200 chars get truncated
+const isLong = post.text?.length > 700  // posts longer than 200 chars get truncated
   const [showReplies,  setShowR]    = useState(false)
   const [showReplyBox, setReplyBox] = useState(false)
   const [replies,      setReplies]  = useState(post.replies || [])
@@ -304,7 +304,7 @@ async function handleReport(reason) {
       style={{
         background: 'none',
         border: 'none',
-        color: 'var(--blue)',
+        color: 'var(--accent)',
         fontSize: '.78rem',
         fontWeight: 700,
         cursor: 'pointer',
