@@ -123,6 +123,7 @@ export default function ConnectionFeed() {
   const [savedIds, setSaved]  = useState([])
   const [search,  setSearch]  = useState('')
 
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
   useEffect(() => {
     const token = localStorage.getItem('nx_token')
     const base = import.meta.env.VITE_API_URL 
@@ -240,6 +241,7 @@ function PostCard({ post: initialPost, currentUserId, liked, saved, onLike, onSa
   const t     = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
   const isOwn = post.postedBy?._id?.toString() === currentUserId
 
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
   function goToProfile() {
     if (!post.isAnonymous && post.postedBy?._id && !isOwn) {
       onNav(`/profile/${post.postedBy._id}`)
@@ -316,7 +318,6 @@ function PostCard({ post: initialPost, currentUserId, liked, saved, onLike, onSa
 
 
 
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
 {post.pdfUrl?.length > 0 && (
   <div style={{

@@ -297,7 +297,7 @@ function MediaTab({ mediaItems, isOwn, onAdd, onRemove }) {
   const [newUrl,    setNewUrl]   = useState('')
   const [urlError,  setUrlError] = useState('')
   const [showInput, setShowInput]= useState(false)
-
+ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
   const detectedType = detectMediaType(newUrl)
   const isValid = detectedType &&
   (detectedType === 'youtube' ? !!getYouTubeId(newUrl) : isInstagramProfile(newUrl))
@@ -455,7 +455,7 @@ function MiniPost({ post, canDelete, onDelete, currentUserId, canUnsave, onUnsav
   const [rt,       setRt]      = useState('')
    const [imgOpen, setImgOpen] = useState(false)
   const [sub,      setSub]     = useState(false)
-
+ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
   const t = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
  
 
@@ -544,8 +544,8 @@ function MiniPost({ post, canDelete, onDelete, currentUserId, canUnsave, onUnsav
 <p className="mp-text" style={{ padding:'9px 12px 0', whiteSpace:'pre-wrap' }}>{post.text}</p>
 
 
- const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
- 
+
+
 {post.pdfUrl?.length > 0 && (
   <div style={{
     display:'flex',
