@@ -448,7 +448,7 @@ function LikeButton({ post, currentUserId }) {
   <p className="pc-text" style={{
     overflow: expanded ? 'visible' : 'hidden',
     display: expanded ? 'block' : '-webkit-box',
-    WebkitLineClamp: expanded ? 'unset' : 6,
+    WebkitLineClamp: expanded ? 'unset' : 7,
     WebkitBoxOrient: 'vertical',
     marginBottom: isLong ? 4 : 0,
   }}>
