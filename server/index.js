@@ -83,8 +83,8 @@ const authLimit = rateLimit({
 })
 
 // ── Body parsers ──────────────────────────────────
-app.use(express.json({ limit: '15mb' }))
-app.use(express.urlencoded({ extended: true, limit: '15mb' }))
+app.use(express.json({ limit: '20mb' }))
+app.use(express.urlencoded({ extended: true, limit: '20mb' }))
 
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 app.use(xss())

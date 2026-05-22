@@ -520,7 +520,7 @@ function removePdf() {
 {/* ── PDF Upload ───────────────────────────── */}
 <div style={{ marginBottom:18 }}>
   <label className="field-label">
-    PDF <span className="field-optional">— optional, max 10MB</span>
+    PDF <span className="field-optional">— optional, max 15MB</span>
   </label>
 
   <input
@@ -541,7 +541,7 @@ function removePdf() {
       <div className="iuz-icon">📄</div>
       <div>
         <div className="iuz-title">Tap to add a PDF</div>
-        <div className="iuz-sub">Notes, syllabus, question paper — max 10MB</div>
+        <div className="iuz-sub">Notes, syllabus, question paper — max 15MB</div>
       </div>
       <div className="iuz-badge">Optional</div>
     </div>
