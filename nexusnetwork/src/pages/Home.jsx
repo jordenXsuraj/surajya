@@ -324,6 +324,8 @@ async function handleReport(reason) {
 
 
 
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
 {post.pdfUrl?.length > 0 && (
   <div style={{
     display:'flex',
@@ -374,18 +376,22 @@ async function handleReport(reason) {
         PDF {post.pdfSize > 0 ? `· ${(post.pdfSize / 1024).toFixed(0)} KB` : ''}
       </div>
 
-      {/* 🔥 SMALL MESSAGE */}
-      <div style={{
-        fontSize:'.6rem',
-        color:'var(--dim)',
-        marginTop:3
-      }}>
-        Download available on laptop 💻
-      </div>
+      {/* 🔥 Message only for mobile */}
+      {isMobile && (
+        <div style={{
+          fontSize:'.6rem',
+          color:'var(--dim)',
+          marginTop:3
+        }}>
+          Download available on laptop 💻
+        </div>
+      )}
     </div>
 
-    {/* ONLY VIEW BUTTON */}
-    <div style={{ flexShrink:0 }}>
+    {/* ACTION BUTTONS */}
+    <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+
+      {/* VIEW */}
       <a
         href={`https://docs.google.com/viewer?url=${encodeURIComponent(post.pdfUrl)}&embedded=true`}
         target="_blank"
@@ -405,6 +411,29 @@ async function handleReport(reason) {
       >
         👁 View
       </a>
+
+      {/* 🔥 DOWNLOAD ONLY ON LAPTOP */}
+      {!isMobile && (
+        <a
+          href={post.pdfUrl}
+          download={post.pdfName || 'document.pdf'}
+          onClick={e => e.stopPropagation()}
+          style={{
+            padding:'6px 12px',
+            borderRadius:8,
+            background:'rgba(34,197,94,.12)',
+            border:'1px solid rgba(34,197,94,.25)',
+            color:'#22c55e',
+            fontSize:'.72rem',
+            fontWeight:700,
+            textDecoration:'none',
+            whiteSpace:'nowrap'
+          }}
+        >
+          ⬇ Download
+        </a>
+      )}
+
     </div>
 
   </div>
