@@ -20,7 +20,8 @@ const NotificationSchema = new mongoose.Schema({
       'connection_accepted',
       'post_replied',
       'post_liked',
-      'new_post'
+      'new_post',
+       'interested' 
     ],
     required: true
   },

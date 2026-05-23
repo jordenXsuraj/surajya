@@ -299,7 +299,33 @@ function PeopleSheet({ title, people, onClose, onView }) {
   )
 }
 
+function LikeButton({ post, currentUserId }) {
+  const myId = currentUserId?.toString() || ''
+  const [liked,     setLiked]     = useState(
+    (post.likes || []).map(l => l?.toString()).includes(myId)
+  )
+  const [likeCount, setLikeCount] = useState(post.likes?.length || 0)
 
+  async function handleLike() {
+    setLiked(p => !p)
+    setLikeCount(p => liked ? p - 1 : p + 1)
+    try {
+      await likePost(post._id)
+    } catch {
+      setLiked(p => !p)
+      setLikeCount(p => liked ? p + 1 : p - 1)
+    }
+  }
+
+  return (
+    <button
+      className={`mp-like-btn ${liked ? 'on' : ''}`}
+      onClick={e => { e.stopPropagation(); handleLike() }}
+    >
+      {liked ? '❤️' : '🤍'} {likeCount}
+    </button>
+  )
+}
 
 
 function StudentPostCard({ post, currentUserId }) {
@@ -341,33 +367,7 @@ const isLong = post.text?.length > 500  // posts longer than 500 chars get trunc
   }
 
 
-function LikeButton({ post, currentUserId }) {
-  const myId = currentUserId?.toString() || ''
-  const [liked,     setLiked]     = useState(
-    (post.likes || []).map(l => l?.toString()).includes(myId)
-  )
-  const [likeCount, setLikeCount] = useState(post.likes?.length || 0)
 
-  async function handleLike() {
-    setLiked(p => !p)
-    setLikeCount(p => liked ? p - 1 : p + 1)
-    try {
-      await likePost(post._id)
-    } catch {
-      setLiked(p => !p)
-      setLikeCount(p => liked ? p + 1 : p - 1)
-    }
-  }
-
-  return (
-    <button
-      className={`mp-like-btn ${liked ? 'on' : ''}`}
-      onClick={e => { e.stopPropagation(); handleLike() }}
-    >
-      {liked ? '❤️' : '🤍'} {likeCount}
-    </button>
-  )
-}
 
 
 

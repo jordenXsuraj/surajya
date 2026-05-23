@@ -280,7 +280,8 @@ router.put('/:id/like', protect, async (req, res) => {
            recipient: post.postedBy,
             sender: req.user._id,
             type: 'post_liked',
-            post: post._id
+            post: post._id,
+              message:   `${req.user.name} liked your post`  
          }).catch(() => {})
     }
     }
