@@ -594,7 +594,7 @@ body {
   box-shadow: 0 6px 20px rgba(0,0,0,0.35);}
 .pt-placement.on { border-color: var(--blue);   background: var(--bl);   }
 .pt-qa.on         { border-color: var(--purple); background: var(--pl);   }
-.pt-partner.on    { border-color: var(--green);  background: var(--gl);   }
+.pt-study.on    { border-color: var(--green);  background: var(--gl);   }
 .pt-project.on    { border-color: var(--yellow); background: var(--yl);   }
 .pt-social.on        { border-color: var(--orange); background: var(--ol);   }
 .pt-confession.on { border-color: var(--accent); background: var(--al);   }
