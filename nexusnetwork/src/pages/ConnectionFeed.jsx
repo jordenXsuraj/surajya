@@ -74,9 +74,14 @@ function ReplyBox({ postId, postType, onAdded, onClose }) {
 
 // ── Reply item ────────────────────────────────────
 function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
+  const nav  = useNavigate()
   const [del, setDel] = useState(false)
+
   const isOwn = reply.postedBy?._id === currentUserId ||
                 reply.postedBy?._id?.toString() === currentUserId
+
+  const canVisit = reply.postedBy?._id &&
+                   reply.postedBy._id?.toString() !== currentUserId
 
   async function handleDelete() {
     setDel(true)
@@ -90,8 +95,15 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
 
   return (
     <div className="reply-item">
-      <div className="reply-av"
-        style={{ background:'rgba(59,130,246,.15)', color:'#3b82f6', overflow:'hidden' }}>
+      <div
+        className="reply-av"
+        style={{
+          background:'rgba(59,130,246,.15)', color:'#3b82f6',
+          overflow:'hidden',
+          cursor: canVisit ? 'pointer' : 'default'
+        }}
+        onClick={() => canVisit && nav(`/profile/${reply.postedBy._id}`)}
+      >
         {reply.postedBy?.avatar
           ? <img src={reply.postedBy.avatar} alt={name} loading="lazy"
               style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }}/>
@@ -100,10 +112,20 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
       </div>
       <div className="reply-content">
         <div className="reply-header">
-          <span className="reply-name">{name}</span>
-          <span className="reply-meta">{reply.postedBy?.year} yr · {timeAgo(reply.createdAt)}</span>
+          <span
+            className="reply-name"
+            style={{ cursor: canVisit ? 'pointer' : 'default' }}
+            onClick={() => canVisit && nav(`/profile/${reply.postedBy._id}`)}
+          >
+            {name}
+          </span>
+          <span className="reply-meta">
+            {reply.postedBy?.year} yr · {timeAgo(reply.createdAt)}
+          </span>
           {isOwn && (
-            <button className="reply-delete" onClick={handleDelete} disabled={del}>🗑️</button>
+            <button className="reply-delete" onClick={handleDelete} disabled={del}>
+              🗑️
+            </button>
           )}
         </div>
         <p className="reply-text">{reply.text}</p>
