@@ -275,15 +275,14 @@ router.put('/:id/like', protect, async (req, res) => {
       const typeKey = `typeEngagement.${post.type}`
       await User.findByIdAndUpdate(req.user._id, { $inc: { [typeKey]: 1 } })
 
-      if (!post.isAnonymous && post.postedBy?.toString() !== uid) {
-        Notification.create({
-          recipient: post.postedBy,
-          sender:    req.user._id,
-          type: 'post_replied',
-          post:      post._id,
-          message:   `${req.user.name} liked your post`
-        }).catch(() => {})
-      }
+    if (!post.isAnonymous && post.postedBy?.toString() !== uid) {
+           Notification.create({
+           recipient: post.postedBy,
+            sender: req.user._id,
+            type: 'post_liked',
+            post: post._id
+         }).catch(() => {})
+    }
     }
 
     const updated = await Post.findById(post._id).select('likes').lean()
@@ -357,13 +356,13 @@ router.post('/:id/replies', protect, async (req, res) => {
     const newReply = post.replies[post.replies.length - 1]
 
     if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) {
-      Notification.create({
-        recipient: post.postedBy,
-        sender:    req.user._id,
-        type:      'post_liked',
-        post:      post._id,
-        message:   `${req.user.name} replied to your post`
-      }).catch(() => {})
+           Notification.create({
+           recipient: post.postedBy,
+           sender: req.user._id,
+           type: 'post_replied',
+           post: post._id,
+         message: text.trim()
+        }).catch(() => {})
     }
 
     res.status(201).json(newReply)
