@@ -840,7 +840,7 @@ export default function Connect() {
           <h1 className="conn-title">
             {tab === 'find'        ? 'Find People 🔍' :
              tab === 'suggestions' ? 'Suggested 💡'   :
-             'Inbox 🔔'}
+             'Activity 🔔'}
           </h1>
 
           {/* 3 tabs */}
@@ -851,12 +851,19 @@ export default function Connect() {
             <button className={tab === 'suggestions' ? 'on' : ''} onClick={() => setTab('suggestions')}>
               Suggested
             </button>
-            <button className={tab === 'requests'    ? 'on' : ''} onClick={() => setTab('requests')}>
-              Inbox
-              {totalBadge > 0 && tab !== 'requests' && (
-                <span className="req-badge">{totalBadge}</span>
-              )}
-            </button>
+           <button className={tab === 'requests' ? 'on' : ''}onClick={() => {setTab('requests')
+    // Auto-switch to correct sub-tab based on what has unread items
+                   if (requests.length === 0 && unreadCount > 0) {
+                      setReqSubTab('notifications')
+                   } else {
+                      setReqSubTab('requests')
+                          }
+                    }}
+                  >
+                   Activity {totalBadge > 0 && tab !== 'requests' && (
+                  <span className="req-badge">{totalBadge}</span>
+             )}
+          </button>
           </div>
         </div>
 
