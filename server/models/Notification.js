@@ -35,7 +35,7 @@ const NotificationSchema = new mongoose.Schema({
   message: {
     type: String,
     required: true,
-    maxlength: 200
+    maxlength: 250
   },
 
   read: {

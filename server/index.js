@@ -66,10 +66,10 @@ app.options('*', cors(corsOptions))   // handle preflight for ALL routes
 app.use(mongoSanitize())
 
 // ── Rate limiting ─────────────────────────────────
-// General: 100 requests per 15 min per IP
+// General: 100 requests per 12 min per IP
 const generalLimit = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max:      100,
+  windowMs: 12 * 60 * 1000,
+  max:      200,
   message:  { message: 'Too many requests, slow down.' },
   standardHeaders: true,
   legacyHeaders:   false,

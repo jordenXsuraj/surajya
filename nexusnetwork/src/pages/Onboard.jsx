@@ -384,11 +384,12 @@ const [showPass, setShowPass] = useState(false)
 
     setErr('')
     if (!form.email || !form.password) return setErr('Email and password required')
-    if (mode === 'signup') {
-      if (!form.name || !form.college) return setErr('All fields required')
-      if (form.password.length < 6)    return setErr('Password must be 6+ characters')
-      if (!/\S+@\S+\.\S+/.test(form.email)) return setErr('Enter a valid email')
-    }
+if (mode === 'signup') {
+  if (!form.name.trim() || !form.college.trim()) return setErr('All fields required')
+  if (!form.year)                                return setErr('Please select your year')
+  if (form.password.length < 6)                 return setErr('Password must be 6+ characters')
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) return setErr('Enter a valid email')
+}
     setLoading(true)
     try {
       if (mode === 'login') {

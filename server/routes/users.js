@@ -277,10 +277,10 @@ if (skill && skill !== 'All' && skill.trim()) {
 
 // Search by name OR username
 if (search && search.trim()) {
-  const q = search.trim()
+  const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   filter.$or = [
-    { name:     { $regex: q, $options: 'i' } },
-    { username: { $regex: q, $options: 'i' } },
+    { name:     { $regex: escaped, $options: 'i' } },
+    { username: { $regex: escaped, $options: 'i' } },
   ]
 }
 
@@ -301,6 +301,7 @@ const users = await User.find(filter)
     res.json(users.map(u => ({
       _id:            u._id,
       name:           u.name,
+       username:       u.username || '',
       year:           u.year,
       branch:         u.branch,
       bio:            u.bio || '',
@@ -337,13 +338,13 @@ router.get('/all', protect, async (req, res) => {
     }
 
     // Search by name OR username
-    if (search && search.trim()) {
-      const q = search.trim()
-      filter.$or = [
-        { name:     { $regex: q, $options: 'i' } },
-        { username: { $regex: q, $options: 'i' } },
-      ]
-    }
+   if (search && search.trim()) {
+  const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  filter.$or = [
+    { name:     { $regex: escaped, $options: 'i' } },
+    { username: { $regex: escaped, $options: 'i' } },
+  ]
+}
 
     const users = await User.find(filter)
       .select('name username year branch bio skills projects following followers sentRequests college avatar')
@@ -413,12 +414,12 @@ await Promise.all([
     User.findByIdAndUpdate(targetId, { $addToSet: { pendingRequests: myId     } })
      ])
 if (targetId.toString() !== req.user._id.toString()) {
-    await Notification.create({
-      recipient: targetId,
-      sender:    req.user._id,
-      type:      'connection_request',
-      message:   `${req.user.name} wants to follow you`
-    }).catch(() => {})
+   await Notification.create({
+  recipient: targetId,
+  sender:    req.user._id,
+  type:      'connection_request',
+  message:   `${req.user.name} wants to follow you`
+}).catch(() => {})
   }
     res.json({ message: `Follow request sent to ${target.name}` })
   } catch (err) {
@@ -487,6 +488,13 @@ router.post('/:id/accept', protect, async (req, res) => {
       $addToSet: { followers: senderId },
       $pull:     { pendingRequests: senderId }
     })
+
+   await Notification.create({
+      recipient: senderId,
+      sender:    req.user._id,
+      type:      'connection_accepted',
+      message:   `${req.user.name} accepted your follow request`
+    }).catch(() => {})
 
     res.json({ message: 'Request accepted' })
   } catch (err) {

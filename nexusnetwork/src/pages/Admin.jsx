@@ -31,8 +31,8 @@ export default function Admin() {
     }
 
     Promise.all([
-      axios.get(`${base}/posts/admin/stats`,   { headers: h }),
-      axios.get(`${base}/posts/admin/reports`, { headers: h }),
+      axios.get(`${base}/posts/admin/stats`,   { headers: getH() }),
+      axios.get(`${base}/posts/admin/reports`, { headers: getH() }),
     ])
       .then(([s, r]) => {
         setStats(s.data)
