@@ -15,7 +15,7 @@ const storage = new CloudinaryStorage({
     folder:          'nexus',
     resource_type:   'image',
     allowed_formats: ['jpg','jpeg','png','webp'],
-    public_id:       `post_${Date.now()}`,
+    public_id: `post_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
     transformation:  [
       { width: 1080, crop: 'limit' },
       { quality: 'auto' }
@@ -40,7 +40,7 @@ const pdfStorage = new CloudinaryStorage({
   params: async (req, file) => ({
     folder:        'meetnet_pdfs',
     resource_type: 'raw',
-    public_id:     `pdf_${Date.now()}`,
+    public_id: `pdf_${Date.now()}_${Math.random().toString(36).slice(2,6)}`
     // NO .pdf extension — let Cloudinary handle it
   }),
 })

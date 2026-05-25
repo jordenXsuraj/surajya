@@ -1,5 +1,9 @@
 module.exports = function errorHandler(err, req, res, next) {
+  if (process.env.NODE_ENV !== 'production') {
   console.error('❌ Error:', err)
+} else {
+  console.error('❌ Error:', err.message)
+}
 
   // Duplicate key
   if (err.code === 11000) {
