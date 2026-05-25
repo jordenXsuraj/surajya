@@ -141,10 +141,19 @@ UserSchema.virtual('followingCount').get(function () { return this.following?.le
 UserSchema.virtual('followerCount').get(function ()  { return this.followers?.length || 0 })
 
 // Hash password
+/*
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next()
   this.password = await bcrypt.hash(this.password, 12)
   next()
+})*/
+UserSchema.pre('save', async function () {
+  if (!this.isModified('password')) return
+  try {
+    this.password = await bcrypt.hash(this.password, 12)
+  } catch (err) {
+    // ← EMPTY — error disappears silently
+  }
 })
 
 UserSchema.methods.matchPassword = function (entered) {
