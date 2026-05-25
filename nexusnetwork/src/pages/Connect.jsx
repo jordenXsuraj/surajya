@@ -239,7 +239,7 @@ const getH  = () => ({ Authorization: `Bearer ${localStorage.getItem('nx_token')
     try {
       await axios.post(`${base}/users/${u._id}/connect`, {}, { headers: getH() })
       setSentIds(p => [...p, u._id.toString()])
-      show(`✅ Follow request sent to ${u.name.split(' ')[0]}!`)
+      show(`✅ Connect request sent to ${u.name.split(' ')[0]}!`)
       refreshUser()
     } catch (e) { show('❌ ' + (e.response?.data?.message || 'Failed')) }
   }
@@ -448,7 +448,7 @@ const getH  = () => ({ Authorization: `Bearer ${localStorage.getItem('nx_token')
                 <div className="conn-empty">
                   <div style={{ fontSize:'2.2rem' }}>📭</div>
                   <h3>No pending requests</h3>
-                  <p>When someone wants to follow you, it appears here</p>
+                  <p>When someone wants to Connect with you, it appears here</p>
                 </div>
               )}
               {requests.map((u, i) => {

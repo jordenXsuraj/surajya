@@ -12,7 +12,7 @@ const protect      = require('../middleware/auth')
 router.get('/', protect, async (req, res) => {
   try {
       const page  = Math.max(1, parseInt(req.query.page) || 1)
- const limit = Math.min(50, parseInt(req.query.limit) || 20)
+ const limit = Math.min(50, parseInt(req.query.limit) || 25)
   const skip  = (page - 1) * limit
 
   const notifications = await Notification.find({ recipient: req.user._id })

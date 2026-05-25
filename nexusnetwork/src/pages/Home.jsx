@@ -517,7 +517,7 @@ async function handleReport(reason) {
           {liked ? '❤️' : '🤍'} {(post.likes || []).length}
         </button>
 
-        {post.type === 'partner' ? (
+        {post.type === 'project' ? (
           <>
             <button className={`interested-btn ${interested ? 'on' : ''}`}
               onClick={handleInterested} disabled={interested}>
@@ -752,7 +752,7 @@ useEffect(() => {
 
 
 
-
+/*
   // ── Saved posts ──────────────────────────────────
   useEffect(() => {
     import('../services/api').then(api => {
@@ -761,7 +761,7 @@ useEffect(() => {
         .catch(() => {})
     })
   }, [])
-
+*/
   // ── FIX 6: Scroll listener — stable with useCallback ──
   // Using useCallback prevents stale closure over hasMore/loading
   const handleScroll = useCallback(() => {
@@ -796,7 +796,7 @@ useEffect(() => {
       setPosts(prev => prev.map(p => p._id === postId ? { ...p, likes: res.data.likes } : p))
     } catch { show('❌ Failed. Try again') }
   }
-
+/*
   async function handleSave(postId) {
     const post = posts.find(p => p._id === postId)
     if (post) trackInteraction(post.type, 'save')
@@ -805,7 +805,7 @@ useEffect(() => {
     try { await savePost(postId); show(already ? 'Bookmark removed' : '🔖 Saved!') }
     catch { setSaved(p => already ? [...p, postId] : p.filter(id => id !== postId)) }
   }
-
+*/
   async function handleDelete(postId) {
     try {
       await deletePost(postId)

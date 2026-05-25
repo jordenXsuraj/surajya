@@ -26,6 +26,8 @@ function cleanUser(user) {
   return {
     _id:             user._id,
     name:            user.name,
+    avatar:          user.avatar,
+  username:        user.username,
     email:           user.email,
     college:         user.college,
     year:            user.year,
@@ -35,7 +37,7 @@ function cleanUser(user) {
     projects:        user.projects,
     roadmap:         user.roadmap,
     isSenior:        user.year === '4th',
-
+    mediaItems:      user.mediaItems,
     // ✅ FIXED
     following:       user.following,
     followers:       user.followers,
@@ -51,14 +53,24 @@ function cleanUser(user) {
 // ─────────────────────────────────────────────
 
 // Add this function at top of auth.js
-function generateUsername(name) {
+async function generateUsername(name) {
   const base = name
     .toLowerCase()
     .replace(/\s+/g, '.')
     .replace(/[^a-z0-9.]/g, '')
     .slice(0, 15)
-  const suffix = Math.floor(Math.random() * 999)
-  return `${base}${suffix}`
+  
+  let username
+  let attempts = 0
+  do {
+    const suffix = Math.floor(Math.random() * 9999)
+    username = `${base}${suffix}`
+    const exists = await User.findOne({ username })
+    if (!exists) break
+    attempts++
+  } while (attempts < 5)
+  
+  return username
 }
 
 
@@ -79,7 +91,7 @@ router.post('/signup',async (req, res, next) => {
     const normalizedEmail = email.toLowerCase().trim()
 
     // ✅ Email format
-    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail)) {
       return res.status(400).json({ message: 'Enter a valid email address' })
     }
 
@@ -97,7 +109,7 @@ router.post('/signup',async (req, res, next) => {
     // ✅ Create user
     const user = await User.create({
       name:     name.trim(),
-      username: generateUsername(name), 
+      username: await generateUsername(name),
       email:    normalizedEmail,
       password,
       college:  college.trim(),

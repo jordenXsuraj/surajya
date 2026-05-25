@@ -278,6 +278,7 @@ function removePdf() {
     if (!text.trim())        { show('⚠️ Write something first'); return }
     if (text.trim().length < 5) { show('⚠️ Too short'); return }
     if (uploading)           { show('⏳ Wait for image upload'); return }
+    if (pdfUploading) { show('⏳ Wait for PDF upload'); return }
     if (imgPreview && !cloudUrl) { show('❌ Image upload failed. Remove it or try again.'); return }
 
 

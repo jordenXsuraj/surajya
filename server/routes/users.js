@@ -227,7 +227,7 @@ router.get('/suggestions', protect, async (req, res) => {
       _id: { $nin: excludeIds }
     })
       .select('name username year branch skills college bio avatar following followers projects')
-      .limit(30)
+      .limit(35)
       .lean()
 
     const scored = candidates.map(u => {
@@ -493,7 +493,7 @@ router.post('/:id/accept', protect, async (req, res) => {
       recipient: senderId,
       sender:    req.user._id,
       type:      'connection_accepted',
-      message:   `${req.user.name} accepted your follow request`
+      message:   `${req.user.name} accepted your Connect request`
     }).catch(() => {})
 
     res.json({ message: 'Request accepted' })
