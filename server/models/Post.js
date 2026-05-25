@@ -8,7 +8,7 @@ const ReplySchema = new mongoose.Schema({
   type: String,
   required: true,
   trim: true,
-  maxlength: [300, 'Reply too long']   // reduce from 500
+  maxlength: [350, 'Reply too long']   // reduce from 500
 },
   postedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -77,7 +77,7 @@ createdAt: { type: Date, default: Date.now }
 
 PostSchema.index({ college: 1, createdAt: -1 })
 PostSchema.index({ college: 1, type: 1, createdAt: -1 })
-PostSchema.index({ postedBy: 1, createdAt: -1 })
+PostSchema.index({ postedBy: 1, expiresAt: 1, createdAt: -1 })
 PostSchema.index({ expiresAt: 1, createdAt: -1 })
 PostSchema.index({ college: 1, expiresAt: 1, createdAt: -1 })
 

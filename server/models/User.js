@@ -37,7 +37,7 @@ const UserSchema = new mongoose.Schema({
 
 mediaItems: {
   type: [{
-    type: { type: String, enum: ['youtube', 'instagram'], required: true },
+    type: { type: String, enum: ['youtube','yt-video','yt-short','yt-channel','yt-playlist','instagram'], required: true },
     url: { type: String, required: true, trim: true },
     addedAt: { type: Date, default: Date.now }
   }],
@@ -125,7 +125,7 @@ savedPosts: {
   typeEngagement: {
     placement:  { type: Number, default: 0 },
     qa:         { type: Number, default: 0 },
-    partner:    { type: Number, default: 0 },
+    study:    { type: Number, default: 0 },
     project:    { type: Number, default: 0 },
     social:        { type: Number, default: 0 },
     confession: { type: Number, default: 0 },
@@ -141,15 +141,10 @@ UserSchema.virtual('followingCount').get(function () { return this.following?.le
 UserSchema.virtual('followerCount').get(function ()  { return this.followers?.length || 0 })
 
 // Hash password
-UserSchema.pre('save', async function () {
-  if (!this.isModified('password')) return 
-
-  try {
-    this.password = await bcrypt.hash(this.password, 12)
-   
-  } catch (err) {
-   
-  }
+UserSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next()
+  this.password = await bcrypt.hash(this.password, 12)
+  next()
 })
 
 UserSchema.methods.matchPassword = function (entered) {

@@ -52,7 +52,7 @@ const NotificationSchema = new mongoose.Schema({
 // TTL
 NotificationSchema.index(
   { createdAt: 1 },
-  { expireAfterSeconds: 30 * 24 * 60 * 60 }
+  { expireAfterSeconds: 45 * 24 * 60 * 60 }
 )
 
 // optimized queries
