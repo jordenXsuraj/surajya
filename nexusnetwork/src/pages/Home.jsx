@@ -694,7 +694,7 @@ const [refreshKey, setRefreshKey] = useState(0)
       ? raw
       : [...prev, ...raw.filter(p => !prev.some(x => x._id === p._id))]
 
-  return smartSort(merged, user?._id, localConns)
+     return smartSort(merged, user?._id || '', localConns || [])
 })
       })
       .catch(() => show('❌ Could not load posts'))
@@ -823,7 +823,15 @@ useEffect(() => {
     } catch (e) { show('❌ ' + (e.response?.data?.message || 'Failed')) }
   }
 
+  if (!Array.isArray(posts)) {
+  return (
+    <div style={{ textAlign:'center', padding:'40px' }}>
+      Loading...
+    </div>
+  )
+}
   const visible = posts.filter(p => {
+    if (!p) return false
     if (!search.trim()) return true
     const q = search.trim().toLowerCase()
     return (
@@ -899,7 +907,7 @@ useEffect(() => {
       {visible.map(p => (
         <PostCard key={p._id} post={p}
           currentUserId={user?._id}
-          onLike={handleLike} onSave={handleSave} onDelete={handleDelete}
+          onLike={handleLike}  onDelete={handleDelete}
           savedIds={savedIds}
           myConnections={localConns} mySentReqs={localSentReqs}
           onConnect={handleConnect}/>
