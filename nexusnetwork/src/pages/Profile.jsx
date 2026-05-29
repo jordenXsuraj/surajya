@@ -451,7 +451,9 @@ function LikeBtn({ post, currentUser }) {
 function MiniPost({ post, canDelete, onDelete, currentUserId, canUnsave, onUnsave, currentUser }) {
   // ADD this state inside PostCard alongside other states:
 const [expanded, setExpanded] = useState(false)
-const isLong = post.text?.length > 500  // posts longer than 200 chars get truncated
+const [isLong, setIsLong] = useState(false)
+const textRef = useRef(null)
+
   const [replies,  setReplies] = useState(post.replies || [])
   const [showR,    setShowR]   = useState(false)
   const [showBox,  setShowBox] = useState(false)
@@ -461,6 +463,16 @@ const isLong = post.text?.length > 500  // posts longer than 200 chars get trunc
  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
   const t = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
  
+useEffect(() => {
+  const timer = setTimeout(() => {
+    const el = textRef.current
+    if (!el) return
+
+    setIsLong(el.scrollHeight > el.clientHeight + 2)
+  }, 0)
+
+  return () => clearTimeout(timer)
+}, [post.text])
 
   function ago(d) {
     const h = Math.floor((Date.now() - new Date(d)) / 3600000)
@@ -545,13 +557,17 @@ const isLong = post.text?.length > 500  // posts longer than 200 chars get trunc
 
 
 <div>
-  <p className="pc-text" style={{
+<p
+  ref={textRef}
+  className="pc-text"
+  style={{
     overflow: expanded ? 'visible' : 'hidden',
     display: expanded ? 'block' : '-webkit-box',
-    WebkitLineClamp: expanded ? 'unset' : 7,
+    WebkitLineClamp: expanded ? 'unset' : 6,
     WebkitBoxOrient: 'vertical',
     marginBottom: isLong ? 4 : 0,
-  }}>
+  }}
+>
     {post.text}
   </p>
   {isLong && (

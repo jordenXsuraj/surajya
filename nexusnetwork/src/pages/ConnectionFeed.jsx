@@ -260,10 +260,25 @@ function PostCard({ post: initialPost, currentUserId, liked, saved, onLike, onSa
   const [showReplies,  setShowR]      = useState(false)
    const [imgOpen, setImgOpen] = useState(false)
   const [showReplyBox, setReplyBox]   = useState(false)
-  const [expanded, setExpanded] = useState(false)
-const isLong = post.text?.length > 200  // posts longer than 200 chars get truncated
+const [expanded, setExpanded] = useState(false)
+const [isLong, setIsLong] = useState(false)
+const textRef = useRef(null)
+
   const t     = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
   const isOwn = post.postedBy?._id?.toString() === currentUserId
+
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    const el = textRef.current
+    if (!el) return
+
+    setIsLong(el.scrollHeight > el.clientHeight + 2)
+  }, 0)
+
+  return () => clearTimeout(timer)
+}, [post.text])
+
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
   function goToProfile() {
@@ -304,13 +319,17 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       {/* Body */}
       <div className="pc-body">
         <div>
-  <p className="pc-text" style={{
+<p
+  ref={textRef}
+  className="pc-text"
+  style={{
     overflow: expanded ? 'visible' : 'hidden',
     display: expanded ? 'block' : '-webkit-box',
     WebkitLineClamp: expanded ? 'unset' : 7,
     WebkitBoxOrient: 'vertical',
     marginBottom: isLong ? 4 : 0,
-  }}>
+  }}
+>
     {post.text}
   </p>
   {isLong && (

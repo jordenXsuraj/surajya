@@ -331,7 +331,9 @@ function LikeButton({ post, currentUserId }) {
 function StudentPostCard({ post, currentUserId }) {
   // ADD this state inside PostCard alongside other states:
 const [expanded, setExpanded] = useState(false)
-const isLong = post.text?.length > 500  // posts longer than 500 chars get truncated
+const [isLong, setIsLong] = useState(false)
+const textRef = useRef(null)
+
   const [replies,  setReplies] = useState(post.replies || [])
   const [showR,    setShowR]   = useState(false)
   const [showBox,  setShowBox] = useState(false)
@@ -367,7 +369,16 @@ const isLong = post.text?.length > 500  // posts longer than 500 chars get trunc
   }
 
 
+useEffect(() => {
+  const timer = setTimeout(() => {
+    const el = textRef.current
+    if (!el) return
 
+    setIsLong(el.scrollHeight > el.clientHeight + 2)
+  }, 0)
+
+  return () => clearTimeout(timer)
+}, [post.text])
 
 
 
@@ -445,13 +456,17 @@ const isLong = post.text?.length > 500  // posts longer than 500 chars get trunc
 
       {/* Text */}
       <div>
-  <p className="pc-text" style={{
+<p
+  ref={textRef}
+  className="pc-text"
+  style={{
     overflow: expanded ? 'visible' : 'hidden',
     display: expanded ? 'block' : '-webkit-box',
-    WebkitLineClamp: expanded ? 'unset' : 7,
+    WebkitLineClamp: expanded ? 'unset' : 6,
     WebkitBoxOrient: 'vertical',
     marginBottom: isLong ? 4 : 0,
-  }}>
+  }}
+>
     {post.text}
   </p>
   {isLong && (

@@ -331,7 +331,7 @@ useEffect(() => {
   style={{
     overflow: expanded ? 'visible' : 'hidden',
     display: expanded ? 'block' : '-webkit-box',
-    WebkitLineClamp: expanded ? 'unset' : 7,
+    WebkitLineClamp: expanded ? 'unset' : 6,
     WebkitBoxOrient: 'vertical',
     marginBottom: isLong ? 4 : 0,
   }}
