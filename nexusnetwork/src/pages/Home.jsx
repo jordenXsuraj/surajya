@@ -195,7 +195,7 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
   const nav = useNavigate()
   // ADD this state inside PostCard alongside other states:
 const [expanded, setExpanded] = useState(false)
-const isLong = post.text?.length > 700  // posts longer than 200 chars get truncated
+const isLong = post.text?.length > 250  // posts longer than 200 chars get truncated
   const [showReplies,  setShowR]    = useState(false)
   const [showReplyBox, setReplyBox] = useState(false)
   const [replies,      setReplies]  = useState(post.replies || [])
@@ -317,7 +317,7 @@ async function handleReport(reason) {
   <p className="pc-text" style={{
     overflow: expanded ? 'visible' : 'hidden',
     display: expanded ? 'block' : '-webkit-box',
-    WebkitLineClamp: expanded ? 'unset' : 7,
+    WebkitLineClamp: expanded ? 'unset' : 5,
     WebkitBoxOrient: 'vertical',
     marginBottom: isLong ? 4 : 0,
   }}>
