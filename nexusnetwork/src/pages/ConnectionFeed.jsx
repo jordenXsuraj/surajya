@@ -261,7 +261,7 @@ function PostCard({ post: initialPost, currentUserId, liked, saved, onLike, onSa
    const [imgOpen, setImgOpen] = useState(false)
   const [showReplyBox, setReplyBox]   = useState(false)
   const [expanded, setExpanded] = useState(false)
-const isLong = post.text?.length > 500  // posts longer than 200 chars get truncated
+const isLong = post.text?.length > 200  // posts longer than 200 chars get truncated
   const t     = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
   const isOwn = post.postedBy?._id?.toString() === currentUserId
 

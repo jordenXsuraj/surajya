@@ -195,7 +195,9 @@ function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myC
   const nav = useNavigate()
   // ADD this state inside PostCard alongside other states:
 const [expanded, setExpanded] = useState(false)
-const isLong = post.text?.length > 250  // posts longer than 200 chars get truncated
+const [isLong, setIsLong] = useState(false)
+const textRef = useRef(null)
+
   const [showReplies,  setShowR]    = useState(false)
   const [showReplyBox, setReplyBox] = useState(false)
   const [replies,      setReplies]  = useState(post.replies || [])
@@ -238,7 +240,16 @@ async function handleReport(reason) {
 }
 
 
+useEffect(() => {
+  const timer = setTimeout(() => {
+    const el = textRef.current
+    if (!el) return
 
+    setIsLong(el.scrollHeight > el.clientHeight + 2)
+  }, 0)
+
+  return () => clearTimeout(timer)
+}, [post.text])
 
 
   function goToProfile() {
@@ -314,13 +325,17 @@ async function handleReport(reason) {
       {/* ── Body — text, image, tags, link ── */}
       <div className="pc-body">
         <div>
-  <p className="pc-text" style={{
+ <p
+  ref={textRef}
+  className="pc-text"
+  style={{
     overflow: expanded ? 'visible' : 'hidden',
     display: expanded ? 'block' : '-webkit-box',
-    WebkitLineClamp: expanded ? 'unset' : 5,
+    WebkitLineClamp: expanded ? 'unset' : 7,
     WebkitBoxOrient: 'vertical',
     marginBottom: isLong ? 4 : 0,
-  }}>
+  }}
+>
     {post.text}
   </p>
   {isLong && (
