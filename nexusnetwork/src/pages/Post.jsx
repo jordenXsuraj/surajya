@@ -521,7 +521,7 @@ setPdfFile(null)
 
 
         {/* ── Image upload — old UI with fast upload logic ── */}
- {attachmentType === 'image' && (
+{imgPreview && (
         <label className="field-label">
           Image <span className="field-optional">— optional, max 10MB , full photo will post as selected</span>
         </label>
@@ -613,7 +613,7 @@ setPdfFile(null)
 
 
 {/* ── PDF Upload ───────────────────────────── */}
-{attachmentType === 'pdf' && (
+{pdfUrl && (
 <div style={{ marginBottom:18 }}>
   <label className="field-label">
     PDF <span className="field-optional">— optional, max 10MB</span>
@@ -724,7 +724,7 @@ setPdfFile(null)
 */}
 
 
-{attachmentType === 'youtube' && (
+{showYoutubeInput && (
 <>
   <label className="field-label">
     YouTube Video
@@ -742,12 +742,75 @@ setPdfFile(null)
       setYoutubeUrl(e.target.value)
     }}
   />
+  {youtubeUrl && (
+  <div style={{
+    marginTop:12,
+    background:'var(--bg2)',
+    border:'1.5px solid var(--br2)',
+    borderRadius:14,
+    overflow:'hidden',
+    position:'relative'
+  }}>
+    <img
+      src={`https://img.youtube.com/vi/${
+        youtubeUrl.match(
+          /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/
+        )?.[1] || ''
+      }/mqdefault.jpg`}
+      alt="YouTube preview"
+      style={{
+        width:'100%',
+        height:180,
+        objectFit:'cover',
+        display:'block'
+      }}
+    />
+
+    <div style={{
+      padding:'12px'
+    }}>
+      <div style={{
+        fontWeight:700,
+        color:'var(--text)',
+        fontSize:'.85rem'
+      }}>
+        🎥 YouTube Video Attached
+      </div>
+
+      <div style={{
+        color:'var(--dim)',
+        fontSize:'.72rem',
+        marginTop:2
+      }}>
+        Ready to post
+      </div>
+    </div>
+
+    <button
+      onClick={() => setYoutubeUrl('')}
+      style={{
+        position:'absolute',
+        top:10,
+        right:10,
+        width:30,
+        height:30,
+        borderRadius:'50%',
+        border:'none',
+        cursor:'pointer',
+        background:'rgba(0,0,0,.65)',
+        color:'#fff'
+      }}
+    >
+      ✕
+    </button>
+  </div>
+)}
 </>
 )}
 
 
 
-{attachmentType === 'link' && (
+{showLinkInput && (
 <>
   <label className="field-label">
     Any Link
