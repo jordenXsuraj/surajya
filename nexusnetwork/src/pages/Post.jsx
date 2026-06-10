@@ -659,7 +659,11 @@ setPdfFile(null)
         YouTube Video <span className="field-optional">— optional</span>
         </label>
 
-    <input
+<label className="field-label">
+  YouTube Video <span className="field-optional">— optional</span>
+</label>
+
+<input
   className="post-input"
   placeholder="Paste YouTube link"
   value={youtubeUrl}
@@ -673,6 +677,16 @@ setPdfFile(null)
   }}
 />
 
+<label className="field-label">
+  Link <span className="field-optional">— optional</span>
+</label>
+
+<input
+  className="post-input"
+  placeholder="GitHub, Drive, LinkedIn, Notion..."
+  value={link}
+  onChange={e => setLink(e.target.value)}
+/>
 
         {/* ── Publish button ── */}
         <button
