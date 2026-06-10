@@ -98,6 +98,7 @@ const [pdfUploading,setPdfUploading]= useState(false)
 const [pdfProgress, setPdfProgress] = useState(0)
 const pdfRef = useRef(null)
 const [showYoutubeInput, setShowYoutubeInput] = useState(false)
+const [showLinkInput, setShowLinkInput] = useState(false)
 
 useEffect(() => {
   return () => {
