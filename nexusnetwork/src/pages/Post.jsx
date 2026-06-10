@@ -97,8 +97,6 @@ const [pdfSize,     setPdfSize]     = useState(0)
 const [pdfUploading,setPdfUploading]= useState(false)
 const [pdfProgress, setPdfProgress] = useState(0)
 const pdfRef = useRef(null)
-const [showYoutubeInput, setShowYoutubeInput] = useState(false)
-const [showLinkInput, setShowLinkInput] = useState(false)
 
 useEffect(() => {
   return () => {
@@ -523,7 +521,7 @@ setPdfFile(null)
 
 
         {/* ── Image upload — old UI with fast upload logic ── */}
-{imgPreview && (
+ {attachmentType === 'image' && (
         <label className="field-label">
           Image <span className="field-optional">— optional, max 10MB , full photo will post as selected</span>
         </label>
@@ -615,7 +613,7 @@ setPdfFile(null)
 
 
 {/* ── PDF Upload ───────────────────────────── */}
-{pdfUrl && (
+{attachmentType === 'pdf' && (
 <div style={{ marginBottom:18 }}>
   <label className="field-label">
     PDF <span className="field-optional">— optional, max 10MB</span>
@@ -726,7 +724,7 @@ setPdfFile(null)
 */}
 
 
-{showYoutubeInput && (
+{attachmentType === 'youtube' && (
 <>
   <label className="field-label">
     YouTube Video
@@ -812,7 +810,7 @@ setPdfFile(null)
 
 
 
-{showLinkInput && (
+{attachmentType === 'link' && (
 <>
   <label className="field-label">
     Any Link
