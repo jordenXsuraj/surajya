@@ -88,6 +88,7 @@ export default function Post() {
 
 const [youtubeUrl, setYoutubeUrl] = useState('')
 const [attachmentType, setAttachmentType] = useState('')
+const [showAttachMenu, setShowAttachMenu] = useState(false)
 
   const [pdfFile,     setPdfFile]     = useState(null)
 const [pdfUrl,      setPdfUrl]      = useState('')
@@ -454,11 +455,77 @@ setPdfFile(null)
         />
         <div className="char-count">{text.length}/1000</div>
 
+
+<div style={{ margin:'12px 0', position:'relative' }}>
+
+  <button
+    type="button"
+    onClick={() => setShowAttachMenu(v => !v)}
+    className="publish-btn"
+    style={{
+      width:'52px',
+      height:'52px',
+      borderRadius:'50%',
+      padding:0,
+      fontSize:'1.6rem'
+    }}
+  >
+    +
+  </button>
+
+  {showAttachMenu && (
+    <div style={{
+      position:'absolute',
+      top:'60px',
+      left:0,
+      background:'var(--card)',
+      border:'1px solid var(--br2)',
+      borderRadius:'14px',
+      padding:'8px',
+      display:'flex',
+      flexDirection:'column',
+      gap:'6px',
+      zIndex:100
+    }}>
+      <button onClick={() => {
+        setAttachmentType('image')
+        setShowAttachMenu(false)
+      }}>
+        📸 Image
+      </button>
+
+      <button onClick={() => {
+        setAttachmentType('youtube')
+        setShowAttachMenu(false)
+      }}>
+        🎥 YouTube
+      </button>
+
+      <button onClick={() => {
+        setAttachmentType('pdf')
+        setShowAttachMenu(false)
+      }}>
+        📄 PDF
+      </button>
+
+      <button onClick={() => {
+        setAttachmentType('link')
+        setShowAttachMenu(false)
+      }}>
+        🔗 Link
+      </button>
+    </div>
+  )}
+
+</div>
+
+
         {/* ── Image upload — old UI with fast upload logic ── */}
+ {attachmentType === 'image' && (
         <label className="field-label">
           Image <span className="field-optional">— optional, max 10MB , full photo will post as selected</span>
         </label>
-
+)}
         <input
           type="file"
           accept="image/*"
@@ -546,6 +613,7 @@ setPdfFile(null)
 
 
 {/* ── PDF Upload ───────────────────────────── */}
+{attachmentType === 'pdf' && (
 <div style={{ marginBottom:18 }}>
   <label className="field-label">
     PDF <span className="field-optional">— optional, max 10MB</span>
@@ -641,7 +709,7 @@ setPdfFile(null)
 </div>
 
 
-
+)}
 
         {/* ── Tags — NEW comma-separated input ── */}
 {/*        <label className="field-label">
@@ -654,37 +722,45 @@ setPdfFile(null)
           onChange={e => setTags(e.target.value)}
         />
 */}
-        {/* ── Link ── */}
-        <label className="field-label">
-        YouTube Video <span className="field-optional">— optional</span>
-        </label>
+
+
+{attachmentType === 'youtube' && (
+<>
+  <label className="field-label">
+    YouTube Video
+  </label>
+
+  <input
+    className="post-input"
+    placeholder="Paste YouTube link"
+    value={youtubeUrl}
+    onChange={e => {
+      if (cloudUrl) {
+        show('⚠️ Remove image first')
+        return
+      }
+      setYoutubeUrl(e.target.value)
+    }}
+  />
+</>
+)}
 
 
 
-<input
-  className="post-input"
-  placeholder="Paste YouTube link"
-  value={youtubeUrl}
-  onChange={e => {
-    if (cloudUrl) {
-      show('⚠️ Remove image first')
-      return
-    }
+{attachmentType === 'link' && (
+<>
+  <label className="field-label">
+    Any Link
+  </label>
 
-    setYoutubeUrl(e.target.value)
-  }}
-/>
-
-<label className="field-label">
-  Link <span className="field-optional">— optional</span>
-</label>
-
-<input
-  className="post-input"
-  placeholder="GitHub, Drive, LinkedIn, Notion..."
-  value={link}
-  onChange={e => setLink(e.target.value)}
-/>
+  <input
+    className="post-input"
+    placeholder="GitHub, Drive, LinkedIn, Notion..."
+    value={link}
+    onChange={e => setLink(e.target.value)}
+  />
+</>
+)}
 
         {/* ── Publish button ── */}
         <button
