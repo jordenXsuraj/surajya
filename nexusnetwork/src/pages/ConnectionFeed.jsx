@@ -18,6 +18,24 @@ const TYPE_TAG = {
   confession: { label:'🤫 Confession', cls:'tag-red'    },
 }
 
+function getYouTubeId(url) {
+  if (!url) return null
+
+  const patterns = [
+    /youtube\.com\/watch\?v=([^&\s]+)/,
+    /youtu\.be\/([^?\s]+)/,
+    /youtube\.com\/embed\/([^?\s]+)/,
+    /youtube\.com\/shorts\/([^?\s]+)/
+  ]
+
+  for (const p of patterns) {
+    const m = url.match(p)
+    if (m?.[1]) return m[1]
+  }
+
+  return null
+}
+
 function timeAgo(d) {
   const h = Math.floor((Date.now() - new Date(d)) / 3600000)
   if (h < 1)  return 'just now'
@@ -266,7 +284,7 @@ const textRef = useRef(null)
 
   const t     = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
   const isOwn = post.postedBy?._id?.toString() === currentUserId
-
+const [videoOpen, setVideoOpen] = useState(false)
 
 useEffect(() => {
   const timer = setTimeout(() => {
@@ -386,7 +404,64 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
   </>
 )}
 
+{post.youtubeUrl && (
+  <>
+    <div
+      className="pc-image-wrap"
+      onClick={() => setVideoOpen(true)}
+    >
+      <img
+        src={`https://img.youtube.com/vi/${getYouTubeId(post.youtubeUrl)}/mqdefault.jpg`}
+        alt="YouTube"
+        className="pc-image-main"
+      />
 
+      <div className="img-tap-hint">
+        ▶ Tap to watch
+      </div>
+    </div>
+
+    {videoOpen && createPortal(
+      <div
+        className="img-fs-overlay"
+        onClick={() => setVideoOpen(false)}
+      >
+        <button
+          className="img-fs-close"
+          onClick={e => {
+            e.stopPropagation()
+            setVideoOpen(false)
+          }}
+        >
+          ✕
+        </button>
+
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            width:'95%',
+            maxWidth:'1000px',
+            aspectRatio:'16/9'
+          }}
+        >
+          <iframe
+            src={`https://www.youtube.com/embed/${getYouTubeId(post.youtubeUrl)}?autoplay=1`}
+            title="YouTube"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{
+              width:'100%',
+              height:'100%',
+              border:'none',
+              borderRadius:'12px'
+            }}
+          />
+        </div>
+      </div>,
+      document.body
+    )}
+  </>
+)}
 
 
 {post.pdfUrl?.length > 0 && (
