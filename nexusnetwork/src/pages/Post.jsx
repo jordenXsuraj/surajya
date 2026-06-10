@@ -97,6 +97,7 @@ const [pdfSize,     setPdfSize]     = useState(0)
 const [pdfUploading,setPdfUploading]= useState(false)
 const [pdfProgress, setPdfProgress] = useState(0)
 const pdfRef = useRef(null)
+const [showYoutubeInput, setShowYoutubeInput] = useState(false)
 
 useEffect(() => {
   return () => {
