@@ -459,7 +459,7 @@ const textRef = useRef(null)
   const [showBox,  setShowBox] = useState(false)
   const [rt,       setRt]      = useState('')
    const [imgOpen, setImgOpen] = useState(false)
-   const [imgOpen, setImgOpen] = useState(false)
+
 const [videoOpen, setVideoOpen] = useState(false)
   const [sub,      setSub]     = useState(false)
  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)

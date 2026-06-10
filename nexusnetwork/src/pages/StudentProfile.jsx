@@ -341,7 +341,7 @@ const textRef = useRef(null)
   const [sub,      setSub]     = useState(false)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
  const [imgOpen, setImgOpen] = useState(false)
- const [imgOpen, setImgOpen] = useState(false)
+
 const [videoOpen, setVideoOpen] = useState(false)
   const TYPE_TAG_LOCAL = {
     placement:  { label:'💼 Placement',  cls:'tag-blue'   },
