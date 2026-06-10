@@ -30,6 +30,24 @@ const TYPE_TAG = {
   study:    { label:'Study Meterial',    cls:'tag-green'  },
 }
 
+function getYouTubeId(url) {
+  if (!url) return null
+
+  const patterns = [
+    /youtube\.com\/watch\?v=([^&\s]+)/,
+    /youtu\.be\/([^?\s]+)/,
+    /youtube\.com\/embed\/([^?\s]+)/,
+    /youtube\.com\/shorts\/([^?\s]+)/
+  ]
+
+  for (const p of patterns) {
+    const m = url.match(p)
+    if (m?.[1]) return m[1]
+  }
+
+  return null
+}
+
 function timeAgo(d) {
   const h = Math.floor((Date.now() - new Date(d)) / 3600000)
   if (h < 1) return 'just now'
@@ -219,23 +237,9 @@ const [reportBusy,  setReportBusy]  = useState(false)
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
-function getYouTubeId(url) {
-  if (!url) return null
+const [videoOpen, setVideoOpen] = useState(false)
 
-  const patterns = [
-    /youtube\.com\/watch\?v=([^&\s]+)/,
-    /youtu\.be\/([^?\s]+)/,
-    /youtube\.com\/embed\/([^?\s]+)/,
-    /youtube\.com\/shorts\/([^?\s]+)/
-  ]
 
-  for (const p of patterns) {
-    const m = url.match(p)
-    if (m?.[1]) return m[1]
-  }
-
-  return null
-}
 
 async function handleReport(reason) {
   if (reported || reportBusy) return
@@ -408,46 +412,63 @@ useEffect(() => {
   </>
 )}
 
-
 {post.youtubeUrl && (
-  (() => {
-    const ytId = getYouTubeId(post.youtubeUrl)
-    if (!ytId) return null
+  <>
+    <div
+      className="pc-image-wrap"
+      onClick={() => setVideoOpen(true)}
+    >
+      <img
+        src={`https://img.youtube.com/vi/${getYouTubeId(post.youtubeUrl)}/mqdefault.jpg`}
+        alt="YouTube"
+        className="pc-image-main"
+      />
 
-    return (
-      <a
-        href={post.youtubeUrl}
-        target="_blank"
-        rel="noreferrer"
-        style={{
-          display:'block',
-          margin:'10px 0',
-          position:'relative'
-        }}
+      <div className="img-tap-hint">
+        ▶ Tap to watch
+      </div>
+    </div>
+
+    {videoOpen && createPortal(
+      <div
+        className="img-fs-overlay"
+        onClick={() => setVideoOpen(false)}
       >
-        <img
-          src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
-          alt="YouTube"
-          style={{
-            width:'100%',
-            borderRadius:14,
-            display:'block'
+        <button
+          className="img-fs-close"
+          onClick={e => {
+            e.stopPropagation()
+            setVideoOpen(false)
           }}
-        />
+        >
+          ✕
+        </button>
 
-        <div style={{
-          position:'absolute',
-          inset:0,
-          display:'flex',
-          alignItems:'center',
-          justifyContent:'center',
-          fontSize:'3rem'
-        }}>
-          ▶️
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            width:'95%',
+            maxWidth:'1000px',
+            aspectRatio:'16/9'
+          }}
+        >
+          <iframe
+            src={`https://www.youtube.com/embed/${getYouTubeId(post.youtubeUrl)}?autoplay=1`}
+            title="YouTube"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{
+              width:'100%',
+              height:'100%',
+              border:'none',
+              borderRadius:'12px'
+            }}
+          />
         </div>
-      </a>
-    )
-  })()
+      </div>,
+      document.body
+    )}
+  </>
 )}
 
 
