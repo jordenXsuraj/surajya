@@ -39,8 +39,12 @@ const PostSchema = new mongoose.Schema({
   
   tags:       { type: [String], default: [] },
   link:       { type: String, trim: true, default: '' },
-  imageUrl:   { type: String, default: '' },
-   pdfUrl:    { type: String, default: '' },   
+imageUrl:   { type: String, default: '' },
+
+youtubeUrl: { type: String, default: '' },
+youtubeId:  { type: String, default: '' },
+
+pdfUrl:     { type: String, default: '' },  
   pdfName:   { type: String, default: '' }, 
   pdfSize:   { type: Number, default: 0  },  
   isAnonymous:{ type: Boolean, default: false },

@@ -14,6 +14,7 @@ const TYPE_TAG = {
   study:    { label:'📚 Study Meterial',    cls:'tag-green'  },
   project:    { label:'🚀 Project',    cls:'tag-yellow' },
   tip:        { label:'💡 Tip',        cls:'tag-orange' },
+  
   social:     { label:'🔥 Social',     cls:'tag-orange' },
   confession: { label:'🤫 Confession', cls:'tag-red'    },
 }

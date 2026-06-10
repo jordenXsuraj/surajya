@@ -86,6 +86,9 @@ export default function Post() {
   const [cloudUrl,   setCloudUrl]  = useState('')
   const [imgPreview, setPreview]   = useState('')
 
+const [youtubeUrl, setYoutubeUrl] = useState('')
+const [attachmentType, setAttachmentType] = useState('')
+
   const [pdfFile,     setPdfFile]     = useState(null)
 const [pdfUrl,      setPdfUrl]      = useState('')
 const [pdfName,     setPdfName]     = useState('')
@@ -125,6 +128,12 @@ const [todayOnly, setTodayOnly] = useState(false)
   async function handleFile(e) {
     const file = e.target.files[0]
     if (!file) return
+
+
+    if (youtubeUrl.trim()) {
+  show('⚠️ Remove YouTube video first')
+  return
+}
 
     if (!file.type.startsWith('image/')) {
   show('⚠️ Only image files allowed')
@@ -205,6 +214,7 @@ useEffect(() => {
       show('❌ ' + err.message)
       setPreview('')
       setCloudUrl('')
+      
       if (fileRef.current) fileRef.current.value = ''
     } finally {
       setUploading(false)
@@ -297,26 +307,43 @@ function removePdf() {
 
     setPublishing(true)
     try {
-      await createPost({
-        type,
-        text:        text.trim(),
-        tags:        cleanTags,
-        link:        link.trim().slice(0, 200),
-        isAnonymous: type === 'confession' ? true : anon,  // NEW: confession always anon
-        imageUrl:    cloudUrl || '', pdfUrl,   
-     pdfName,   
-     pdfSize,   
+await createPost({
+  type,
+  text: text.trim(),
 
-         todayOnly   
-      })
+  imageUrl: cloudUrl || '',
+  youtubeUrl: youtubeUrl.trim(),
+
+  pdfUrl,
+  pdfName,
+  pdfSize,
+
+  link,
+
+  todayOnly,
+
+  isAnonymous: anon || type === 'confession'
+})
 
       show('✅ Posted!')
 
       // Reset
-      setTodayOnly(false)
-      setType('social'); setText(''); setTags('')
-      setLink(''); setAnon(false)
-      setPreview(''); setCloudUrl('')
+     setTodayOnly(false)
+setType('social')
+setText('')
+setTags('')
+setLink('')
+setAnon(false)
+
+setPreview('')
+setCloudUrl('')
+
+setYoutubeUrl('')
+
+setPdfUrl('')
+setPdfName('')
+setPdfSize(0)
+setPdfFile(null)
       if (fileRef.current) fileRef.current.value = ''
 
       setTimeout(() => nav('/home'), 700)
@@ -629,20 +656,29 @@ function removePdf() {
 */}
         {/* ── Link ── */}
         <label className="field-label">
-          Link <span className="field-optional">— optional</span>
+        YouTube Video <span className="field-optional">— optional</span>
         </label>
-        <input
-          className="post-input"
-          placeholder="GitHub, Figma, Notion, YouTube…"
-          value={link}
-          onChange={e => setLink(e.target.value)}
-        />
+
+    <input
+  className="post-input"
+  placeholder="Paste YouTube link"
+  value={youtubeUrl}
+  onChange={e => {
+    if (cloudUrl) {
+      show('⚠️ Remove image first')
+      return
+    }
+
+    setYoutubeUrl(e.target.value)
+  }}
+/>
+
 
         {/* ── Publish button ── */}
         <button
           className="publish-btn"
           onClick={handlePublish}
-          disabled={publishing || uploading}
+          disabled={publishing || uploading || pdfUploading}
         >
           {publishing ? 'Posting…'         :
            uploading  ? `Uploading ${uploadPct}%…` :

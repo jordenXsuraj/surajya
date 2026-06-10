@@ -189,18 +189,54 @@ router.post('/upload-pdf', protect, pdfUpload.single('pdf'), (req, res) => {
   }
 })
 
+
+
+
+function extractYoutubeId(url = '') {
+  const m = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/i
+  )
+  return m ? m[1] : ''
+}
+
+
+
+
 // ─────────────────────────────────────────────────
 // POST /api/posts — Create post
 // ─────────────────────────────────────────────────
 router.post('/', protect, async (req, res) => {
   try {
-    const { type, text, tags, link, imageUrl, pdfUrl, pdfName, pdfSize, isAnonymous, todayOnly } = req.body
+    const {
+  type,
+  text,
+  tags,
+  link,
+  imageUrl,
+  youtubeUrl,
+  pdfUrl,
+  pdfName,
+  pdfSize,
+  isAnonymous,
+  todayOnly
+} = req.body
 
     if (!text?.trim()) return res.status(400).json({ message: 'Post text required' })
     if (text.trim().length < 5) return res.status(400).json({ message: 'Post too short' })
 
     const validTypes = ['social','placement','qa','study','project','confession']
     if (!validTypes.includes(type)) return res.status(400).json({ message: 'Invalid type' })
+
+
+
+      const ytId = youtubeUrl ? extractYoutubeId(youtubeUrl) : ''
+
+if (imageUrl && ytId) {
+  return res.status(400).json({
+    message: 'Choose either image or YouTube video'
+  })
+}
+
 
     const cleanTags = Array.isArray(tags)
       ? tags.map(t => t.toString().trim().replace(/^#/, '')).filter(Boolean).slice(0, 5)
@@ -218,6 +254,10 @@ const post = await Post.create({
   tags:        cleanTags,
   link:        link?.trim()   || '',
   imageUrl:    imageUrl       || '',
+
+youtubeUrl: youtubeUrl || '',
+youtubeId: ytId || '',
+
   isAnonymous: Boolean(isAnonymous),
   expiresAt,
   postedBy:    req.user._id,
@@ -454,11 +494,20 @@ router.post('/:id/replies', protect, async (req, res) => {
     if (!text?.trim()) return res.status(400).json({ message: 'Reply text required' })
     if (text.trim().length > 350) return res.status(400).json({ message: 'Reply too long' })
 
-    const post = await Post.findByIdAndUpdate(
-      req.params.id,
-      { $push: { replies: { text: text.trim(), postedBy: req.user._id, createdAt: new Date() } } },
-      { new: true }
-    ).populate('replies.postedBy', 'name year branch avatar')
+  await Post.findByIdAndUpdate(
+  req.params.id,
+  {
+    $push: {
+      replies: {
+        text: text.trim(),
+        postedBy: req.user._id,
+        createdAt: new Date()
+      }
+    },
+    $inc: { replyCount: 1 }
+  },
+  { new: true }
+).populate('replies.postedBy', 'name year branch avatar')
 
     if (!post) return res.status(404).json({ message: 'Post not found' })
 
