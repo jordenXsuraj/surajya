@@ -589,8 +589,46 @@ useEffect(() => {
   )}
 </div>
 
+{post.youtubeUrl && (
+  (() => {
+    const ytId = getYouTubeId(post.youtubeUrl)
+    if (!ytId) return null
 
+    return (
+      <a
+        href={post.youtubeUrl}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          display:'block',
+          margin:'10px 0',
+          position:'relative'
+        }}
+      >
+        <img
+          src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+          alt="YouTube"
+          style={{
+            width:'100%',
+            borderRadius:14,
+            display:'block'
+          }}
+        />
 
+        <div style={{
+          position:'absolute',
+          inset:0,
+          display:'flex',
+          alignItems:'center',
+          justifyContent:'center',
+          fontSize:'3rem'
+        }}>
+          ▶️
+        </div>
+      </a>
+    )
+  })()
+)}
 
 {post.pdfUrl?.length > 0 && (
   <div style={{

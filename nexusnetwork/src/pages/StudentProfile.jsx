@@ -489,42 +489,45 @@ useEffect(() => {
 </div>
 
 
-
 {post.youtubeUrl && (
-  <a
-    href={post.youtubeUrl}
-    target="_blank"
-    rel="noreferrer"
-    style={{
-      display:'flex',
-      alignItems:'center',
-      gap:12,
-      padding:'12px 14px',
-      background:'var(--bg2)',
-      border:'1.5px solid rgba(255,0,0,.25)',
-      borderRadius:14,
-      margin:'10px 0',
-      textDecoration:'none'
-    }}
-  >
-    <div style={{ fontSize:'1.8rem' }}>🎥</div>
+  (() => {
+    const ytId = getYouTubeId(post.youtubeUrl)
+    if (!ytId) return null
 
-    <div>
-      <div style={{
-        color:'var(--text)',
-        fontWeight:700
-      }}>
-        YouTube Video
-      </div>
+    return (
+      <a
+        href={post.youtubeUrl}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          display:'block',
+          margin:'10px 0',
+          position:'relative'
+        }}
+      >
+        <img
+          src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+          alt="YouTube"
+          style={{
+            width:'100%',
+            borderRadius:14,
+            display:'block'
+          }}
+        />
 
-      <div style={{
-        fontSize:'.7rem',
-        color:'var(--dim)'
-      }}>
-        Tap to watch
-      </div>
-    </div>
-  </a>
+        <div style={{
+          position:'absolute',
+          inset:0,
+          display:'flex',
+          alignItems:'center',
+          justifyContent:'center',
+          fontSize:'3rem'
+        }}>
+          ▶️
+        </div>
+      </a>
+    )
+  })()
 )}
 
 
