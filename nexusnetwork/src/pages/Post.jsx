@@ -659,9 +659,7 @@ setPdfFile(null)
         YouTube Video <span className="field-optional">— optional</span>
         </label>
 
-<label className="field-label">
-  YouTube Video <span className="field-optional">— optional</span>
-</label>
+
 
 <input
   className="post-input"

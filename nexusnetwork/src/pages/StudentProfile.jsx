@@ -14,7 +14,6 @@ const TYPE_TAG = {
   study:    { label:'📚 Study Meterial',    cls:'tag-green'  },
   project:    { label:'🚀 Project',    cls:'tag-yellow' },
   tip:        { label:'💡 Tip',        cls:'tag-orange' },
-  
   social:     { label:'🔥 Social',     cls:'tag-orange' },
   confession: { label:'🤫 Confession', cls:'tag-red'    },
 }
@@ -490,6 +489,43 @@ useEffect(() => {
 </div>
 
 
+
+{post.youtubeUrl && (
+  <a
+    href={post.youtubeUrl}
+    target="_blank"
+    rel="noreferrer"
+    style={{
+      display:'flex',
+      alignItems:'center',
+      gap:12,
+      padding:'12px 14px',
+      background:'var(--bg2)',
+      border:'1.5px solid rgba(255,0,0,.25)',
+      borderRadius:14,
+      margin:'10px 0',
+      textDecoration:'none'
+    }}
+  >
+    <div style={{ fontSize:'1.8rem' }}>🎥</div>
+
+    <div>
+      <div style={{
+        color:'var(--text)',
+        fontWeight:700
+      }}>
+        YouTube Video
+      </div>
+
+      <div style={{
+        fontSize:'.7rem',
+        color:'var(--dim)'
+      }}>
+        Tap to watch
+      </div>
+    </div>
+  </a>
+)}
 
 
 {post.pdfUrl?.length > 0 && (
