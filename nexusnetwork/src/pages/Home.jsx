@@ -210,22 +210,7 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
 }
 
 
-async function handleShare() {
-  const url = `${window.location.origin}/post/${post._id}`
 
-  try {
-    if (navigator.share) {
-      await navigator.share({
-        title: 'MeetNet Post',
-        text: post.text?.slice(0, 100),
-        url
-      })
-    } else {
-      await navigator.clipboard.writeText(url)
-      alert('🔗 Link copied')
-    }
-  } catch {}
-}
 
 
 function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myConnections, mySentReqs, onConnect }) {
@@ -259,7 +244,22 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
 const [videoOpen, setVideoOpen] = useState(false)
 
+async function handleShare() {
+  const url = `${window.location.origin}/post/${post._id}`
 
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'MeetNet Post',
+        text: post.text?.slice(0, 100),
+        url
+      })
+    } else {
+      await navigator.clipboard.writeText(url)
+      alert('🔗 Link copied')
+    }
+  } catch {}
+}
 
 async function handleReport(reason) {
   if (reported || reportBusy) return
@@ -662,9 +662,7 @@ useEffect(() => {
           </button>
         )}
  
-        <button className={`act-btn ${saved ? 'saved' : ''}`} onClick={() => onSave(post._id)}>
-          🔖
-        </button>
+        
           {/* ── REPORT BUTTON — ADD THIS ── */}
 
 
@@ -680,7 +678,10 @@ useEffect(() => {
 
   {showMenu && (
     <div className="three-dot-menu">
-
+      
+<button className={`act-btn ${saved ? 'saved' : ''}`} onClick={() => onSave(post._id)}>
+          🔖
+        </button>
       <button
         className="menu-item"
         onClick={() => {
