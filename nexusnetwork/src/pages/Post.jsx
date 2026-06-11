@@ -320,7 +320,7 @@ await createPost({
   pdfSize,
 
   link,
-  tags,
+  tags: cleanTags,
   todayOnly,
 
   isAnonymous: anon || type === 'confession'
@@ -716,20 +716,22 @@ setPdfFile(null)
 
 
 )}
- {tags && (
+ 
+ 
+ {attachmentType === 'tags' && (
   <>
-        {/* ── Tags — NEW comma-separated input ── */}
-       <label className="field-label">
-          Tags <span className="field-optional">— comma separated, max 5</span>
-        </label>
-        <input
-          className="post-input"
-          placeholder="e.g. DSA, placement, TCS"
-          value={tags}
-          onChange={e => setTags(e.target.value)}
-        />
-        </>
- )}
+    <label className="field-label">
+      Tags <span className="field-optional">— comma separated, max 5</span>
+    </label>
+
+    <input
+      className="post-input"
+      placeholder="DSA, placement, TCS"
+      value={tags}
+      onChange={e => setTags(e.target.value)}
+    />
+  </>
+)}
 
 {attachmentType === 'youtube' && (
 <>
