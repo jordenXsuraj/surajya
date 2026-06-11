@@ -343,6 +343,10 @@ const textRef = useRef(null)
  const [imgOpen, setImgOpen] = useState(false)
 
 const [videoOpen, setVideoOpen] = useState(false)
+const [showMenu, setShowMenu] = useState(false)
+const [showReport, setShowReport] = useState(false)
+const [reported, setReported] = useState(false)
+
   const TYPE_TAG_LOCAL = {
     placement:  { label:'💼 Placement',  cls:'tag-blue'   },
     qa:         { label:'❓ Q&A',         cls:'tag-purple' },
@@ -382,6 +386,57 @@ useEffect(() => {
   return () => clearTimeout(timer)
 }, [post.text])
 
+
+
+async function handleShare() {
+  const url = `${window.location.origin}/post/${post._id}`
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'MeetNet Post',
+        text: post.text?.slice(0, 100),
+        url
+      })
+    } else {
+      await navigator.clipboard.writeText(url)
+      alert('🔗 Link copied')
+    }
+  } catch {}
+}
+
+async function handleReport(reason) {
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_API_URL}/posts/${post._id}/report`,
+      { reason }
+    )
+
+    setReported(true)
+    setShowReport(false)
+    alert('Reported')
+  } catch (e) {
+    alert(e.response?.data?.message || 'Failed')
+  }
+}
+
+async function handleSave() {
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_API_URL}/users/save/${post._id}`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('nx_token')}`
+        }
+      }
+    )
+
+    alert('🔖 Saved')
+  } catch {
+    alert('Save failed')
+  }
+}
 
 
   async function submitReply() {
@@ -694,6 +749,80 @@ useEffect(() => {
             {showR ? '▲ Hide' : `▼ ${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}`}
           </button>
         )}
+
+<div style={{ marginLeft:'auto', position:'relative' }}>
+
+  <button
+    className="act-btn menu-trigger"
+    onClick={() => setShowMenu(v => !v)}
+  >
+    ⋯
+  </button>
+
+  {showMenu && (
+    <div className="three-dot-menu">
+
+      <button
+        className="menu-item"
+        onClick={() => {
+          handleSave()
+          setShowMenu(false)
+        }}
+      >
+        🔖 Save Post
+      </button>
+
+      <button
+        className="menu-item"
+        onClick={() => {
+          handleShare()
+          setShowMenu(false)
+        }}
+      >
+        🔗 Share Post
+      </button>
+
+      <button
+        className="menu-item"
+        onClick={() => {
+          setShowMenu(false)
+          setShowReport(true)
+        }}
+      >
+        🚩 Report Post
+      </button>
+
+    </div>
+  )}
+
+  {showReport && !reported && (
+    <div className="three-dot-menu">
+
+      <button className="menu-item" onClick={() => handleReport('spam')}>
+        🗑️ Spam
+      </button>
+
+      <button className="menu-item" onClick={() => handleReport('hate')}>
+        😡 Hate Speech
+      </button>
+
+      <button className="menu-item" onClick={() => handleReport('harassment')}>
+        🚫 Harassment
+      </button>
+
+      <button className="menu-item" onClick={() => handleReport('misinformation')}>
+        ❌ Misinformation
+      </button>
+
+      <button className="menu-item" onClick={() => handleReport('other')}>
+        ⚠️ Other
+      </button>
+
+    </div>
+  )}
+
+</div>
+
       </div>
 
       {/* Reply input box */}
