@@ -15,6 +15,38 @@ const TYPE_TAG = {
   study:    { label:'Study Meterial',    cls:'tag-green'  },
 }
 
+function timeAgo(d) {
+  const h = Math.floor((Date.now() - new Date(d)) / 3600000)
+  if (h < 1) return 'just now'
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
+
+function av(name) {
+  if (!name) return '??'
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
+
+
+function getYouTubeId(url) {
+  if (!url) return null
+
+  const patterns = [
+    /youtube\.com\/watch\?v=([^&\s]+)/,
+    /youtu\.be\/([^?\s]+)/,
+    /youtube\.com\/embed\/([^?\s]+)/,
+    /youtube\.com\/shorts\/([^?\s]+)/
+  ]
+
+  for (const p of patterns) {
+    const m = url.match(p)
+    if (m?.[1]) return m[1]
+  }
+
+  return null
+}
+
+
 function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myConnections, mySentReqs, onConnect }) {
   const nav = useNavigate()
   // ADD this state inside PostCard alongside other states:
