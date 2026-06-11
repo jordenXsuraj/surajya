@@ -87,7 +87,28 @@ const getH = () => ({
       Loading…
     </div>
   )
+const deletePost = async (postId, reportId) => {
+  console.log('Delete clicked', postId, reportId)
 
+  try {
+    await axios.delete(
+      `${base}/posts/admin/post/${postId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-admin-key': adminKey
+        }
+      }
+    )
+
+    setReports(prev =>
+      prev.filter(r => r._id !== reportId)
+    )
+  } catch (err) {
+    console.error(err)
+    alert('Delete failed')
+  }
+}
   // ... rest of your JSX stays exactly the same
   return (
     <div style={{ maxWidth:430, margin:'0 auto', background:'#0d0d0d',
