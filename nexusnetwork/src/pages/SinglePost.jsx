@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import axios from 'axios'
+import PostCard from '../components/PostCard'
 
 export default function SinglePost() {
   const { id } = useParams()
@@ -14,18 +15,19 @@ export default function SinglePost() {
 
   if (!post) return <div>Loading...</div>
 
-  return (
-    <div style={{ padding:'20px' }}>
-      <h2>{post.postedBy?.name}</h2>
-      <p>{post.text}</p>
-
-      {post.imageUrl && (
-        <img
-          src={post.imageUrl}
-          alt=""
-          style={{ maxWidth:'100%' }}
-        />
-      )}
-    </div>
-  )
+return (
+  <div className="page-wrap">
+    <PostCard
+      post={post}
+      currentUserId=""
+      onLike={() => {}}
+      onSave={() => {}}
+      onDelete={() => {}}
+      savedIds={[]}
+      myConnections={[]}
+      mySentReqs={[]}
+      onConnect={() => {}}
+    />
+  </div>
+)
 }
