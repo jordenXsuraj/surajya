@@ -512,6 +512,9 @@ router.delete('/:id', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 // POST /api/posts/:id/replies
 // ─────────────────────────────────────────────────
+
+
+/*
 router.post('/:id/replies', protect, async (req, res) => {
   try {
     const { text } = req.body
@@ -548,6 +551,47 @@ router.post('/:id/replies', protect, async (req, res) => {
     return res.status(500).json({
       message: err.message
     })
+  }
+})
+*/
+
+router.post('/:id/replies', protect, async (req, res) => {
+  try {
+    const { text } = req.body
+
+    if (!text?.trim()) {
+      return res.status(400).json({ message: 'Reply text required' })
+    }
+
+    await Post.findByIdAndUpdate(
+      req.params.id,
+      {
+        $push: {
+          replies: {
+            text: text.trim(),
+            postedBy: req.user._id,
+            createdAt: new Date()
+          }
+        }
+      }
+    )
+
+    return res.status(201).json({
+      _id: Date.now().toString(),
+      text: text.trim(),
+      postedBy: {
+        _id: req.user._id,
+        name: req.user.name,
+        year: req.user.year,
+        branch: req.user.branch,
+        avatar: req.user.avatar || ''
+      },
+      createdAt: new Date()
+    })
+
+  } catch (err) {
+    console.error('REPLY ROUTE ERROR:', err)
+    return res.status(500).json({ message: err.message })
   }
 })
 
