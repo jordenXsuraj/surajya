@@ -341,6 +341,30 @@ router.post('/admin/dismiss/:reportId', protect, async (req, res) => {
   }
 })
 
+router.delete('/admin/post/:postId', protect, async (req, res) => {
+  try {
+    if (
+      req.user.email !== process.env.ADMIN_EMAIL ||
+      req.headers['x-admin-key'] !== process.env.ADMIN_SECRET_KEY
+    ) {
+      return res.status(403).json({ message: 'Not authorized' })
+    }
+
+    const post = await Post.findByIdAndDelete(req.params.postId)
+
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' })
+    }
+
+    res.json({ message: 'Post deleted successfully' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+
+
 router.get('/admin/stats', protect, async (req, res) => {
   try {
     const ADMIN_EMAIL = process.env.ADMIN_EMAIL
