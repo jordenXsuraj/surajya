@@ -46,6 +46,101 @@ function getYouTubeId(url) {
   return null
 }
 
+function ReplyBox({ postId, postType, onAdded, onClose }) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function submit() {
+    if (!text.trim()) return
+    setBusy(true)
+    try {
+      const res = await addReply(postId, text.trim())
+      onAdded(res.data); setText(''); onClose()
+    } catch (e) { alert(e.response?.data?.message || 'Failed') }
+    finally { setBusy(false) }
+  }
+
+  return (
+    <div className="reply-box">
+      <textarea className="reply-input" autoFocus
+        placeholder={postType === 'qa' ? 'Write your answer…' : 'Write a reply…'}
+        value={text} onChange={e => setText(e.target.value)} maxLength={500}
+        onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) submit() }}/>
+      <div className="reply-box-footer">
+        <span className="reply-char">{text.length}/500</span>
+        <div style={{ display:'flex', gap:7 }}>
+          <button className="reply-cancel" onClick={onClose}>Cancel</button>
+          <button className="reply-submit" onClick={submit} disabled={busy || !text.trim()}>
+            {busy ? '…' : postType === 'qa' ? 'Answer' : 'Reply'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
+  const nav  = useNavigate()
+  const [del, setDel] = useState(false)
+
+  const isOwn = reply.postedBy?._id === currentUserId ||
+                reply.postedBy?._id?.toString() === currentUserId
+
+  const canVisit = reply.postedBy?._id &&
+                   reply.postedBy._id?.toString() !== currentUserId
+
+  async function handleDelete() {
+    setDel(true)
+    try { await deleteReply(postId, reply._id); onDeleted(reply._id) }
+    catch { alert('Could not delete') }
+    finally { setDel(false) }
+  }
+
+  const name     = reply.postedBy?.name || 'User'
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+
+  return (
+    <div className="reply-item">
+      <div
+        className="reply-av"
+        style={{
+          background:'rgba(59,130,246,.15)', color:'#3b82f6',
+          overflow:'hidden',
+          cursor: canVisit ? 'pointer' : 'default'
+        }}
+        onClick={() => canVisit && nav(`/profile/${reply.postedBy._id}`)}
+      >
+        {reply.postedBy?.avatar
+          ? <img src={reply.postedBy.avatar} alt={name} loading="lazy"
+              style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }}/>
+          : initials
+        }
+      </div>
+      <div className="reply-content">
+        <div className="reply-header">
+          <span
+            className="reply-name"
+            style={{ cursor: canVisit ? 'pointer' : 'default' }}
+            onClick={() => canVisit && nav(`/profile/${reply.postedBy._id}`)}
+          >
+            {name}
+          </span>
+          <span className="reply-meta">
+            {reply.postedBy?.year} yr · {timeAgo(reply.createdAt)}
+          </span>
+          {isOwn && (
+            <button className="reply-delete" onClick={handleDelete} disabled={del}>
+              🗑️
+            </button>
+          )}
+        </div>
+        <p className="reply-text">{reply.text}</p>
+      </div>
+    </div>
+  )
+}
+
+
 
 function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myConnections, mySentReqs, onConnect }) {
   const nav = useNavigate()
