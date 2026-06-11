@@ -2735,3 +2735,11 @@ border-bottom: 1px solid rgba(255,255,255,0.05);
 .menu-item:hover{
   background:rgba(255,255,255,.06);
 }
+
+.act-btn{
+  width:34px;
+  height:34px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}

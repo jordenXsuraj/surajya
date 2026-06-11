@@ -680,7 +680,7 @@ useEffect(() => {
     <div className="three-dot-menu">
       
 <button className={`act-btn ${saved ? 'saved' : ''}`} onClick={() => onSave(post._id)}>
-          🔖
+          🔖 Save Post
         </button>
       <button
         className="menu-item"
@@ -707,7 +707,12 @@ useEffect(() => {
 
     {showReport && !reported && (
       <div style={{
-        position:'absolute', bottom:'110%', right:0,
+        position:'absolute',
+top:'100%',
+right:'-8px',
+minWidth:'190px',
+marginTop:'6px',
+zIndex:999,
         background:'var(--card)', border:'1px solid var(--br2)',
         borderRadius:12, padding:8, zIndex:200,
         minWidth:160, boxShadow:'0 8px 24px rgba(0,0,0,.5)',
