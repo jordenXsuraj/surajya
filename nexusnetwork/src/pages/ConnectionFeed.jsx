@@ -74,11 +74,11 @@ function ReplyBox({ postId, postType, onAdded, onClose }) {
         placeholder={postType === 'qa' ? 'Write your answer…' : 'Write a reply…'}
         value={text}
         onChange={e => setText(e.target.value)}
-        maxLength={500}
+        maxLength={350}
         onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) submit() }}
       />
       <div className="reply-box-footer">
-        <span className="reply-char">{text.length}/500</span>
+        <span className="reply-char">{text.length}/350</span>
         <div style={{ display:'flex', gap:7 }}>
           <button className="reply-cancel" onClick={onClose}>Cancel</button>
           <button className="reply-submit" onClick={submit} disabled={busy || !text.trim()}>
