@@ -673,7 +673,7 @@ useEffect(() => {
     className="act-btn"
     onClick={() => setShowMenu(v => !v)}
   >
-    ⋮
+     ⋯
   </button>
 
   {showMenu && (
@@ -1057,7 +1057,7 @@ useEffect(() => {
         <PostCard key={p._id} post={p}
           currentUserId={user?._id}
           onLike={handleLike}  onDelete={handleDelete}
-          savedIds={savedIds}
+          savedIds={savedIds}  onSave={handleSave}
           myConnections={localConns} mySentReqs={localSentReqs}
           onConnect={handleConnect}/>
       ))}
