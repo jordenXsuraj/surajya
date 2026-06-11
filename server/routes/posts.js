@@ -515,41 +515,39 @@ router.delete('/:id', protect, async (req, res) => {
 router.post('/:id/replies', protect, async (req, res) => {
   try {
     const { text } = req.body
-    if (!text?.trim()) return res.status(400).json({ message: 'Reply text required' })
-    if (text.trim().length > 350) return res.status(400).json({ message: 'Reply too long' })
 
-  const post = await Post.findByIdAndUpdate(
-  req.params.id,
-  {
-    $push: {
-      replies: {
-        text: text.trim(),
-        postedBy: req.user._id,
-        createdAt: new Date()
-      }
-    },
-    $inc: { replyCount: 1 }
-  },
-  { new: true }
-).populate('replies.postedBy', 'name year branch avatar')
+    if (!text?.trim()) {
+      return res.status(400).json({ message: 'Reply text required' })
+    }
 
-    if (!post) return res.status(404).json({ message: 'Post not found' })
+    const post = await Post.findByIdAndUpdate(
+      req.params.id,
+      {
+        $push: {
+          replies: {
+            text: text.trim(),
+            postedBy: req.user._id,
+            createdAt: new Date()
+          }
+        },
+        $inc: { replyCount: 1 }
+      },
+      { new: true }
+    ).populate('replies.postedBy', 'name year branch avatar')
+
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' })
+    }
 
     const newReply = post.replies[post.replies.length - 1]
 
-    if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) {
-           Notification.create({
-           recipient: post.postedBy,
-           sender: req.user._id,
-           type: 'post_replied',
-           post: post._id,
-         message: text.trim()
-        }).catch(() => {})
-    }
+    return res.status(201).json(newReply)
 
-    res.status(201).json(newReply)
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    console.error('REPLY ROUTE ERROR:', err)
+    return res.status(500).json({
+      message: err.message
+    })
   }
 })
 
