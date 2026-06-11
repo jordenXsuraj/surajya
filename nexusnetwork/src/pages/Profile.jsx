@@ -509,7 +509,6 @@ useEffect(() => {
 
 
 
-
   async function submitReply() {
     if (!rt.trim()) return
     setSub(true)

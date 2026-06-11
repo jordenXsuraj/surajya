@@ -518,7 +518,7 @@ router.post('/:id/replies', protect, async (req, res) => {
     if (!text?.trim()) return res.status(400).json({ message: 'Reply text required' })
     if (text.trim().length > 350) return res.status(400).json({ message: 'Reply too long' })
 
-  await Post.findByIdAndUpdate(
+  const post = await Post.findByIdAndUpdate(
   req.params.id,
   {
     $push: {
