@@ -209,6 +209,25 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
   )
 }
 
+
+async function handleShare() {
+  const url = `${window.location.origin}/post/${post._id}`
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'MeetNet Post',
+        text: post.text?.slice(0, 100),
+        url
+      })
+    } else {
+      await navigator.clipboard.writeText(url)
+      alert('🔗 Link copied')
+    }
+  } catch {}
+}
+
+
 function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myConnections, mySentReqs, onConnect }) {
   const nav = useNavigate()
   // ADD this state inside PostCard alongside other states:
@@ -224,6 +243,7 @@ const textRef = useRef(null)
   const [imgOpen, setImgOpen] = useState(false)
 const [reported,    setReported]    = useState(false)
 const [showReport,  setShowReport]  = useState(false)
+const [showMenu, setShowMenu] = useState(false)
 const [reportBusy,  setReportBusy]  = useState(false)
 
   const t        = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
@@ -641,20 +661,48 @@ useEffect(() => {
             {connBusy ? '…' : reqSent ? '⏳' : '🤝 Connect'}
           </button>
         )}
-{/* 
+ 
         <button className={`act-btn ${saved ? 'saved' : ''}`} onClick={() => onSave(post._id)}>
           🔖
-        </button>*/}
+        </button>
           {/* ── REPORT BUTTON — ADD THIS ── */}
-  <div style={{ position:'relative' }}>
-    <button
-      className="act-btn"
-      onClick={() => setShowReport(b => !b)}
-      disabled={reported}
-      style={{ color: reported ? 'var(--green)' : 'var(--muted)' }}
-    >
-      {reported ? '✓' : '🚩'}
-    </button>
+
+
+          
+<div style={{ position:'relative' }}>
+
+  <button
+    className="act-btn"
+    onClick={() => setShowMenu(v => !v)}
+  >
+    ⋮
+  </button>
+
+  {showMenu && (
+    <div className="three-dot-menu">
+
+      <button
+        className="menu-item"
+        onClick={() => {
+          handleShare()
+          setShowMenu(false)
+        }}
+      >
+        🔗 Share Post
+      </button>
+
+      <button
+        className="menu-item"
+        onClick={() => {
+          setShowMenu(false)
+          setShowReport(true)
+        }}
+      >
+        🚩 Report Post
+      </button>
+
+    </div>
+  )}
 
     {showReport && !reported && (
       <div style={{
@@ -696,6 +744,8 @@ useEffect(() => {
       </div>
     )}
   </div>
+
+  
   {/* ── END REPORT BUTTON ── */}
       </div>
 
@@ -845,7 +895,7 @@ useEffect(() => {
 
 
 
-/*
+
   // ── Saved posts ──────────────────────────────────
   useEffect(() => {
     import('../services/api').then(api => {
@@ -854,7 +904,7 @@ useEffect(() => {
         .catch(() => {})
     })
   }, [])
-*/
+
   // ── FIX 6: Scroll listener — stable with useCallback ──
   // Using useCallback prevents stale closure over hasMore/loading
   const handleScroll = useCallback(() => {
@@ -889,7 +939,7 @@ useEffect(() => {
       setPosts(prev => prev.map(p => p._id === postId ? { ...p, likes: res.data.likes } : p))
     } catch { show('❌ Failed. Try again') }
   }
-/*
+
   async function handleSave(postId) {
     const post = posts.find(p => p._id === postId)
     if (post) trackInteraction(post.type, 'save')
@@ -898,7 +948,7 @@ useEffect(() => {
     try { await savePost(postId); show(already ? 'Bookmark removed' : '🔖 Saved!') }
     catch { setSaved(p => already ? [...p, postId] : p.filter(id => id !== postId)) }
   }
-*/
+
   async function handleDelete(postId) {
     try {
       await deletePost(postId)
