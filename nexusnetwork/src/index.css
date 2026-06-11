@@ -2616,3 +2616,88 @@ border-bottom: 1px solid rgba(255,255,255,0.05);
   overflow: hidden;
   background: #000;
 }
+
+.attach-menu{
+  position:absolute;
+  top:65px;
+  left:0;
+  width:320px;
+  background:rgba(15,15,18,.95);
+  backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:24px;
+  overflow:hidden;
+  z-index:1000;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+
+.attach-item{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:18px;
+  background:none;
+  border:none;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  cursor:pointer;
+  text-align:left;
+}
+
+.attach-item:last-child{
+  border-bottom:none;
+}
+
+.attach-item:hover{
+  background:rgba(255,255,255,.04);
+}
+
+.attach-icon{
+  width:58px;
+  height:58px;
+  border-radius:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.6rem;
+}
+
+.attach-icon.image{
+  background:rgba(255,72,122,.18);
+}
+
+.attach-icon.youtube{
+  background:rgba(255,0,0,.18);
+}
+
+.attach-icon.pdf{
+  background:rgba(140,92,255,.18);
+}
+
+.attach-icon.link{
+  background:rgba(70,160,255,.18);
+}
+
+.attach-icon.tags{
+  background:rgba(77,210,90,.18);
+}
+
+.attach-title{
+  color:#fff;
+  font-size:1.05rem;
+  font-weight:700;
+}
+
+.attach-sub{
+  color:#8c8c8c;
+  font-size:.82rem;
+  margin-top:3px;
+}
+.attach-trigger{
+  width:72px;
+  height:72px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#ff2d55,#ff4458);
+  font-size:2rem;
+  box-shadow:0 0 30px rgba(255,45,85,.4);
+}

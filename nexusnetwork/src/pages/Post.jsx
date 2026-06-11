@@ -473,55 +473,81 @@ setPdfFile(null)
     +
   </button>
 
-  {showAttachMenu && (
-    <div style={{
-      position:'absolute',
-      top:'60px',
-      left:0,
-      background:'var(--card)',
-      border:'1px solid var(--br2)',
-      borderRadius:'14px',
-      padding:'8px',
-      display:'flex',
-      flexDirection:'column',
-      gap:'6px',
-      zIndex:100
-    }}>
-      <button onClick={() => {
+{showAttachMenu && (
+  <div className="attach-menu">
+
+    <button
+      className="attach-item"
+      onClick={() => {
         setAttachmentType('image')
         setShowAttachMenu(false)
-      }}>
-        📸 Image
-      </button>
+      }}
+    >
+      <div className="attach-icon image">📸</div>
+      <div>
+        <div className="attach-title">Image</div>
+        <div className="attach-sub">Upload a photo</div>
+      </div>
+    </button>
 
-      <button onClick={() => {
+    <button
+      className="attach-item"
+      onClick={() => {
         setAttachmentType('youtube')
         setShowAttachMenu(false)
-      }}>
-        🎥 YouTube
-      </button>
+      }}
+    >
+      <div className="attach-icon youtube">▶️</div>
+      <div>
+        <div className="attach-title">YouTube</div>
+        <div className="attach-sub">Add a YouTube video</div>
+      </div>
+    </button>
 
-      <button onClick={() => {
+    <button
+      className="attach-item"
+      onClick={() => {
         setAttachmentType('pdf')
         setShowAttachMenu(false)
-      }}>
-        📄 PDF
-      </button>
+      }}
+    >
+      <div className="attach-icon pdf">📄</div>
+      <div>
+        <div className="attach-title">PDF</div>
+        <div className="attach-sub">Upload a PDF file</div>
+      </div>
+    </button>
 
-      <button onClick={() => {
+    <button
+      className="attach-item"
+      onClick={() => {
         setAttachmentType('link')
         setShowAttachMenu(false)
-      }}>
-        🔗 Link
-      </button>
-       <button onClick={() => {
+      }}
+    >
+      <div className="attach-icon link">🔗</div>
+      <div>
+        <div className="attach-title">Link</div>
+        <div className="attach-sub">Add a web link</div>
+      </div>
+    </button>
+
+    <button
+      className="attach-item"
+      onClick={() => {
         setAttachmentType('tags')
         setShowAttachMenu(false)
-      }}>
-        Tags 
-      </button>
-    </div>
-  )}
+      }}
+    >
+      <div className="attach-icon tags">🏷️</div>
+      <div>
+        <div className="attach-title">Tags</div>
+        <div className="attach-sub">Add topics & tags</div>
+      </div>
+    </button>
+
+  </div>
+)}
 
 </div>
 
