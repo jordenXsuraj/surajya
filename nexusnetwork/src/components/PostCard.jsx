@@ -5,6 +5,16 @@ import { useNavigate } from 'react-router-dom'
 import { addReply, deleteReply, sendInterest } from '../services/api'
 
 
+
+const TYPE_TAG = {
+  placement:  { label:'💼 Placement',  cls:'tag-blue'   },
+  social:     { label:'🔥 Social',     cls:'tag-orange' },
+  confession: { label:'🤫 Confession', cls:'tag-red'    },
+  project:    { label:'🚀Project/partner',    cls:'tag-yellow' },
+  qa:         { label:'❓ Q&A',         cls:'tag-purple' },
+  study:    { label:'Study Meterial',    cls:'tag-green'  },
+}
+
 function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myConnections, mySentReqs, onConnect }) {
   const nav = useNavigate()
   // ADD this state inside PostCard alongside other states:
