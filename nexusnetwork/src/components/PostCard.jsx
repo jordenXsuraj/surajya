@@ -1,4 +1,8 @@
 
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
+import { addReply, deleteReply, sendInterest } from '../services/api'
 
 
 function PostCard({ post, currentUserId, onLike, onSave, onDelete, savedIds, myConnections, mySentReqs, onConnect }) {
