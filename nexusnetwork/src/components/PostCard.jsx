@@ -162,11 +162,12 @@ const [reportBusy,  setReportBusy]  = useState(false)
 
   const t        = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
   const liked    = (post.likes || []).map(l => l?.toString()).includes(currentUserId)
-  const saved    = savedIds.includes(post._id)
+const saved = (savedIds || []).includes(post._id)
   const isOwn    = post.postedBy?._id?.toString() === currentUserId
   const authorId = post.postedBy?._id?.toString()
-  const isConn   = authorId && myConnections.includes(authorId)
-  const reqSent  = authorId && mySentReqs.includes(authorId)
+
+const isConn = authorId && (myConnections || []).includes(authorId)
+const reqSent = authorId && (mySentReqs || []).includes(authorId)
   const showConn = !isOwn && !post.isAnonymous && authorId && !isConn
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)

@@ -286,6 +286,10 @@ const textRef = useRef(null)
   const isOwn = post.postedBy?._id?.toString() === currentUserId
 const [videoOpen, setVideoOpen] = useState(false)
 
+const [showMenu, setShowMenu] = useState(false)
+const [showReport, setShowReport] = useState(false)
+const [reported, setReported] = useState(false)
+
 useEffect(() => {
   const timer = setTimeout(() => {
     const el = textRef.current
@@ -304,6 +308,38 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       onNav(`/profile/${post.postedBy._id}`)
     }
   }
+
+  async function handleShare() {
+  const url = `${window.location.origin}/post/${post._id}`
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'MeetNet Post',
+        text: post.text?.slice(0, 100),
+        url
+      })
+    } else {
+      await navigator.clipboard.writeText(url)
+      alert('🔗 Link copied')
+    }
+  } catch {}
+}
+
+async function handleReport(reason) {
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_API_URL}/posts/${post._id}/report`,
+      { reason }
+    )
+
+    setReported(true)
+    setShowReport(false)
+    alert('Reported')
+  } catch (e) {
+    alert(e.response?.data?.message || 'Failed')
+  }
+}
 
   return (
     <article className="post-card">
@@ -616,9 +652,78 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
         <div style={{ flex:1 }}/>
 
-        <button className={`act-btn ${saved ? 'saved' : ''}`} onClick={() => onSave(post._id)}>
-          🔖
-        </button>
+       <div style={{ position:'relative' }}>
+
+  <button
+    className="act-btn menu-trigger"
+    onClick={() => setShowMenu(v => !v)}
+  >
+    ⋯
+  </button>
+
+  {showMenu && (
+    <div className="three-dot-menu">
+
+      <button
+        className="menu-item"
+        onClick={() => {
+          onSave(post._id)
+          setShowMenu(false)
+        }}
+      >
+        🔖 Save Post
+      </button>
+
+      <button
+        className="menu-item"
+        onClick={() => {
+          handleShare()
+          setShowMenu(false)
+        }}
+      >
+        🔗 Share Post
+      </button>
+
+      <button
+        className="menu-item"
+        onClick={() => {
+          setShowMenu(false)
+          setShowReport(true)
+        }}
+      >
+        🚩 Report Post
+      </button>
+
+    </div>
+  )}
+
+  {showReport && !reported && (
+    <div className="three-dot-menu">
+
+      <button onClick={() => handleReport('spam')} className="menu-item">
+        🗑️ Spam
+      </button>
+
+      <button onClick={() => handleReport('hate')} className="menu-item">
+        😡 Hate Speech
+      </button>
+
+      <button onClick={() => handleReport('harassment')} className="menu-item">
+        🚫 Harassment
+      </button>
+
+      <button onClick={() => handleReport('misinformation')} className="menu-item">
+        ❌ Misinformation
+      </button>
+
+      <button onClick={() => handleReport('other')} className="menu-item">
+        ⚠️ Other
+      </button>
+
+    </div>
+  )}
+
+</div>
       </div>
 
       {/* Reply box */}
