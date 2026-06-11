@@ -710,9 +710,10 @@ setPdfFile(null)
 
 
 )}
-
+ {tags && (
+  <>
         {/* ── Tags — NEW comma-separated input ── */}
-{/*        <label className="field-label">
+       <label className="field-label">
           Tags <span className="field-optional">— comma separated, max 5</span>
         </label>
         <input
@@ -721,8 +722,8 @@ setPdfFile(null)
           value={tags}
           onChange={e => setTags(e.target.value)}
         />
-*/}
-
+        </>
+ )}
 
 {attachmentType === 'youtube' && (
 <>
