@@ -670,7 +670,7 @@ useEffect(() => {
 <div style={{ position:'relative' }}>
 
   <button
-    className="act-btn"
+    className="act-btn menu-trigger"
     onClick={() => setShowMenu(v => !v)}
   >
      ⋯
