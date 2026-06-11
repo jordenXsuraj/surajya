@@ -554,40 +554,43 @@ router.post('/:id/replies', protect, async (req, res) => {
   }
 })
 */
-
 router.post('/:id/replies', protect, async (req, res) => {
   try {
     const { text } = req.body
+    if (!text?.trim()) return res.status(400).json({ message: 'Reply text required' })
+    if (text.trim().length > 500) return res.status(400).json({ message: 'Reply too long' })
 
-    if (!text?.trim()) {
-      return res.status(400).json({ message: 'Reply text required' })
-    }
-
-    await Post.findByIdAndUpdate(
+    const post = await Post.findByIdAndUpdate(
       req.params.id,
       {
         $push: {
           replies: {
-            text: text.trim(),
-            postedBy: req.user._id,
+            text:      text.trim(),
+            postedBy:  req.user._id,
             createdAt: new Date()
           }
         }
-      }
-    )
-
-    return res.status(201).json({
-      _id: Date.now().toString(),
-      text: text.trim(),
-      postedBy: {
-        _id: req.user._id,
-        name: req.user.name,
-        year: req.user.year,
-        branch: req.user.branch,
-        avatar: req.user.avatar || ''
       },
-      createdAt: new Date()
-    })
+      { new: true }
+    ).populate('replies.postedBy', 'name year branch avatar')
+
+    if (!post) return res.status(404).json({ message: 'Post not found' })
+
+    // Return the REAL last reply with real _id from MongoDB
+    const newReply = post.replies[post.replies.length - 1]
+
+    // Notify post owner — only if not anonymous and not own post
+    if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) {
+      Notification.create({
+        recipient: post.postedBy,
+        sender:    req.user._id,
+        type:      'post_replied',
+        post:      post._id,
+        message:   `${req.user.name} replied: "${text.trim().slice(0, 60)}"`
+      }).catch(() => {})
+    }
+
+    return res.status(201).json(newReply)
 
   } catch (err) {
     console.error('REPLY ROUTE ERROR:', err)
