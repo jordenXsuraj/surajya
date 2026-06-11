@@ -462,8 +462,8 @@ const textRef = useRef(null)
 
 const [videoOpen, setVideoOpen] = useState(false)
 const [showMenu, setShowMenu] = useState(false)
-const [showReport, setShowReport] = useState(false)
-const [reported, setReported] = useState(false)
+
+
 
   const [sub,      setSub]     = useState(false)
  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
@@ -507,20 +507,7 @@ useEffect(() => {
   }
 }
 
-async function handleReport(reason) {
-  try {
-    await axios.post(
-      `${import.meta.env.VITE_API_URL}/posts/${post._id}/report`,
-      { reason }
-    )
 
-    setReported(true)
-    setShowReport(false)
-    alert('Reported')
-  } catch (e) {
-    alert(e.response?.data?.message || 'Failed')
-  }
-}
 
 
   async function submitReply() {
@@ -862,44 +849,13 @@ async function handleReport(reason) {
         🔗 Share Post
       </button>
 
-      <button
-        className="menu-item"
-        onClick={() => {
-          setShowMenu(false)
-          setShowReport(true)
-        }}
-      >
-        🚩 Report Post
-      </button>
+    
 
     </div>
   )}
 
-  {showReport && !reported && (
-    <div className="three-dot-menu">
+    
 
-      <button className="menu-item" onClick={() => handleReport('spam')}>
-        🗑️ Spam
-      </button>
-
-      <button className="menu-item" onClick={() => handleReport('hate')}>
-        😡 Hate Speech
-      </button>
-
-      <button className="menu-item" onClick={() => handleReport('harassment')}>
-        🚫 Harassment
-      </button>
-
-      <button className="menu-item" onClick={() => handleReport('misinformation')}>
-        ❌ Misinformation
-      </button>
-
-      <button className="menu-item" onClick={() => handleReport('other')}>
-        ⚠️ Other
-      </button>
-
-    </div>
-  )}
 
 </div>
 
