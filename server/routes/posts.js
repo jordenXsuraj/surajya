@@ -447,15 +447,17 @@ router.put('/:id/like', protect, async (req, res) => {
       const typeKey = `typeEngagement.${post.type}`
       await User.findByIdAndUpdate(req.user._id, { $inc: { [typeKey]: 1 } })
 
-    if (!post.isAnonymous && post.postedBy?.toString() !== uid) {
-           Notification.create({
-           recipient: post.postedBy,
-            sender: req.user._id,
-            type: 'post_liked',
-            post: post._id,
-              message:   `${req.user.name} liked your post`  
-         }).catch(() => {})
-    }
+    const me = await User.findById(req.user._id).select('name year branch')
+
+if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) {
+  Notification.create({
+    recipient: post.postedBy,
+    sender: req.user._id,
+    type: 'post_replied',
+    post: post._id,
+    message: `${me?.name || 'Someone'} replied: "${text.trim().slice(0, 60)}"`
+  }).catch(() => {})
+}
     }
 
     const updated = await Post.findById(post._id).select('likes').lean()
@@ -512,9 +514,6 @@ router.delete('/:id', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 // POST /api/posts/:id/replies
 // ─────────────────────────────────────────────────
-
-
-/*
 router.post('/:id/replies', protect, async (req, res) => {
   try {
     const { text } = req.body
@@ -552,56 +551,6 @@ router.post('/:id/replies', protect, async (req, res) => {
       message: err.message
     })
   }
-})
-*/
-router.post('/:id/replies', protect, async (req, res) => {
-  try {
-    const { text } = req.body
-    if (!text?.trim()) return res.status(400).json({ message: 'Reply text required' })
-    if (text.trim().length > 500) return res.status(400).json({ message: 'Reply too long' })
-
-    const post = await Post.findByIdAndUpdate(
-      req.params.id,
-      {
-        $push: {
-          replies: {
-            text:      text.trim(),
-            postedBy:  req.user._id,
-            createdAt: new Date()
-          }
-        }
-      },
-      { new: true }
-    ).populate('replies.postedBy', 'name year branch avatar')
-
-    if (!post) return res.status(404).json({ message: 'Post not found' })
-
-    // Return the REAL last reply with real _id from MongoDB
-    const newReply = post.replies[post.replies.length - 1]
-
-    // Notify post owner — only if not anonymous and not own post
-    if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) {
-      Notification.create({
-        recipient: post.postedBy,
-        sender:    req.user._id,
-        type:      'post_replied',
-        post:      post._id,
-        message:   `${req.user.name} replied: "${text.trim().slice(0, 60)}"`
-      }).catch(() => {})
-    }
-
-    return res.status(201).json(newReply)
-
-  } catch (err) {
-  console.error('========================')
-  console.error(err)
-  console.error(err.stack)
-  console.error('========================')
-
-  return res.status(500).json({
-    message: err.message
-  })
-}
 })
 
 // ─────────────────────────────────────────────────
