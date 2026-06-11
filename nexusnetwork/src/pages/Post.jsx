@@ -320,7 +320,7 @@ await createPost({
   pdfSize,
 
   link,
-
+  tags,
   todayOnly,
 
   isAnonymous: anon || type === 'confession'
@@ -513,6 +513,12 @@ setPdfFile(null)
         setShowAttachMenu(false)
       }}>
         🔗 Link
+      </button>
+       <button onClick={() => {
+        setAttachmentType('tags')
+        setShowAttachMenu(false)
+      }}>
+        Tags 
       </button>
     </div>
   )}
