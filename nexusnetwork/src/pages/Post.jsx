@@ -473,23 +473,40 @@ setPdfFile(null)
     +
   </button>
 
+
+<div className="selected-attachments">
+
+  {pdfUrl && (
+    <div className="attach-chip">
+      📄 {pdfName}
+    </div>
+  )}
+
+  {link && (
+    <div className="attach-chip">
+      🔗 Link Added
+    </div>
+  )}
+
+  {youtubeUrl && (
+    <div className="attach-chip">
+      🎥 YouTube Added
+    </div>
+  )}
+
+  {tags && (
+    <div className="attach-chip">
+      🏷️ {tags.split(',').length} Tags
+    </div>
+  )}
+
+</div>
+
+
 {showAttachMenu && (
   <div className="attach-menu">
 
-    <button
-      className="attach-item"
-      onClick={() => {
-        setAttachmentType('image')
-        setShowAttachMenu(false)
-      }}
-    >
-      <div className="attach-icon image">📸</div>
-      <div>
-        <div className="attach-title">Image</div>
-        <div className="attach-sub">Upload a photo</div>
-      </div>
-    </button>
-
+   
     <button
       className="attach-item"
       onClick={() => {
