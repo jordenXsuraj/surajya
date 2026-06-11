@@ -593,9 +593,15 @@ router.post('/:id/replies', protect, async (req, res) => {
     return res.status(201).json(newReply)
 
   } catch (err) {
-    console.error('REPLY ROUTE ERROR:', err)
-    return res.status(500).json({ message: err.message })
-  }
+  console.error('========================')
+  console.error(err)
+  console.error(err.stack)
+  console.error('========================')
+
+  return res.status(500).json({
+    message: err.message
+  })
+}
 })
 
 // ─────────────────────────────────────────────────
