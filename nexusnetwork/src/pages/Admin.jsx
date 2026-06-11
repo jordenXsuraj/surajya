@@ -29,10 +29,13 @@ export default function Admin() {
       Authorization: `Bearer ${token}`,
       'x-admin-key': adminKey
     }
-
+const getH = () => ({
+  Authorization: `Bearer ${token}`,
+  'x-admin-key': adminKey
+})
     Promise.all([
-      axios.get(`${base}/posts/admin/stats`,   { headers: getH() }),
-      axios.get(`${base}/posts/admin/reports`, { headers: getH() }),
+       axios.get(`${base}/posts/admin/stats`, { headers: h }),
+       axios.get(`${base}/posts/admin/reports`, { headers: h }),
     ])
       .then(([s, r]) => {
         setStats(s.data)
