@@ -439,16 +439,38 @@ async function handleSave() {
 }
 
 
-  async function submitReply() {
-    if (!rt.trim()) return
-    setSub(true)
-    try {
-      const res = await addReply(post._id, rt.trim())
-      setReplies(p => [...p, res.data])
-      setRt(''); setShowBox(false); setShowR(true)
-    } catch (e) { alert(e.response?.data?.message || 'Failed') }
-    finally { setSub(false) }
+async function submitReply() {
+  if (!rt.trim()) return
+
+  setSub(true)
+
+  try {
+    await addReply(post._id, rt.trim())
+
+setReplies(p => [
+  ...p,
+  {
+    _id: Date.now(),
+    text: rt.trim(),
+    postedBy: currentUser,
+    createdAt: new Date()
   }
+])
+
+    setRt('')
+    setShowBox(false)
+    setShowR(true)
+
+  } catch (e) {
+    console.log('REPLY ERROR:', e)
+    console.log('REPLY RESPONSE:', e?.response?.data)
+    alert(JSON.stringify(e?.response?.data || e.message))
+  }
+
+  finally {
+    setSub(false)
+  }
+}
 
   async function removeReply(rid) {
     try {
