@@ -453,10 +453,11 @@ if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) 
   Notification.create({
     recipient: post.postedBy,
     sender: req.user._id,
-    type: 'post_replied',
+    type: 'post_liked',
     post: post._id,
-    message: `${me?.name || 'Someone'} replied: "${text.trim().slice(0, 60)}"`
+    message: `${me?.name || 'Someone'} liked your post`
   }).catch(() => {})
+
 }
     }
 
