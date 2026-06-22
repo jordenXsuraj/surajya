@@ -471,7 +471,7 @@ if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) 
     post: post._id,
     message: `${me?.name || 'Someone'} liked your post`
   }).catch(() => {})
-3
+
 }
     }
 
@@ -557,18 +557,28 @@ router.post('/:id/replies', protect, async (req, res) => {
       return res.status(404).json({ message: 'Post not found' })
     }
 
-    const newReply = post.replies[post.replies.length - 1]
+ const newReply = post.replies[post.replies.length - 1]
 
-    return res.status(201).json(newReply)
-
-    if (!post.isAnonymous && post.postedBy) {
+// Contributor badge check
+if (!post.isAnonymous && post.postedBy) {
   const posterPosts = await Post.find({ postedBy: post.postedBy })
-    .select('likes').lean()
-  const totalLikes = posterPosts.reduce((sum, p) => sum + (p.likes?.length || 0), 0)
-  if (posterPosts.length >= 5 && totalLikes >= 25) {
-    await User.findByIdAndUpdate(post.postedBy, { isContributor: true })
+    .select('likes')
+    .lean()
+
+  const totalPosts = posterPosts.length
+  const totalLikes = posterPosts.reduce(
+    (sum, p) => sum + (p.likes?.length || 0),
+    0
+  )
+
+  if (totalPosts >= 5 && totalLikes >= 25) {
+    await User.findByIdAndUpdate(post.postedBy, {
+      isContributor: true
+    })
   }
 }
+
+return res.status(201).json(newReply)
 
   } catch (err) {
     console.error('REPLY ROUTE ERROR:', err)

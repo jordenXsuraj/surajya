@@ -15,6 +15,27 @@ const TYPE_TAG = {
   study:    { label:'Study Meterial',    cls:'tag-green'  },
 }
 
+function ContributorBadge() {
+  return (
+    <span title="MeetNet Contributor" style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 16, height: 16,
+      borderRadius: '50%',
+      background: 'linear-gradient(135deg, #f97316, #ff3b5c)',
+      fontSize: '.55rem',
+      marginLeft: 4,
+      flexShrink: 0,
+      boxShadow: '0 0 6px rgba(255,59,92,.5)',
+      verticalAlign: 'middle'
+    }}>
+      ✦
+    </span>
+  )
+}
+
+
 function timeAgo(d) {
   const h = Math.floor((Date.now() - new Date(d)) / 3600000)
   if (h < 1) return 'just now'
