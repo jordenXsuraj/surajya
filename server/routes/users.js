@@ -226,7 +226,7 @@ router.get('/suggestions', protect, async (req, res) => {
       college: me.college,
       _id: { $nin: excludeIds }
     })
-      .select('name username year branch skills college bio avatar following followers projects')
+      .select('name username year branch skills college bio avatar following followers projects isContributor')
       .limit(35)
       .lean()
 
@@ -289,7 +289,7 @@ const limit = 20
 const skip  = (page - 1) * limit
 
 const users = await User.find(filter)
-  .select('name username year branch bio skills projects following followers sentRequests college avatar coverImage')
+  .select('name username year branch bio skills projects following followers sentRequests college avatar coverImage isContributor')
   .sort({ year: -1, createdAt: -1 })
   .skip(skip)
   .limit(limit)
@@ -348,7 +348,7 @@ router.get('/all', protect, async (req, res) => {
 }
 
     const users = await User.find(filter)
-      .select('name username year branch bio skills projects following followers sentRequests college avatar')
+      .select('name username year branch bio skills projects following followers sentRequests college avatar isContributor')
       .sort({ year: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)

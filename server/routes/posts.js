@@ -461,7 +461,7 @@ if (!post.isAnonymous && post.postedBy) {
       const typeKey = `typeEngagement.${post.type}`
       await User.findByIdAndUpdate(req.user._id, { $inc: { [typeKey]: 1 } })
 
-    const me = await User.findById(req.user._id).select('name year branch')
+    const me = await User.findById(req.user._id).select('name year branch avatar isContributor')
 
 if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) {
   Notification.create({
