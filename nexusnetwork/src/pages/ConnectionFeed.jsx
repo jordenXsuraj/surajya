@@ -20,20 +20,24 @@ const TYPE_TAG = {
 
 function ContributorBadge() {
   return (
-    <span title="MeetNet Contributor" style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 16, height: 16,
-      borderRadius: '50%',
-      background: 'linear-gradient(135deg, #f97316, #ff3b5c)',
-      fontSize: '.55rem',
-      marginLeft: 4,
-      flexShrink: 0,
-      boxShadow: '0 0 6px rgba(255,59,92,.5)',
-      verticalAlign: 'middle'
-    }}>
-      ✦
+    <span
+      title="Top Contributor"
+      style={{
+        display:'inline-flex',
+        alignItems:'center',
+        justifyContent:'center',
+        width:18,
+        height:18,
+        borderRadius:'50%',
+        background:'linear-gradient(135deg,#f59e0b,#f97316)',
+        color:'#fff',
+        fontSize:'0.7rem',
+        marginLeft:6,
+        boxShadow:'0 2px 8px rgba(249,115,22,.35)',
+        border:'1px solid rgba(255,255,255,.15)'
+      }}
+    >
+      ★
     </span>
   )
 }

@@ -34,32 +34,21 @@ function ContributorBadge() {
     <span
       title="Top Contributor"
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 14,
-        height: 14,
-        marginLeft: 6,
-        transform: 'rotate(45deg)',
-        background: 'linear-gradient(135deg, #fbbf24, #f97316)',
-        borderRadius: 3,
-        boxShadow: '0 1px 6px rgba(249,115,22,.35)',
-        border: '1px solid rgba(255,255,255,.25)',
-        verticalAlign: 'middle',
-        flexShrink: 0
+        display:'inline-flex',
+        alignItems:'center',
+        justifyContent:'center',
+        width:18,
+        height:18,
+        borderRadius:'50%',
+        background:'linear-gradient(135deg,#f59e0b,#f97316)',
+        color:'#fff',
+        fontSize:'0.7rem',
+        marginLeft:6,
+        boxShadow:'0 2px 8px rgba(249,115,22,.35)',
+        border:'1px solid rgba(255,255,255,.15)'
       }}
     >
-      <span
-        style={{
-          transform: 'rotate(-45deg)',
-          color: '#fff',
-          fontSize: '8px',
-          fontWeight: 900,
-          lineHeight: 1
-        }}
-      >
-        ✓
-      </span>
+      ★
     </span>
   )
 }
