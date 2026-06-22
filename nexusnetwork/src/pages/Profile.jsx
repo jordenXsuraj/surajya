@@ -94,6 +94,29 @@ const AV_COLORS = [
   { bg:'rgba(245,158,11,.14)', color:'#f59e0b' },
 ]
 
+
+function ContributorBadge() {
+  return (
+    <span title="MeetNet Contributor" style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 16, height: 16,
+      borderRadius: '50%',
+      background: 'linear-gradient(135deg, #f97316, #ff3b5c)',
+      fontSize: '.55rem',
+      marginLeft: 4,
+      flexShrink: 0,
+      boxShadow: '0 0 6px rgba(255,59,92,.5)',
+      verticalAlign: 'middle'
+    }}>
+      ✦
+    </span>
+  )
+}
+
+
+
 // ── Media helpers ─────────────────────────────────
 function getYouTubeId(url) {
   if (!url) return null
@@ -1232,7 +1255,10 @@ const res = await fetch(`${base}/users/me/cover`, {
       {!editMode && (
         <>
           <div className="prof-info">
-            <h2 className="prof-name">{user?.name}</h2>
+            <h2 className="prof-name" style={{ display:'flex', alignItems:'center', gap:4 }}>
+  {user?.name}
+  {user?.isContributor && <ContributorBadge />}
+</h2>
           
 <p className="prof-handle">
   @{user?.username || user?.name?.toLowerCase().replace(/\s+/g, '.')}

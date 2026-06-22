@@ -265,9 +265,13 @@ useEffect(() => {
               : <div className="av-sm av-colored">{av(post.postedBy.name)}</div>
           }
           <div className="pc-meta">
-            <div className="pc-name">
-              {post.isAnonymous || !post.postedBy ? 'Anonymous' : post.postedBy.name}
-            </div>
+
+            <div className="pc-name" style={{ display:'flex', alignItems:'center' }}>
+  {post.isAnonymous || !post.postedBy ? 'Anonymous' : post.postedBy.name}
+  {!post.isAnonymous && post.postedBy?.isContributor && <ContributorBadge />}
+</div>
+
+
             <div className="pc-sub">
               {!post.isAnonymous && post.postedBy &&
                 `${post.postedBy.year} yr ${post.postedBy.branch} · `}

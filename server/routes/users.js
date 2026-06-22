@@ -314,6 +314,7 @@ const users = await User.find(filter)
       followerCount:  u.followers?.length || 0,
       isFollowing:    myFollowing.includes(u._id.toString()),
       requestSent:    mySent.includes(u._id.toString()),
+      isContributor: u.isContributor || false,
     })))
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
@@ -372,6 +373,7 @@ router.get('/all', protect, async (req, res) => {
       followerCount:  u.followers?.length || 0,
       isFollowing:    myFollowing.includes(u._id.toString()),
       requestSent:    mySent.includes(u._id.toString()),
+      isContributor: u.isContributor || false,
     })))
   } catch (err) {
     res.status(500).json({ message: 'Server error' })

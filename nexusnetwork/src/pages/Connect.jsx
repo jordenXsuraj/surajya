@@ -30,6 +30,30 @@ const NOTIF_META = {
   new_post:            { icon:'📝', color:'#a855f7',  label:'shared a new post'    },
 }
 
+
+
+function ContributorBadge() {
+  return (
+    <span title="MeetNet Contributor" style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 16, height: 16,
+      borderRadius: '50%',
+      background: 'linear-gradient(135deg, #f97316, #ff3b5c)',
+      fontSize: '.55rem',
+      marginLeft: 4,
+      flexShrink: 0,
+      boxShadow: '0 0 6px rgba(255,59,92,.5)',
+      verticalAlign: 'middle'
+    }}>
+      ✦
+    </span>
+  )
+}
+
+
+
 function av(name) {
   if (!name) return '??'
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -78,7 +102,12 @@ function PersonCard({ u, index, onFollow, onView, sentIds, isSuggestion }) {
         {u.online && <div className="online-dot" />}
       </div>
       <div className="person-info">
-        <div className="person-name">{u.name}</div>
+
+        <div className="person-name" style={{ display:'flex', alignItems:'center' }}>
+  {u.name}
+  {u.isContributor && <ContributorBadge />}
+</div>
+
         <div className="person-role">
           {u.year} yr {u.branch}
           {u.isSenior ? ' · 🎓' : ''}

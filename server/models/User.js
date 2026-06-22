@@ -131,7 +131,8 @@ savedPosts: {
     confession: { type: Number, default: 0 },
   },
 
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  isContributor: { type: Boolean, default: false },
 
 }, { toJSON: { virtuals: true }, toObject: { virtuals: true } })
 

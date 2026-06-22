@@ -92,7 +92,7 @@ const skip  = (page - 1) * limit
       if (type && type !== 'all' && type !== '') filter.type = type
 
       const posts = await Post.find(filter)
-        .populate('postedBy', 'name year branch avatar')
+        .populate('postedBy', 'name year branch avatar isContributor')
         .populate({
             path: 'replies.postedBy',
                 select: 'name year branch avatar',
@@ -125,7 +125,7 @@ const skip  = (page - 1) * limit
       .lean()
 
     const rawPosts = await Post.find(filter)
-.populate('postedBy', 'name year branch avatar')
+.populate('postedBy', 'name year branch avatar isContributor')
 .populate({
   path: 'replies.postedBy',
   select: 'name year branch avatar',
@@ -267,7 +267,7 @@ youtubeId: ytId || '',
  pdfSize: pdfSize || 0,
 })
 
-    await post.populate('postedBy', 'name year branch college avatar')
+    await post.populate('postedBy', 'name year branch avatar isContributor')
 
     // Notify followers in background
     if (!isAnonymous) {
@@ -443,6 +443,20 @@ router.put('/:id/like', protect, async (req, res) => {
       await Post.findByIdAndUpdate(post._id,    { $addToSet: { likes: req.user._id } })
       await User.findByIdAndUpdate(req.user._id, { $addToSet: { likedPosts: post._id } })
 
+
+if (!post.isAnonymous && post.postedBy) {
+  // Check if poster qualifies for contributor badge
+  const posterPosts = await Post.find({ postedBy: post.postedBy })
+    .select('likes').lean()
+
+  const totalPosts = posterPosts.length
+  const totalLikes = posterPosts.reduce((sum, p) => sum + (p.likes?.length || 0), 0)
+
+  if (totalPosts >= 5 && totalLikes >= 25) {
+    await User.findByIdAndUpdate(post.postedBy, { isContributor: true })
+  }
+}
+
       // Track type engagement for personalization
       const typeKey = `typeEngagement.${post.type}`
       await User.findByIdAndUpdate(req.user._id, { $inc: { [typeKey]: 1 } })
@@ -457,7 +471,7 @@ if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) 
     post: post._id,
     message: `${me?.name || 'Someone'} liked your post`
   }).catch(() => {})
-
+3
 }
     }
 
@@ -485,6 +499,7 @@ router.put('/:id/save', protect, async (req, res) => {
       res.json({ saved: false })
     } else {
       await User.findByIdAndUpdate(req.user._id, { $addToSet: { savedPosts: post._id } })
+      
       res.json({ saved: true })
     }
   } catch (err) {
@@ -545,6 +560,15 @@ router.post('/:id/replies', protect, async (req, res) => {
     const newReply = post.replies[post.replies.length - 1]
 
     return res.status(201).json(newReply)
+
+    if (!post.isAnonymous && post.postedBy) {
+  const posterPosts = await Post.find({ postedBy: post.postedBy })
+    .select('likes').lean()
+  const totalLikes = posterPosts.reduce((sum, p) => sum + (p.likes?.length || 0), 0)
+  if (posterPosts.length >= 5 && totalLikes >= 25) {
+    await User.findByIdAndUpdate(post.postedBy, { isContributor: true })
+  }
+}
 
   } catch (err) {
     console.error('REPLY ROUTE ERROR:', err)
