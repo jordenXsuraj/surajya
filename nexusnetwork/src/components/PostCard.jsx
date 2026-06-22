@@ -14,7 +14,7 @@ const TYPE_TAG = {
   qa:         { label:'❓ Q&A',         cls:'tag-purple' },
   study:    { label:'Study Meterial',    cls:'tag-green'  },
 }
-
+/*
 function ContributorBadge() {
   return (
     <span title="MeetNet Contributor" style={{
@@ -34,6 +34,33 @@ function ContributorBadge() {
     </span>
   )
 }
+*/
+
+function ContributorBadge() {
+  return (
+    <span
+      title="Top Contributor"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 20,
+        height: 20,
+        borderRadius: '50%',
+        background: 'linear-gradient(135deg, #2563eb, #06b6d4)',
+        color: '#fff',
+        fontSize: '.7rem',
+        marginLeft: 6,
+        flexShrink: 0,
+        boxShadow: '0 2px 10px rgba(37,99,235,.35)',
+        border: '1px solid rgba(255,255,255,.2)'
+      }}
+    >
+      🎓
+    </span>
+  )
+}
+
 
 
 function timeAgo(d) {
