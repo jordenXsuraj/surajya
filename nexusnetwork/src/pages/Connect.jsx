@@ -34,20 +34,35 @@ const NOTIF_META = {
 
 function ContributorBadge() {
   return (
-    <span title="MeetNet Contributor" style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 16, height: 16,
-      borderRadius: '50%',
-      background: 'linear-gradient(135deg, #f97316, #ff3b5c)',
-      fontSize: '.55rem',
-      marginLeft: 4,
-      flexShrink: 0,
-      boxShadow: '0 0 6px rgba(255,59,92,.5)',
-      verticalAlign: 'middle'
-    }}>
-      ✦
+    <span
+      title="Top Contributor"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 14,
+        height: 14,
+        marginLeft: 6,
+        transform: 'rotate(45deg)',
+        background: 'linear-gradient(135deg, #fbbf24, #f97316)',
+        borderRadius: 3,
+        boxShadow: '0 1px 6px rgba(249,115,22,.35)',
+        border: '1px solid rgba(255,255,255,.25)',
+        verticalAlign: 'middle',
+        flexShrink: 0
+      }}
+    >
+      <span
+        style={{
+          transform: 'rotate(-45deg)',
+          color: '#fff',
+          fontSize: '8px',
+          fontWeight: 900,
+          lineHeight: 1
+        }}
+      >
+        ✓
+      </span>
     </span>
   )
 }

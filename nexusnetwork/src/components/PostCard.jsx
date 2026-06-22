@@ -35,7 +35,6 @@ function ContributorBadge() {
   )
 }
 */
-
 function ContributorBadge() {
   return (
     <span
@@ -44,23 +43,32 @@ function ContributorBadge() {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 20,
-        height: 20,
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, #2563eb, #06b6d4)',
-        color: '#fff',
-        fontSize: '.7rem',
+        width: 14,
+        height: 14,
         marginLeft: 6,
-        flexShrink: 0,
-        boxShadow: '0 2px 10px rgba(37,99,235,.35)',
-        border: '1px solid rgba(255,255,255,.2)'
+        transform: 'rotate(45deg)',
+        background: 'linear-gradient(135deg, #fbbf24, #f97316)',
+        borderRadius: 3,
+        boxShadow: '0 1px 6px rgba(249,115,22,.35)',
+        border: '1px solid rgba(255,255,255,.25)',
+        verticalAlign: 'middle',
+        flexShrink: 0
       }}
     >
-      🎓
+      <span
+        style={{
+          transform: 'rotate(-45deg)',
+          color: '#fff',
+          fontSize: '8px',
+          fontWeight: 900,
+          lineHeight: 1
+        }}
+      >
+        ✓
+      </span>
     </span>
   )
 }
-
 
 
 function timeAgo(d) {
