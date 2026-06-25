@@ -1047,9 +1047,9 @@ useEffect(() => {
   setLP(true)
 
   // Load only important first
-  getMyPosts()
-    .then(res => setMyPosts(res.data || []))
-    .finally(() => setLP(false))
+ getMyPosts('?page=1&limit=50')
+  .then(res => setMyPosts(res.data || []))
+  .finally(() => setLP(false))
 
   // Load others in background (non-blocking)
 setTimeout(() => {

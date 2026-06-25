@@ -127,14 +127,19 @@ router.post('/me/cover', protect, upload.single('image'), async (req, res) => {
 // ─────────────────────────────────────────────────
 router.get('/me/posts', protect, async (req, res) => {
   try {
+    const page  = parseInt(req.query.page)  || 1
+    const limit = parseInt(req.query.limit) || 20
+    const skip  = (page - 1) * limit
+
     const posts = await Post.find({ postedBy: req.user._id })
       .populate({
-  path: 'replies.postedBy',
-  select: 'name year branch avatar',
-  options: { limit: 5 }
-})
+        path: 'replies.postedBy',
+        select: 'name year branch avatar',
+        options: { limit: 5 }
+      })
       .sort({ createdAt: -1 })
-      .limit(10)
+      .skip(skip)
+      .limit(limit)
       .lean()
     res.json(posts)
   } catch (err) {
