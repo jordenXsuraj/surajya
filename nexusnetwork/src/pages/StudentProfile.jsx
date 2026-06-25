@@ -1014,7 +1014,7 @@ useEffect(() => {
   // 2️⃣ Load posts separately (non-blocking)
 //  axios.get(`${base}/users/${id}/posts`, { headers: h })
 // 2️⃣ Load posts + following + followers (non-blocking)
-axios.get(`${base}/users/${id}/posts?page=1&limit=10`, { headers: h })
+axios.get(`${base}/users/${id}/posts?page=1&limit=50`, { headers: h })
   .then(r => setPosts(r.data || []))
 
 axios.get(`${base}/users/${id}/following`, { headers: h })

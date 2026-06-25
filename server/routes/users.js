@@ -554,7 +554,7 @@ router.get('/:id/posts', protect, async (req, res) => {
   options: { limit: 5 }
 })
       .sort({ createdAt: -1 })
-      .limit(20)
+      .limit(50)
       .lean()
 
       posts.forEach(p => {
