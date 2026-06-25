@@ -51,7 +51,7 @@ export const deleteReply  = (pid, rid)   => API.delete(`/posts/${pid}/replies/${
 // ── My profile ────────────────────────────────────
 export const getMyProfile  = ()  => API.get('/users/me')
 export const updateProfile = d   => API.put('/users/me', d)
-export const getMyPosts = (params = '') => api.get(`/users/me/posts${params}`)
+export const getMyPosts = (params = '') => API.get(`/users/me/posts${params}`)
 export const getSavedPosts = ()  => API.get('/users/me/saved')
 
 // ── Profile photo upload ───────────────────────────
