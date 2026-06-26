@@ -822,7 +822,7 @@ setReplies(p => [
     />
     <div className="three-dot-menu" style={{
       position:'absolute',
-      position:'absolute',
+     
       top:'110%',
       right:0,
        zIndex:9999,

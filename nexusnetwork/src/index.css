@@ -2762,13 +2762,13 @@ border-bottom: 1px solid rgba(255,255,255,0.05);
 
 .three-dot-menu {
   position: absolute;
-  bottom: 110%;        /* opens upward */
+  top: 110%;
   right: 0;
-  z-index: 200;
+  z-index: 9999;
   background: var(--card);
   border: 1px solid var(--br2);
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;      /* ← was hidden, change to visible */
   min-width: 160px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  box-shadow: 0 8px 24px rgba(0,0,0,.6);
 }
