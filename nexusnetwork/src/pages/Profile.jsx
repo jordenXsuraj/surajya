@@ -872,8 +872,29 @@ setReplies(p => [
     ⋯
   </button>
 
-  {showMenu && (
-    <div className="three-dot-menu">
+
+ {showMenu && (
+  <>
+    {/* Backdrop — clicking outside closes menu */}
+    <div
+      style={{
+        position:'fixed', inset:0, zIndex:199
+      }}
+      onClick={() => setShowMenu(false)}
+    />
+    <div className="three-dot-menu" style={{
+      position:'absolute',
+     
+      top:'110%',
+      right:0,
+       zIndex:9999,
+      background:'var(--card)',
+      border:'1px solid var(--br2)',
+      borderRadius:12,
+      overflow:'hidden',
+      minWidth:160,
+      boxShadow:'0 8px 24px rgba(0,0,0,.5)',
+    }}>
 
       <button
         className="menu-item"
@@ -898,6 +919,7 @@ setReplies(p => [
     
 
     </div>
+    </>
   )}
 
     
