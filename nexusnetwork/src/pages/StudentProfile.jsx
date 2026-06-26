@@ -811,8 +811,27 @@ setReplies(p => [
     ⋯
   </button>
 
-  {showMenu && (
-    <div className="three-dot-menu">
+ {showMenu && (
+  <>
+    {/* Backdrop — clicking outside closes menu */}
+    <div
+      style={{
+        position:'fixed', inset:0, zIndex:199
+      }}
+      onClick={() => setShowMenu(false)}
+    />
+    <div className="three-dot-menu" style={{
+      position:'absolute',
+      bottom:'110%',       // ← opens UPWARD not downward
+      right:0,
+      zIndex:200,
+      background:'var(--card)',
+      border:'1px solid var(--br2)',
+      borderRadius:12,
+      overflow:'hidden',
+      minWidth:160,
+      boxShadow:'0 8px 24px rgba(0,0,0,.5)',
+    }}>
 
       <button
         className="menu-item"
@@ -845,10 +864,27 @@ setReplies(p => [
       </button>
 
     </div>
+    </>
   )}
 
-  {showReport && !reported && (
-    <div className="three-dot-menu">
+ {showReport && !reported && (
+  <>
+    <div
+      style={{ position:'fixed', inset:0, zIndex:199 }}
+      onClick={() => setShowReport(false)}
+    />
+    <div className="three-dot-menu" style={{
+      position:'absolute',
+      bottom:'110%',
+      right:0,
+      zIndex:200,
+      background:'var(--card)',
+      border:'1px solid var(--br2)',
+      borderRadius:12,
+      overflow:'hidden',
+      minWidth:170,
+      boxShadow:'0 8px 24px rgba(0,0,0,.5)',
+    }}>
 
       <button className="menu-item" onClick={() => handleReport('spam')}>
         🗑️ Spam
@@ -871,6 +907,7 @@ setReplies(p => [
       </button>
 
     </div>
+    </>
   )}
 
 </div>
