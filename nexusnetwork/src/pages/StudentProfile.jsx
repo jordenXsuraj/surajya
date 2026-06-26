@@ -822,9 +822,10 @@ setReplies(p => [
     />
     <div className="three-dot-menu" style={{
       position:'absolute',
-      bottom:'110%',       // ← opens UPWARD not downward
+      position:'absolute',
+      top:'110%',
       right:0,
-      zIndex:200,
+       zIndex:9999,
       background:'var(--card)',
       border:'1px solid var(--br2)',
       borderRadius:12,
@@ -875,9 +876,9 @@ setReplies(p => [
     />
     <div className="three-dot-menu" style={{
       position:'absolute',
-      bottom:'110%',
+      top:'110%',
       right:0,
-      zIndex:200,
+       zIndex:9999,  
       background:'var(--card)',
       border:'1px solid var(--br2)',
       borderRadius:12,
