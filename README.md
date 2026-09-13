@@ -6,8 +6,9 @@ A full-stack social networking and collaboration platform featuring a React (Vit
 
 ```
 .
-├── docker-compose.yml       # Multi-container Docker orchestration
+├── docker-compose.yml       # Multi-container Docker orchestration (Unique Ports)
 ├── .dockerignore
+├── .env.example             # Root port & environment configurations
 ├── nexusnetwork/            # Frontend (React + Vite)
 │   ├── Dockerfile
 │   ├── nginx.conf
@@ -27,17 +28,24 @@ A full-stack social networking and collaboration platform featuring a React (Vit
 
 ## Running with Docker (Recommended)
 
-To spin up the entire application stack including the MongoDB database:
+All containers are mapped to **unique dedicated ports** to avoid conflicts with any other projects on your machine:
 
+| Service | Host Port | Internal Container Port | Description |
+| :--- | :--- | :--- | :--- |
+| **Frontend** | **`38180`** | `80` | [http://localhost:38180](http://localhost:38180) |
+| **Backend API** | **`38150`** | `5000` | [http://localhost:38150](http://localhost:38150) |
+| **MongoDB** | **`38127`** | `27017` | `mongodb://localhost:38127` |
+
+### Start All Services
 ```bash
 docker compose up --build
 ```
 
-- **Frontend**: Accessible at [http://localhost](http://localhost) (Port 80)
-- **Backend API**: Accessible at [http://localhost:5000](http://localhost:5000)
-- **MongoDB**: Running at `localhost:27017`
+- **Web App**: Open [http://localhost:38180](http://localhost:38180) in your browser.
+- **Backend API**: Accessible at [http://localhost:38150](http://localhost:38150) (Health check: [http://localhost:38150/healthz](http://localhost:38150/healthz)).
+- **MongoDB**: Listening on host port `38127` with persistent named volume `mongo_data`.
 
-To stop the containers:
+### Stop Services
 ```bash
 docker compose down
 ```

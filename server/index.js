@@ -42,6 +42,7 @@ app.use(helmet({
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
+  'http://localhost:38180',
   process.env.CLIENT_URL,
   process.env.FRONTEND_URL,
   'https://www.themeetnet.com',
