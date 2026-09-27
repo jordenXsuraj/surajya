@@ -7,6 +7,7 @@ import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import axios from 'axios'
 import { createPortal } from 'react-dom'
+import { isOwnReply, isAnonAuthorReply, replyAuthorName, likeCountOf, isLikedBy, toggleLike, applyLikeResponse } from '../utils/postView'
 
 const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },
@@ -119,8 +120,8 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
   const nav  = useNavigate()
   const [del, setDel] = useState(false)
 
-  const isOwn = reply.postedBy?._id === currentUserId ||
-                reply.postedBy?._id?.toString() === currentUserId
+  const isOwn = isOwnReply(reply, currentUserId)
+  const anonAuthor = isAnonAuthorReply(reply)
 
   const canVisit = reply.postedBy?._id &&
                    reply.postedBy._id?.toString() !== currentUserId
@@ -132,7 +133,7 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
     finally { setDel(false) }
   }
 
-  const name     = reply.postedBy?.name || 'User'
+  const name     = replyAuthorName(reply)
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 
   return (
@@ -146,7 +147,7 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
         }}
         onClick={() => canVisit && nav(`/profile/${reply.postedBy._id}`)}
       >
-        {reply.postedBy?.avatar
+        {anonAuthor ? '👤' : reply.postedBy?.avatar
           ? <img src={reply.postedBy.avatar} alt={name} loading="lazy"
               style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }}/>
           : initials
@@ -162,7 +163,7 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
             {name}
           </span>
           <span className="reply-meta">
-            {reply.postedBy?.year} yr · {timeAgo(reply.createdAt)}
+            {reply.postedBy?.year ? `${reply.postedBy.year} yr · ` : ''}{timeAgo(reply.createdAt)}
           </span>
           {isOwn && (
             <button className="reply-delete" onClick={handleDelete} disabled={del}>
@@ -209,10 +210,12 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     const uid = user?._id
     setPosts(prev => prev.map(p => {
       if (p._id !== postId) return p
-      const already = (p.likes || []).map(l => l?.toString()).includes(uid)
-      return { ...p, likes: already ? p.likes.filter(l => l?.toString()!==uid) : [...(p.likes||[]), uid] }
+      return toggleLike(p, uid)
     }))
-    try { await likePost(postId) }
+    try {
+      const res = await likePost(postId)
+      setPosts(prev => prev.map(p => p._id === postId ? applyLikeResponse(p, res.data) : p))
+    }
     catch { show('❌ Like failed') }
   }
 
@@ -278,7 +281,7 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
           key={p._id}
           post={p}
           currentUserId={user?._id}
-          liked={(p.likes||[]).map(l => l?.toString()).includes(user?._id)}
+          liked={isLikedBy(p, user?._id)}
           saved={savedIds.includes(p._id)}
           onLike={handleLike}
           onSave={handleSave}
@@ -658,7 +661,7 @@ async function handleReport(reason) {
   className={`act-btn ${liked ? 'liked' : ''}`}
   onClick={() => onLike(initialPost._id)}
 >
-  {liked ? '❤️' : '🤍'} {(initialPost.likes || []).length}
+  {liked ? '❤️' : '🤍'} {likeCountOf(initialPost)}
 </button>
 
         {/* Reply button */}

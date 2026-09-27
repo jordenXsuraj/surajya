@@ -9,12 +9,30 @@ function makeToken(id) {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' })
 }
 
-const rateLimit = require('express-rate-limit')
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit')
+
+// Students share one public IP (campus Wi-Fi, mobile CGNAT), so login is
+// limited per IP + account: brute-forcing one account is blocked without
+// locking out a whole college.
+function normalizeEmail(email) {
+  return typeof email === 'string' ? email.toLowerCase().trim() : ''
+}
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: 'Too many login attempts, try later'
+  limit:    10,
+  keyGenerator: req => `${ipKeyGenerator(req.ip)}:${normalizeEmail(req.body?.email)}`,
+  message:  { message: 'Too many login attempts. Try again in 15 minutes.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders:   false,
+})
+
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit:    30,
+  message:  { message: 'Too many accounts created from this network. Try again later.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders:   false,
 })
 
 
@@ -74,7 +92,7 @@ async function generateUsername(name) {
 }
 
 
-router.post('/signup',async (req, res, next) => {
+router.post('/signup', signupLimiter, async (req, res, next) => {
   try {
     const {
       name, email, password, college,

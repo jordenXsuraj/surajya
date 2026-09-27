@@ -28,7 +28,8 @@ services:
       - MONGO_URI=mongodb://mongo:27017/nexusnetwork
       - CLIENT_URL=http://localhost:${FRONTEND_PORT:-38180}
       - FRONTEND_URL=http://localhost:${FRONTEND_PORT:-38180}
-      - JWT_SECRET=${JWT_SECRET:-meetnet_secret_key_change_in_prod}
+      # No fallback: must be set in .env (server refuses to start in production if < 32 chars)
+      - JWT_SECRET=${JWT_SECRET}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY:-}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}

@@ -6,6 +6,7 @@ const User         = require('../models/User')
 const Post         = require('../models/Post')
 const Notification = require('../models/Notification')
 const protect      = require('../middleware/auth')
+const { sanitizePost } = require('../utils/sanitizePost')
 const { upload }   = require('../config/cloudinary')
 
 function collegeRegex(college) {
@@ -141,7 +142,7 @@ router.get('/me/posts', protect, async (req, res) => {
       .skip(skip)
       .limit(limit)
       .lean()
-    res.json(posts)
+    res.json(posts.map(p => sanitizePost(p, req.user._id)))
   } catch (err) {
     res.status(500).json({ message: 'Server error. Please try again.' })
   }
@@ -164,7 +165,7 @@ router.get('/me/saved', protect, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(20)
       .lean()
-    res.json(posts.map(p => { if (p.isAnonymous) p.postedBy = null; return p }))
+    res.json(posts.map(p => sanitizePost(p, req.user._id)))
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }
@@ -563,7 +564,7 @@ router.get('/:id/posts', protect, async (req, res) => {
   }
 })
 
-    res.json(posts)
+    res.json(posts.map(p => sanitizePost(p, req.user._id)))
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }
@@ -622,8 +623,9 @@ router.get('/:id/followers', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 router.get('/:id', protect, async (req, res) => {
   try {
+    // Email is private: only returned via /me and auth responses
     const user = await User.findById(req.params.id)
-      .select('-password -__v -likedPosts -savedPosts -pendingRequests -sentRequests')
+      .select('-password -email -__v -likedPosts -savedPosts -pendingRequests -sentRequests')
       .lean()
     if (!user) return res.status(404).json({ message: 'User not found' })
 
