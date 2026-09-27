@@ -1,11 +1,13 @@
 
 
 const express      = require('express')
+const mongoose     = require('mongoose')
 const router       = express.Router()
-const Post         = require('../models/Post')
+const Post       = require('../models/Post')
 const User         = require('../models/User')
 const Notification = require('../models/Notification')
 const protect      = require('../middleware/auth')
+const { sanitizePost, sanitizeReply, sanitizeLikes } = require('../utils/sanitizePost')
 //const { upload }   = require('../config/cloudinary')
 
 
@@ -102,10 +104,7 @@ const skip  = (page - 1) * limit
         .skip(skip).limit(limit)
         .lean()
 
-      return res.json(posts.map(p => {
-        if (p.isAnonymous) p.postedBy = null
-        return p
-      }))
+      return res.json(posts.map(p => sanitizePost(p, req.user._id)))
     }
 
     // ── Normal feed (college or global) ──
@@ -145,8 +144,8 @@ const followingSet = new Set((user.following || []).map(id => id.toString()))
       .map(p => ({ post: p, score: scorePost(p, user, followingSet) }))
       .sort((a, b) => b.score - a.score)
 
-const result = scored.map(({ post }) => {
-  if (post.isAnonymous) post.postedBy = null
+const result = scored.map(({ post: raw }) => {
+  const post = sanitizePost(raw, req.user._id)
   delete post.postedByBranch
   delete post.postedByYear
   post.replies = (post.replies || []).slice(-5) // ← last 5 only
@@ -285,9 +284,7 @@ youtubeId: ytId || '',
       }
     }
 
-    const result = post.toObject()
-    if (result.isAnonymous) result.postedBy = null
-    res.status(201).json(result)
+    res.status(201).json(sanitizePost(post, req.user._id))
   } catch (err) {
     console.error('POST /posts error:', err)
     res.status(500).json({ message: 'Server error' })
@@ -476,7 +473,11 @@ if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) 
     }
 
     const updated = await Post.findById(post._id).select('likes').lean()
-    res.json({ liked: !alreadyLiked, count: updated.likes.length, likes: updated.likes })
+    const likes = sanitizeLikes(updated.likes, {
+      isAnonymous: post.isAnonymous,
+      authorId:    post.postedBy?.toString(),
+    })
+    res.json({ liked: !alreadyLiked, count: updated.likes.length, likeCount: updated.likes.length, likes })
   } catch (err) {
     console.error('PUT /like error:', err)
     res.status(500).json({ message: 'Server error' })
@@ -578,7 +579,10 @@ if (!post.isAnonymous && post.postedBy) {
   }
 }
 
-return res.status(201).json(newReply)
+return res.status(201).json(sanitizeReply(newReply, {
+  isAnonymous: post.isAnonymous,
+  authorId:    post.postedBy?.toString(),
+}, req.user._id))
 
   } catch (err) {
     console.error('REPLY ROUTE ERROR:', err)
@@ -670,16 +674,25 @@ router.post('/:id/report', protect, async (req, res) => {
   }
 })
 
+// ─────────────────────────────────────────────────
+// GET /api/posts/:id — Public single post (share links)
+// ─────────────────────────────────────────────────
 router.get('/:id', async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id)
-      .populate('postedBy')
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid post id' })
+    }
 
-    if (!post) {
+    const post = await Post.findById(req.params.id)
+      .populate('postedBy', 'name username year branch avatar isContributor college')
+      .populate('replies.postedBy', 'name year branch avatar')
+      .lean()
+
+    if (!post || (post.expiresAt && post.expiresAt < new Date())) {
       return res.status(404).json({ message: 'Post not found' })
     }
 
-    res.json(post)
+    res.json(sanitizePost(post))
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }

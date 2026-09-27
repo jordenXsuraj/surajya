@@ -23,7 +23,7 @@ const UserSchema = new mongoose.Schema({
   match:     [/^[a-z0-9_.]{3,25}$/, 'Username: 3-25 chars, only letters/numbers/._'],
 },
   email:    { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true, minlength: 6 },
+  password: { type: String, required: true, minlength: 6, select: false },
   college:  { type: String, required: true, trim: true },
   year:     { type: String, enum: ['1st','2nd','3rd','4th'], default: '1st' },
   branch:   { type: String, trim: true, default: 'CS' },
@@ -150,11 +150,8 @@ UserSchema.pre('save', async function (next) {
 })*/
 UserSchema.pre('save', async function () {
   if (!this.isModified('password')) return
-  try {
-    this.password = await bcrypt.hash(this.password, 12)
-  } catch (err) {
-    // ← EMPTY — error disappears silently
-  }
+  // No try/catch: a hashing failure must abort the save, never store plaintext
+  this.password = await bcrypt.hash(this.password, 12)
 })
 
 UserSchema.methods.matchPassword = function (entered) {

@@ -10,6 +10,7 @@ import {
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import PostCard from '../components/PostCard'
+import { likeCountOf, toggleLike, applyLikeResponse } from '../utils/postView'
 const CATEGORIES = [
   { id:'all',        label:'All',           color:'var(--text)'   },
   { id:'social',     label:'🔥 Social',     color:'var(--orange)' },
@@ -88,7 +89,7 @@ function affinityScore(postType) {
 function scorePost(post, { currentUserId, connectionIds, nowMs }) {
   let score = 0
   const ageHours   = (nowMs - new Date(post.createdAt).getTime()) / 3600000
-  const likeCount  = (post.likes   || []).length
+  const likeCount  = likeCountOf(post)
   const replyCount = (post.replies || []).length
   const isConn     = connectionIds.includes(post.postedBy?._id?.toString())
 
@@ -373,12 +374,11 @@ useEffect(() => {
     const uid = user?._id
     setPosts(prev => prev.map(p => {
       if (p._id !== postId) return p
-      const already = (p.likes || []).map(l => l?.toString()).includes(uid)
-      return { ...p, likes: already ? p.likes.filter(l => l?.toString() !== uid) : [...(p.likes || []), uid] }
+      return toggleLike(p, uid)
     }))
     try {
       const res = await likePost(postId)
-      setPosts(prev => prev.map(p => p._id === postId ? { ...p, likes: res.data.likes } : p))
+      setPosts(prev => prev.map(p => p._id === postId ? applyLikeResponse(p, res.data) : p))
     } catch { show('❌ Failed. Try again') }
   }
 

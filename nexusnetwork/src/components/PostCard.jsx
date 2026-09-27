@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { addReply, deleteReply, sendInterest } from '../services/api'
+import { isOwnReply, isAnonAuthorReply, replyAuthorName, likeCountOf, isLikedBy } from '../utils/postView'
 
 
 
@@ -128,8 +129,8 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
   const nav  = useNavigate()
   const [del, setDel] = useState(false)
 
-  const isOwn = reply.postedBy?._id === currentUserId ||
-                reply.postedBy?._id?.toString() === currentUserId
+  const isOwn = isOwnReply(reply, currentUserId)
+  const anonAuthor = isAnonAuthorReply(reply)
 
   const canVisit = reply.postedBy?._id &&
                    reply.postedBy._id?.toString() !== currentUserId
@@ -141,7 +142,7 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
     finally { setDel(false) }
   }
 
-  const name     = reply.postedBy?.name || 'User'
+  const name     = replyAuthorName(reply)
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 
   return (
@@ -155,7 +156,7 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
         }}
         onClick={() => canVisit && nav(`/profile/${reply.postedBy._id}`)}
       >
-        {reply.postedBy?.avatar
+        {anonAuthor ? '👤' : reply.postedBy?.avatar
           ? <img src={reply.postedBy.avatar} alt={name} loading="lazy"
               style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }}/>
           : initials
@@ -171,7 +172,7 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
             {name}
           </span>
           <span className="reply-meta">
-            {reply.postedBy?.year} yr · {timeAgo(reply.createdAt)}
+            {reply.postedBy?.year ? `${reply.postedBy.year} yr · ` : ''}{timeAgo(reply.createdAt)}
           </span>
           {isOwn && (
             <button className="reply-delete" onClick={handleDelete} disabled={del}>
@@ -206,7 +207,7 @@ const [showMenu, setShowMenu] = useState(false)
 const [reportBusy,  setReportBusy]  = useState(false)
 
   const t        = TYPE_TAG[post.type] || { label: post.type, cls:'tag-dim' }
-  const liked    = (post.likes || []).map(l => l?.toString()).includes(currentUserId)
+  const liked    = isLikedBy(post, currentUserId)
 const saved = (savedIds || []).includes(post._id)
   const isOwn    = post.postedBy?._id?.toString() === currentUserId
   const authorId = post.postedBy?._id?.toString()
@@ -606,7 +607,7 @@ useEffect(() => {
           className={`act-btn ${liked ? 'liked' : ''}`}
           onClick={() => onLike(post._id)}
         >
-          {liked ? '❤️' : '🤍'} {(post.likes || []).length}
+          {liked ? '❤️' : '🤍'} {likeCountOf(post)}
         </button>
 
         {post.type === 'project' ? (

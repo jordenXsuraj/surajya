@@ -12,6 +12,7 @@ import {
 } from '../services/api'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
+import { isOwnReply, isAnonAuthorReply, replyAuthorName, likeCountOf, isLikedBy } from '../utils/postView'
 
 // ── Branch skills ─────────────────────────────────
 const BRANCH_SKILLS = {
@@ -449,9 +450,9 @@ const igItems = (mediaItems || []).filter(m => m.type === 'instagram')
 function LikeBtn({ post, currentUser }) {
   const myId = currentUser?._id?.toString() || ''
   const [liked,     setLiked]     = useState(
-    (post.likes || []).map(l => l?.toString()).includes(myId)
+    isLikedBy(post, myId)
   )
-  const [likeCount, setLikeCount] = useState(post.likes?.length || 0)
+  const [likeCount, setLikeCount] = useState(likeCountOf(post))
 
   async function handleLike() {
     setLiked(p => !p)
@@ -949,11 +950,11 @@ setReplies(p => [
       {showR && replies.length > 0 && (
         <div className="replies-list">
           {replies.map(r => {
-            const isOwn = r.postedBy?._id === currentUserId || r.postedBy?._id?.toString() === currentUserId
+            const isOwn = isOwnReply(r, currentUserId)
             return (
               <div key={r._id} className="reply-item">
                 <div className="reply-av" style={{ background:'rgba(59,130,246,.15)', color:'#3b82f6', overflow:'hidden' }}>
-                  {r.postedBy?.avatar
+                  {isAnonAuthorReply(r) ? '👤' : r.postedBy?.avatar
                     ? <img src={r.postedBy.avatar} alt=""
                         style={{ width:'100%', height:'100%', borderRadius:'50%', objectFit:'cover' }}/>
                     : initials(r.postedBy?.name)
@@ -961,8 +962,8 @@ setReplies(p => [
                 </div>
                 <div className="reply-content">
                   <div className="reply-header">
-                    <span className="reply-name">{r.postedBy?.name || 'User'}</span>
-                    <span className="reply-meta">{r.postedBy?.year} yr · {ago(r.createdAt)}</span>
+                    <span className="reply-name">{replyAuthorName(r)}</span>
+                    <span className="reply-meta">{r.postedBy?.year ? `${r.postedBy.year} yr · ` : ''}{ago(r.createdAt)}</span>
                     {isOwn && <button className="reply-delete" onClick={() => removeReply(r._id)}>🗑️</button>}
                   </div>
                   <p className="reply-text">{r.text}</p>
