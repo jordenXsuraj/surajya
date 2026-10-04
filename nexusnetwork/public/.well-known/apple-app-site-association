@@ -1,0 +1,20 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.com.themeetnet.app",
+        "appIDs": ["TEAMID.com.themeetnet.app"],
+        "paths": ["/post/*", "/profile/*", "/reset-password*"],
+        "components": [
+          { "/": "/post/*" },
+          { "/": "/profile/*" },
+          { "/": "/reset-password*" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.com.themeetnet.app"]
+  }
+}

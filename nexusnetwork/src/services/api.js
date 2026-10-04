@@ -30,6 +30,17 @@ API.interceptors.response.use(
 export const signup = d => API.post('/auth/signup', d)
 export const login  = d => API.post('/auth/login',  d)
 
+// Passwords & sessions (wrong passwords answer 400, so the 401 auto-logout never fires)
+export const forgotPassword = email                 => API.post('/auth/forgot-password', { email })
+export const resetPassword  = (token, newPassword)  => API.post('/auth/reset-password', { token, newPassword })
+export const changePassword = (currentPassword, newPassword) =>
+  API.post('/auth/change-password', { currentPassword, newPassword })
+export const logoutAllDevices = ()                  => API.post('/auth/logout-all')
+
+// Account
+export const deleteMyAccount = password => API.delete('/users/me', { data: { password } })
+export const acceptTerms     = ()       => API.post('/users/me/accept-terms')
+
 // ── Posts ─────────────────────────────────────────
 export const getFeed = (type, connOnly, global, page = 1) =>
   API.get(`/posts${buildQuery({

@@ -288,12 +288,38 @@ const deletePost = async (postId, reportId) => {
                   padding:'3px 8px', borderRadius:6 }}>
                   {r.reason}
                 </span>
+                <span style={{ fontSize:'.6rem', fontWeight:700, color:'#888',
+                  border:'1px solid #2a2a2a', padding:'2px 7px', borderRadius:6 }}>
+                  {r.targetType || 'post'}
+                </span>
                 <span style={{ fontSize:'.63rem', color:'#555' }}>
                   by {r.reportedBy?.name} · {new Date(r.createdAt).toLocaleDateString()}
                 </span>
               </div>
+              {r.note && (
+                <p style={{ fontSize:'.72rem', color:'#888', margin:'0 0 10px' }}>“{r.note}”</p>
+              )}
+
+              {/* Reported user / reply */}
+              {r.targetType === 'user' && (
+                <div style={{ background:'#0d0d0d', borderRadius:10, padding:'10px 12px', marginBottom:10,
+                  fontSize:'.8rem', color:'#bbb' }}>
+                  👤 {r.user?.name || 'Deleted user'}{r.user?.username ? ` (@${r.user.username})` : ''} · {r.user?.college}
+                  {r.user?._id && <a href={`/profile/${r.user._id}`} style={{ marginLeft:8, color:'#3b82f6' }}>view</a>}
+                </div>
+              )}
+              {r.targetType === 'reply' && (
+                <div style={{ background:'#0d0d0d', borderRadius:10, padding:'10px 12px', marginBottom:10,
+                  borderLeft:'3px solid #ef4444' }}>
+                  <div style={{ fontSize:'.62rem', color:'#444', marginBottom:5, textTransform:'uppercase' }}>Reported reply</div>
+                  <p style={{ fontSize:'.8rem', color:'#bbb', margin:0, wordBreak:'break-word' }}>
+                    {r.reply?.text || '(reply already deleted)'}
+                  </p>
+                </div>
+              )}
 
               {/* Post preview */}
+              {r.post && (
               <div style={{ background:'#0d0d0d', borderRadius:10,
                 padding:'10px 12px', marginBottom:10 }}>
                 <div style={{ fontSize:'.62rem', color:'#444',
@@ -310,9 +336,11 @@ const deletePost = async (postId, reportId) => {
                       maxHeight:180, objectFit:'cover' }} />
                 )}
               </div>
+              )}
 
               {/* Action buttons */}
               <div style={{ display:'flex', gap:8 }}>
+                {(r.targetType || 'post') === 'post' && r.post && (
                 <button onClick={() => deletePost(r.post?._id, r._id)}
                   style={{
                     flex:1, padding:'9px', borderRadius:9, border:'none',
@@ -322,6 +350,7 @@ const deletePost = async (postId, reportId) => {
                   }}>
                   🗑️ Delete Post
                 </button>
+                )}
                 <button onClick={() => dismiss(r._id)}
                   style={{
                     flex:1, padding:'9px', borderRadius:9,

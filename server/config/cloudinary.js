@@ -8,14 +8,18 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 })
 
+const HEIC_TYPES = ['image/heic', 'image/heif']
+
 // ── Image storage ─────────────────────────────────
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
     folder:          'nexus',
     resource_type:   'image',
-    allowed_formats: ['jpg','jpeg','png','webp'],
+    allowed_formats: ['jpg','jpeg','png','webp','heic','heif'],
     public_id: `post_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    // iPhone HEIC/HEIF is stored as JPG so every browser and Android can show it
+    ...(HEIC_TYPES.includes(file.mimetype) && { format: 'jpg' }),
     transformation:  [
       { width: 1080, crop: 'limit' },
       { quality: 'auto' }
@@ -27,7 +31,7 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg','image/png','image/webp']
+    const allowed = ['image/jpeg','image/png','image/webp', ...HEIC_TYPES]
     if (allowed.includes(file.mimetype)) cb(null, true)
     else cb(new Error('Only image files allowed'), false)
   }

@@ -1,4 +1,9 @@
 module.exports = function errorHandler(err, req, res, next) {
+  // Request from an Origin not in the CORS allow-list (expected, not worth a log line)
+  if (err.code === 'CORS_ORIGIN_NOT_ALLOWED') {
+    return res.status(403).json({ message: 'Origin not allowed' })
+  }
+
   if (process.env.NODE_ENV !== 'production') {
   console.error('❌ Error:', err)
 } else {

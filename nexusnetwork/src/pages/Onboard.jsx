@@ -1,5 +1,5 @@
 
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signup, login } from '../services/api'
 import { useState, useEffect, useRef } from 'react'
@@ -363,7 +363,8 @@ function StepAuth({ onNext }) {
   const [mode,    setMode]    = useState('signup')
   const [form,    setForm]    = useState({
     name:'', email:'', password:'',
-    college:'', year:'', branch:'CS'
+    college:'', year:'', branch:'CS',
+    acceptTerms: false,     // sent with signup; the API rejects signups without it
   })
   const [err,     setErr]     = useState('')
   const [loading, setLoading] = useState(false)
@@ -387,8 +388,9 @@ const [showPass, setShowPass] = useState(false)
 if (mode === 'signup') {
   if (!form.name.trim() || !form.college.trim()) return setErr('All fields required')
   if (!form.year)                                return setErr('Please select your year')
-  if (form.password.length < 6)                 return setErr('Password must be 6+ characters')
+  if (form.password.length < 8)                 return setErr('Password must be at least 8 characters')
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) return setErr('Enter a valid email')
+  if (!form.acceptTerms)                        return setErr('Please accept the Terms and Privacy Policy')
 }
     setLoading(true)
     try {
@@ -479,7 +481,7 @@ if (mode === 'signup') {
     className="ob-inp"
     name="password"
     type={showPass ? 'text' : 'password'}
-    placeholder="Password (min 6)"
+    placeholder={mode === 'signup' ? 'Password (min 8 characters)' : 'Password'}
     value={form.password}
     onChange={f}
     style={{ paddingRight: 44 }}
@@ -504,6 +506,22 @@ if (mode === 'signup') {
     {showPass ? '🙈' : '👁️'}
   </button>
 </div>
+
+        {mode === 'login' && (
+          <Link to="/forgot-password" className="ob-link">Forgot password?</Link>
+        )}
+
+        {mode === 'signup' && (
+          <label className="ob-check">
+            <input type="checkbox" checked={form.acceptTerms}
+              onChange={e => { setForm(p => ({ ...p, acceptTerms: e.target.checked })); setErr('') }} />
+            <span>
+              I'm 18 or older and I agree to the <Link to="/terms" target="_blank">Terms</Link>,{' '}
+              <Link to="/privacy" target="_blank">Privacy Policy</Link> and{' '}
+              <Link to="/community-guidelines" target="_blank">Community Guidelines</Link>.
+            </span>
+          </label>
+        )}
 
         {err && <div className="ob-err">{err}</div>}
 

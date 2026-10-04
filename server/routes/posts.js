@@ -6,8 +6,21 @@ const router       = express.Router()
 const Post       = require('../models/Post')
 const User         = require('../models/User')
 const Notification = require('../models/Notification')
+const Report       = require('../models/Report')
 const protect      = require('../middleware/auth')
 const { sanitizePost, sanitizeReply, sanitizeLikes } = require('../utils/sanitizePost')
+const { getBlockSets, addPostBlockFilter, isPostHidden } = require('../utils/blocks')
+const { notify, notifyFollowers } = require('../services/notify')
+
+const REPORT_REASONS = ['spam','hate','harassment','misinformation','other']
+
+// Loads the fields needed for block checks; null when missing or hidden from this viewer
+async function visiblePost(req, fields = 'postedBy isAnonymous') {
+  if (!mongoose.isValidObjectId(req.params.id)) return null
+  const post = await Post.findById(req.params.id).select(fields).lean()
+  if (!post || isPostHidden(post, await getBlockSets(req.user))) return null
+  return post
+}
 //const { upload }   = require('../config/cloudinary')
 
 
@@ -86,10 +99,14 @@ const skip  = (page - 1) * limit
 
       if (followingIds.length === 0) return res.json([])
 
-      const filter = {
+      const sets   = await getBlockSets(req.user)
+      // Anonymous posts never appear here: a feed limited to people you follow
+      // would narrow down who wrote them (they stay in the college/global feeds)
+      const filter = addPostBlockFilter({
   postedBy: { $in: followingIds },
+  isAnonymous: { $ne: true },
   $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }]
-}
+}, sets)
 
       if (type && type !== 'all' && type !== '') filter.type = type
 
@@ -104,7 +121,7 @@ const skip  = (page - 1) * limit
         .skip(skip).limit(limit)
         .lean()
 
-      return res.json(posts.map(p => sanitizePost(p, req.user._id)))
+      return res.json(posts.map(p => sanitizePost(p, req.user._id, sets)))
     }
 
     // ── Normal feed (college or global) ──
@@ -117,6 +134,9 @@ const skip  = (page - 1) * limit
     }
 
     if (type && type !== 'all' && type !== '') filter.type = type
+
+    const sets = await getBlockSets(req.user)
+    addPostBlockFilter(filter, sets)
 
     // Get user with following info for personalization
     const user = await User.findById(req.user._id)
@@ -145,7 +165,7 @@ const followingSet = new Set((user.following || []).map(id => id.toString()))
       .sort((a, b) => b.score - a.score)
 
 const result = scored.map(({ post: raw }) => {
-  const post = sanitizePost(raw, req.user._id)
+  const post = sanitizePost(raw, req.user._id, sets)
   delete post.postedByBranch
   delete post.postedByYear
   post.replies = (post.replies || []).slice(-5) // ← last 5 only
@@ -154,8 +174,7 @@ const result = scored.map(({ post: raw }) => {
 
     res.json(result)
   } catch (err) {
-    console.error('GET /posts error:', err)
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -272,22 +291,17 @@ youtubeId: ytId || '',
     if (!isAnonymous) {
       // Get fresh followers list
       const me = await User.findById(req.user._id).select('followers').lean()
-      if (me.followers?.length > 0) {
-        const notifs = me.followers.map(fid => ({
-          recipient: fid,
-          sender:    req.user._id,
-          type:      'new_post',
-          post:      post._id,
-          message:   `${req.user.name} shared a new ${type} post`
-        }))
-        Notification.insertMany(notifs).catch(() => {})
-      }
+      notifyFollowers({
+        sender:      req.user._id,
+        followerIds: me.followers || [],
+        post:        post._id,
+        message:     `${req.user.name} shared a new ${type} post`
+      })
     }
 
     res.status(201).json(sanitizePost(post, req.user._id))
   } catch (err) {
-    console.error('POST /posts error:', err)
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -306,17 +320,28 @@ router.get('/admin/reports', protect, async (req, res) => {
   return res.status(403).json({ message: 'Not authorized' })
 }
 
-    const Report = require('../models/Report')
     const reports = await Report.find({ status: 'pending' })
-      .populate('post', 'text imageUrl type postedBy college createdAt')
+      .populate('post', 'text imageUrl type postedBy college createdAt replies')
+      .populate('user', 'name username college avatar')
       .populate('reportedBy', 'name college')
       .sort({ createdAt: -1 })
       .limit(100)
       .lean()
 
-    res.json(reports)
+    // Older reports have no targetType; reply reports carry the reply itself.
+    // Reports of the same post share one populated object, so copy — never mutate.
+    res.json(reports.map(r => {
+      const targetType = r.targetType || 'post'
+      const { replies = [], ...post } = r.post || {}
+      let reply = null
+      if (targetType === 'reply') {
+        const found = replies.find(x => String(x._id) === String(r.replyId))
+        reply = found ? { _id: found._id, text: found.text, postedBy: found.postedBy, createdAt: found.createdAt } : null
+      }
+      return { ...r, post: r.post ? post : null, targetType, reply }
+    }))
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -334,7 +359,7 @@ router.post('/admin/dismiss/:reportId', protect, async (req, res) => {
     await Report.findByIdAndUpdate(req.params.reportId, { status: 'dismissed' })
     res.json({ message: 'Dismissed' })
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -355,8 +380,7 @@ router.delete('/admin/post/:postId', protect, async (req, res) => {
 
     res.json({ message: 'Post deleted successfully' })
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -417,8 +441,7 @@ router.get('/admin/stats', protect, async (req, res) => {
       topColleges: collegeStats.map(c => ({ college: c._id, count: c.count })),
     })
   } catch (err) {
-    console.error('Admin stats error:', err)
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -427,6 +450,7 @@ router.get('/admin/stats', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 router.put('/:id/like', protect, async (req, res) => {
   try {
+    if (!(await visiblePost(req))) return res.status(404).json({ message: 'Post not found' })
     const post = await Post.findById(req.params.id).select('likes postedBy isAnonymous type')
     if (!post) return res.status(404).json({ message: 'Post not found' })
 
@@ -460,15 +484,14 @@ if (!post.isAnonymous && post.postedBy) {
 
     const me = await User.findById(req.user._id).select('name year branch avatar isContributor')
 
-if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) {
-  Notification.create({
+if (!post.isAnonymous) {
+  notify({
     recipient: post.postedBy,
     sender: req.user._id,
     type: 'post_liked',
     post: post._id,
     message: `${me?.name || 'Someone'} liked your post`
-  }).catch(() => {})
-
+  })
 }
     }
 
@@ -479,8 +502,7 @@ if (!post.isAnonymous && post.postedBy?.toString() !== req.user._id.toString()) 
     })
     res.json({ liked: !alreadyLiked, count: updated.likes.length, likeCount: updated.likes.length, likes })
   } catch (err) {
-    console.error('PUT /like error:', err)
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -504,7 +526,7 @@ router.put('/:id/save', protect, async (req, res) => {
       res.json({ saved: true })
     }
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -524,7 +546,7 @@ router.delete('/:id', protect, async (req, res) => {
     Notification.deleteMany({ post: post._id }).catch(() => {})
     res.json({ message: 'Deleted' })
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -539,6 +561,8 @@ router.post('/:id/replies', protect, async (req, res) => {
       return res.status(400).json({ message: 'Reply text required' })
     }
 
+    if (!(await visiblePost(req))) return res.status(404).json({ message: 'Post not found' })
+
     const post = await Post.findByIdAndUpdate(
       req.params.id,
       {
@@ -551,7 +575,7 @@ router.post('/:id/replies', protect, async (req, res) => {
         },
         $inc: { replyCount: 1 }
       },
-      { new: true }
+      { new: true, runValidators: true }
     ).populate('replies.postedBy', 'name year branch avatar')
 
     if (!post) {
@@ -579,16 +603,22 @@ if (!post.isAnonymous && post.postedBy) {
   }
 }
 
+// Tell the author (skipped for self-replies, and by notify() for blocks)
+notify({
+  recipient: post.postedBy,
+  sender:    req.user._id,
+  type:      'post_replied',
+  post:      post._id,
+  message:   `${req.user.name} replied to your post`
+})
+
 return res.status(201).json(sanitizeReply(newReply, {
   isAnonymous: post.isAnonymous,
   authorId:    post.postedBy?.toString(),
 }, req.user._id))
 
   } catch (err) {
-    console.error('REPLY ROUTE ERROR:', err)
-    return res.status(500).json({
-      message: err.message
-    })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -612,7 +642,7 @@ router.delete('/:id/replies/:replyId', protect, async (req, res) => {
     })
     res.json({ message: 'Reply deleted' })
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -621,6 +651,7 @@ router.delete('/:id/replies/:replyId', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 router.post('/:id/interested', protect, async (req, res) => {
   try {
+    if (!(await visiblePost(req))) return res.status(404).json({ message: 'Post not found' })
     const post = await Post.findById(req.params.id).populate('postedBy', 'name _id')
     if (!post) return res.status(404).json({ message: 'Post not found' })
 
@@ -628,19 +659,19 @@ router.post('/:id/interested', protect, async (req, res) => {
       return res.status(400).json({ message: 'Only for partner/project posts' })
     }
 
-    if (post.postedBy && post.postedBy._id.toString() !== req.user._id.toString()) {
-      Notification.create({
+    if (post.postedBy) {
+      notify({
         recipient: post.postedBy._id,
         sender:    req.user._id,
         type:      'interested',
         post:      post._id,
         message:   `${req.user.name} (${req.user.year} yr ${req.user.branch}) is interested in your ${post.type} post`
-      }).catch(() => {})
+      })
     }
 
     res.json({ message: 'Interest sent!' })
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
@@ -670,14 +701,39 @@ router.post('/:id/report', protect, async (req, res) => {
     if (err.code === 11000) {
       return res.status(400).json({ message: 'You already reported this post' })
     }
-    res.status(500).json({ message: 'Server error' })
+    throw err
   }
+})
+
+// POST /api/posts/:id/replies/:replyId/report { reason, note }
+router.post('/:id/replies/:replyId/report', protect, async (req, res) => {
+  const { reason, note } = req.body || {}
+  if (!REPORT_REASONS.includes(reason)) return res.status(400).json({ message: 'Invalid reason' })
+  if (!mongoose.isValidObjectId(req.params.id) || !mongoose.isValidObjectId(req.params.replyId)) {
+    return res.status(404).json({ message: 'Reply not found' })
+  }
+  const post = await Post.findById(req.params.id).select('replies._id replies.postedBy').lean()
+  const reply = post?.replies?.find(r => String(r._id) === req.params.replyId)
+  if (!reply) return res.status(404).json({ message: 'Reply not found' })
+  if (String(reply.postedBy) === String(req.user._id)) {
+    return res.status(400).json({ message: 'You cannot report your own reply' })
+  }
+  try {
+    await Report.create({
+      targetType: 'reply', post: post._id, replyId: reply._id, reportedBy: req.user._id,
+      reason, note: typeof note === 'string' ? note.trim().slice(0, 300) : '',
+    })
+  } catch (err) {
+    if (err.code === 11000) return res.status(400).json({ message: 'You already reported this reply' })
+    throw err
+  }
+  res.json({ message: 'Report submitted. Thank you.' })
 })
 
 // ─────────────────────────────────────────────────
 // GET /api/posts/:id — Public single post (share links)
 // ─────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', protect.optional, async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid post id' })
@@ -692,9 +748,13 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Post not found' })
     }
 
-    res.json(sanitizePost(post))
+    // Logged-in viewers don't see posts hidden by a block (checked on the real author)
+    const sets = req.user ? await getBlockSets(req.user) : null
+    if (isPostHidden(post, sets)) return res.status(404).json({ message: 'Post not found' })
+
+    res.json(sanitizePost(post, req.user?._id, sets))
   } catch (err) {
-    res.status(500).json({ message: 'Server error' })
+    throw err   // errorHandler: validation/cast errors -> 400, anything else -> 500
   }
 })
 
