@@ -217,10 +217,16 @@ describe('anonymous post de-anonymisation', () => {
     expectNoAuthorId(anonPost)
   })
 
+  test('connections feed leaves anonymous posts out entirely', async () => {
+    const res = await as(otherToken, 'get', '/api/posts?connections=true')
+    expect(res.status).toBe(200)
+    expect(res.body.map(p => p._id)).not.toContain(anonPost._id)
+    expectNoAuthorId(res.body.filter(p => p.isAnonymous))
+  })
+
   test.each([
     ['college feed',     '/api/posts'],
     ['global feed',      '/api/posts?global=true'],
-    ['connections feed', '/api/posts?connections=true'],
     ['saved posts',      '/api/users/me/saved'],
   ])('%s: author reply/like hidden from other users', async (_, url) => {
     const res = await as(otherToken, 'get', url)

@@ -29,7 +29,18 @@ function sanitizeLikes(likes, { isAnonymous, authorId }) {
     : all
 }
 
-function sanitizePost(post, viewerId) {
+// Replies from users blocked either way are dropped. The anonymous author's own
+// replies follow the post's rule instead (see utils/blocks.js), so blocking
+// can't be used to find out who wrote an anonymous post.
+function isReplyHidden(reply, { isAnonymous, authorId }, blockSets) {
+  if (!blockSets) return false
+  const replier = idOf(reply.postedBy)
+  if (isAnonymous && replier && replier === authorId) return blockSets.blockedMe.has(replier)
+  return Boolean(replier && blockSets.all.has(replier))
+}
+
+// blockSets: optional result of getBlockSets(viewer)
+function sanitizePost(post, viewerId, blockSets) {
   const p = post?.toObject ? post.toObject() : { ...post }
   const ctx = { isAnonymous: Boolean(p.isAnonymous), authorId: idOf(p.postedBy) }
   const rawLikes = p.likes || []
@@ -39,7 +50,9 @@ function sanitizePost(post, viewerId) {
   p.likes = sanitizeLikes(rawLikes, ctx)
 
   if (Array.isArray(p.replies)) {
-    p.replies = p.replies.map(r => sanitizeReply(r, ctx, viewerId))
+    p.replies = p.replies
+      .filter(r => !isReplyHidden(r, ctx, blockSets))
+      .map(r => sanitizeReply(r, ctx, viewerId))
   }
 
   if (ctx.isAnonymous) p.postedBy = null

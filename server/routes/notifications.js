@@ -3,6 +3,13 @@ const express      = require('express')
 const router       = express.Router()
 const Notification = require('../models/Notification')
 const protect      = require('../middleware/auth')
+const { getBlockSets } = require('../utils/blocks')
+
+// Notifications from users blocked in either direction are hidden
+async function visibleFilter(user, extra = {}) {
+  const sets = await getBlockSets(user)
+  return { recipient: user._id, ...extra, ...(sets.all.size ? { sender: { $nin: sets.allIds } } : {}) }
+}
 
 // ─────────────────────────────────────────────
 // GET /api/notifications
@@ -15,7 +22,7 @@ router.get('/', protect, async (req, res) => {
  const limit = Math.min(50, parseInt(req.query.limit) || 25)
   const skip  = (page - 1) * limit
 
-  const notifications = await Notification.find({ recipient: req.user._id })
+  const notifications = await Notification.find(await visibleFilter(req.user))
     .populate('sender', 'name year branch college avatar')
     .populate('post',   'type text')
     .sort({ read: 1, createdAt: -1 })
@@ -35,10 +42,7 @@ router.get('/', protect, async (req, res) => {
 // Get count of unread notifications (for badge)
 // ─────────────────────────────────────────────
 router.get('/unread-count', protect, async (req, res) => {
-  const count = await Notification.countDocuments({
-    recipient: req.user._id,
-    read: false
-  })
+  const count = await Notification.countDocuments(await visibleFilter(req.user, { read: false }))
   res.json({ count })
 })
 

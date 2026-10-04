@@ -11,6 +11,7 @@ import {
   addReply, deleteReply
 } from '../services/api'
 import Toast from '../components/Toast'
+import AccountSettings from '../components/AccountSettings'
 import { useToast } from '../hooks/useToast'
 import { isOwnReply, isAnonAuthorReply, replyAuthorName, likeCountOf, isLikedBy } from '../utils/postView'
 
@@ -1532,6 +1533,8 @@ const res = await fetch(`${base}/users/me/cover`, {
           )}
         </>
       )}
+
+      {!editMode && <AccountSettings onMessage={show} />}
 
       {!editMode && (
         <button className="logout-btn" onClick={() => { logout(); nav('/') }}>Log Out</button>

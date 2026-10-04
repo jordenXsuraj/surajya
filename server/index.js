@@ -5,8 +5,11 @@ const helmet        = require('helmet')
 const mongoSanitize = require('express-mongo-sanitize')
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit')
 const jwt           = require('jsonwebtoken')
+const mongoose      = require('mongoose')
 const connectDB     = require('./config/db')
+const runStartupMigrations = require('./config/migrations')
 const errorHandler  = require('./middleware/errorHandler')
+const { clientIp }  = require('./utils/clientIp')
 
 
 require('dotenv').config()
@@ -59,7 +62,8 @@ const corsOptions = {
   origin: (origin, cb) => {
     // Allow no-origin (mobile apps, Postman, UptimeRobot)
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
-    cb(new Error(`CORS blocked: ${origin}`))
+    // Answered as 403 by the error handler (not a 500 with a stack trace)
+    cb(Object.assign(new Error('Origin not allowed'), { code: 'CORS_ORIGIN_NOT_ALLOWED' }))
   },
   credentials: true,
   methods:        ['GET','POST','PUT','DELETE','OPTIONS','PATCH'],
@@ -85,7 +89,7 @@ function rateLimitKey(req) {
       if (id) return `user:${id}`
     } catch { /* invalid/expired token — fall back to IP */ }
   }
-  return `ip:${ipKeyGenerator(req.ip)}`
+  return `ip:${ipKeyGenerator(clientIp(req))}`
 }
 
 const generalLimit = rateLimit({
@@ -111,6 +115,8 @@ app.use('/api/auth',                        require('./routes/auth'))
 app.use('/api/posts',         generalLimit, require('./routes/posts'))
 app.use('/api/users',         generalLimit, require('./routes/users'))
 app.use('/api/notifications', generalLimit, require('./routes/notifications'))
+app.use('/api/app',           generalLimit, require('./routes/app'))
+app.use('/api/_debug',        generalLimit, require('./routes/debug'))   // 404 unless DEBUG_IP_ROUTE=1
 
 //app.use('/api/admin',         generalLimit, require('./routes/admin'))
 
@@ -134,6 +140,9 @@ app.use(errorHandler)
 
 // Only connect + listen when run directly (tests require `app` instead)
 if (require.main === module) {
+  mongoose.connection.once('open', () => {
+    runStartupMigrations().catch(err => console.error('❌ Startup migration failed:', err.message))
+  })
   connectDB()
 
   const PORT = process.env.PORT || 5000

@@ -1,13 +1,45 @@
 
 
 const express      = require('express')
+const mongoose     = require('mongoose')
 const router       = express.Router()
+const { Expo }     = require('expo-server-sdk')
+const { rateLimit } = require('express-rate-limit')
 const User         = require('../models/User')
 const Post         = require('../models/Post')
-const Notification = require('../models/Notification')
+const Report       = require('../models/Report')
 const protect      = require('../middleware/auth')
 const { sanitizePost } = require('../utils/sanitizePost')
+const { getBlockSets, addPostBlockFilter, isBlockedEitherWay } = require('../utils/blocks')
+const { notify }   = require('../services/notify')
+const { deleteAccount } = require('../services/accountDeletion')
 const { upload }   = require('../config/cloudinary')
+
+const REPORT_REASONS = ['spam','hate','harassment','misinformation','other']
+
+// Wrong password on account deletion: 5 tries per 15 min per user
+const deleteAccountLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit:    5,
+  keyGenerator: req => `user:${req.user._id}`,
+  message:  { message: 'Too many attempts. Try again in 15 minutes.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders:   false,
+})
+
+// 404 for a profile hidden by a block in either direction (also for bad ids)
+async function profileVisible(req, res) {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(404).json({ message: 'User not found' })
+    return null
+  }
+  const sets = await getBlockSets(req.user)
+  if (isBlockedEitherWay(sets, req.params.id)) {
+    res.status(404).json({ message: 'User not found' })
+    return null
+  }
+  return sets
+}
 
 function collegeRegex(college) {
   return {
@@ -21,6 +53,8 @@ function collegeRegex(college) {
 function safeUser(u) {
   const obj = u.toObject ? u.toObject({ virtuals: true }) : { ...u }
   delete obj.password
+  delete obj.pushTokens
+  delete obj.tokenVersion
   delete obj.__v
   obj.followingCount = obj.following?.length || 0
   obj.followerCount  = obj.followers?.length || 0
@@ -41,6 +75,75 @@ router.get('/me', protect, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }
+})
+
+// ─────────────────────────────────────────────────
+// DELETE /api/users/me { password } — permanent account deletion
+// ─────────────────────────────────────────────────
+router.delete('/me', protect, deleteAccountLimiter, async (req, res) => {
+  const { password } = req.body || {}
+  if (typeof password !== 'string' || !password) {
+    return res.status(400).json({ message: 'Password is required' })
+  }
+  const user = await User.findById(req.user._id).select('+password')
+  if (!user || !(await user.matchPassword(password))) {
+    return res.status(400).json({ message: 'Incorrect password' })   // 400, not 401: the session is fine
+  }
+  await deleteAccount(user._id)
+  res.status(204).end()
+})
+
+// ─────────────────────────────────────────────────
+// POST /api/users/me/accept-terms — for accounts created before terms existed
+// ─────────────────────────────────────────────────
+router.post('/me/accept-terms', protect, async (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.user._id, { $set: { termsAcceptedAt: new Date() } }, { returnDocument: 'after' }
+  ).select('termsAcceptedAt')
+  res.json({ termsAcceptedAt: user.termsAcceptedAt })
+})
+
+// ─────────────────────────────────────────────────
+// Push tokens (mobile). Never returned by any endpoint.
+// POST   /api/users/me/push-token { token, platform, deviceId }
+// DELETE /api/users/me/push-token { deviceId }   (call on logout)
+// ─────────────────────────────────────────────────
+router.post('/me/push-token', protect, async (req, res) => {
+  const { token, platform, deviceId } = req.body || {}
+  if (!Expo.isExpoPushToken(token)) return res.status(400).json({ message: 'Invalid Expo push token' })
+  if (!['ios', 'android'].includes(platform)) return res.status(400).json({ message: "platform must be 'ios' or 'android'" })
+  if (typeof deviceId !== 'string' || !deviceId.trim() || deviceId.length > 200) {
+    return res.status(400).json({ message: 'deviceId is required' })
+  }
+  const id = deviceId.trim()
+
+  // A token belongs to one device and one account: if another account still
+  // has it (same phone, different login), it must stop receiving our pushes.
+  await User.updateMany({ _id: { $ne: req.user._id }, 'pushTokens.token': token }, { $pull: { pushTokens: { token } } })
+  await User.updateOne({ _id: req.user._id }, { $pull: { pushTokens: { deviceId: id } } })
+  await User.updateOne({ _id: req.user._id }, { $pull: { pushTokens: { token } } })
+  await User.updateOne({ _id: req.user._id }, {
+    $push: { pushTokens: { $each: [{ token, platform, deviceId: id, updatedAt: new Date() }], $slice: -10 } },
+  })
+  res.json({ ok: true })
+})
+
+router.delete('/me/push-token', protect, async (req, res) => {
+  const deviceId = req.body?.deviceId ?? req.query.deviceId
+  if (typeof deviceId !== 'string' || !deviceId.trim()) return res.status(400).json({ message: 'deviceId is required' })
+  await User.updateOne({ _id: req.user._id }, { $pull: { pushTokens: { deviceId: deviceId.trim() } } })
+  res.json({ ok: true })
+})
+
+// ─────────────────────────────────────────────────
+// GET /api/users/me/blocked
+// ─────────────────────────────────────────────────
+router.get('/me/blocked', protect, async (req, res) => {
+  const me = await User.findById(req.user._id)
+    .select('blockedUsers')
+    .populate('blockedUsers', 'name username avatar')
+    .lean()
+  res.json(me?.blockedUsers || [])
 })
 
 // ─────────────────────────────────────────────────
@@ -132,6 +235,7 @@ router.get('/me/posts', protect, async (req, res) => {
     const limit = parseInt(req.query.limit) || 20
     const skip  = (page - 1) * limit
 
+    const sets  = await getBlockSets(req.user)
     const posts = await Post.find({ postedBy: req.user._id })
       .populate({
         path: 'replies.postedBy',
@@ -142,7 +246,7 @@ router.get('/me/posts', protect, async (req, res) => {
       .skip(skip)
       .limit(limit)
       .lean()
-    res.json(posts.map(p => sanitizePost(p, req.user._id)))
+    res.json(posts.map(p => sanitizePost(p, req.user._id, sets)))
   } catch (err) {
     res.status(500).json({ message: 'Server error. Please try again.' })
   }
@@ -155,7 +259,8 @@ router.get('/me/saved', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('savedPosts').lean()
     if (!user?.savedPosts?.length) return res.json([])
-    const posts = await Post.find({ _id: { $in: user.savedPosts } })
+    const sets  = await getBlockSets(req.user)
+    const posts = await Post.find(addPostBlockFilter({ _id: { $in: user.savedPosts } }, sets))
       .populate('postedBy', 'name year branch college avatar')
       .populate({
   path: 'replies.postedBy',
@@ -165,7 +270,7 @@ router.get('/me/saved', protect, async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(20)
       .lean()
-    res.json(posts.map(p => sanitizePost(p, req.user._id)))
+    res.json(posts.map(p => sanitizePost(p, req.user._id, sets)))
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }
@@ -226,7 +331,8 @@ router.get('/suggestions', protect, async (req, res) => {
 
     const myFollowingIds = (me.following    || []).map(id => id.toString())
     const mySentIds      = (me.sentRequests || []).map(id => id.toString())
-    const excludeIds     = [req.user._id.toString(), ...myFollowingIds, ...mySentIds]
+    const sets           = await getBlockSets(req.user)
+    const excludeIds     = [req.user._id.toString(), ...myFollowingIds, ...mySentIds, ...sets.all]
 
     const candidates = await User.find({
       college: me.college,
@@ -275,7 +381,8 @@ router.get('/suggestions', protect, async (req, res) => {
 router.get('/', protect, async (req, res) => {
   try {
 const { skill, search } = req.query
-const filter = { college: collegeRegex(req.user.college), _id: { $ne: req.user._id } }
+const sets   = await getBlockSets(req.user)
+const filter = { college: collegeRegex(req.user.college), _id: { $nin: [req.user._id, ...sets.allIds] } }
 
 if (skill && skill !== 'All' && skill.trim()) {
   filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
@@ -337,7 +444,8 @@ router.get('/all', protect, async (req, res) => {
     const limit = 20
     const skip  = (page - 1) * limit
 
-    const filter = { _id: { $ne: req.user._id } }
+    const sets   = await getBlockSets(req.user)
+    const filter = { _id: { $nin: [req.user._id, ...sets.allIds] } }
 
     // Skill filter
     if (skill && skill !== 'All' && skill.trim()) {
@@ -397,8 +505,14 @@ router.post('/:id/connect', protect, async (req, res) => {
 
     if (targetId === myId) return res.status(400).json({ message: 'Cannot follow yourself' })
 
+    if (!mongoose.isValidObjectId(targetId)) return res.status(404).json({ message: 'User not found' })
     const target = await User.findById(targetId)
     if (!target) return res.status(404).json({ message: 'User not found' })
+
+    // No follow requests between users who blocked each other (either way)
+    if (isBlockedEitherWay(await getBlockSets(req.user), targetId)) {
+      return res.status(403).json({ message: 'You cannot follow this user' })
+    }
 
       /*
     const alreadyFollowing = (req.user.following    || []).map(c => c.toString()).includes(targetId)
@@ -421,14 +535,12 @@ await Promise.all([
     User.findByIdAndUpdate(myId,     { $addToSet: { sentRequests:    targetId } }),
     User.findByIdAndUpdate(targetId, { $addToSet: { pendingRequests: myId     } })
      ])
-if (targetId.toString() !== req.user._id.toString()) {
-   await Notification.create({
+notify({
   recipient: targetId,
   sender:    req.user._id,
   type:      'connection_request',
   message:   `${req.user.name} wants to follow you`
-}).catch(() => {})
-  }
+})
     res.json({ message: `Follow request sent to ${target.name}` })
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
@@ -497,12 +609,12 @@ router.post('/:id/accept', protect, async (req, res) => {
       $pull:     { pendingRequests: senderId }
     })
 
-   await Notification.create({
+    notify({
       recipient: senderId,
       sender:    req.user._id,
       type:      'connection_accepted',
       message:   `${req.user.name} accepted your Connect request`
-    }).catch(() => {})
+    })
 
     res.json({ message: 'Request accepted' })
   } catch (err) {
@@ -547,6 +659,8 @@ router.post('/:id/unfollow', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 router.get('/:id/posts', protect, async (req, res) => {
   try {
+    const sets = await profileVisible(req, res)
+    if (!sets) return
     const posts = await Post.find({ postedBy: req.params.id, isAnonymous: false })
       .populate('postedBy', 'name year branch college avatar')
       .populate({
@@ -564,7 +678,7 @@ router.get('/:id/posts', protect, async (req, res) => {
   }
 })
 
-    res.json(posts.map(p => sanitizePost(p, req.user._id)))
+    res.json(posts.map(p => sanitizePost(p, req.user._id, sets)))
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }
@@ -575,11 +689,13 @@ router.get('/:id/posts', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 router.get('/:id/connections', protect, async (req, res) => {
   try {
+    const sets = await profileVisible(req, res)
+    if (!sets) return
     const user = await User.findById(req.params.id)
       .populate('following', 'name year branch skills college avatar')
       .lean()
     if (!user) return res.status(404).json({ message: 'User not found' })
-    res.json(user.following || [])
+    res.json((user.following || []).filter(u => !sets.all.has(String(u._id))))
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }
@@ -591,11 +707,13 @@ router.get('/:id/connections', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 router.get('/:id/following', protect, async (req, res) => {
   try {
+    const sets = await profileVisible(req, res)
+    if (!sets) return
     const user = await User.findById(req.params.id)
       .populate('following', 'name year branch skills college avatar')
       .lean()
     if (!user) return res.status(404).json({ message: 'User not found' })
-    res.json(user.following || [])
+    res.json((user.following || []).filter(u => !sets.all.has(String(u._id))))
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }
@@ -607,11 +725,13 @@ router.get('/:id/following', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 router.get('/:id/followers', protect, async (req, res) => {
   try {
+    const sets = await profileVisible(req, res)
+    if (!sets) return
     const user = await User.findById(req.params.id)
       .populate('followers', 'name year branch skills college avatar')
       .lean()
     if (!user) return res.status(404).json({ message: 'User not found' })
-    res.json(user.followers || [])
+    res.json((user.followers || []).filter(u => !sets.all.has(String(u._id))))
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }
@@ -623,9 +743,10 @@ router.get('/:id/followers', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 router.get('/:id', protect, async (req, res) => {
   try {
-    // Email is private: only returned via /me and auth responses
+    if (!(await profileVisible(req, res))) return
+    // Email, blocks, push tokens and sessions are private: only returned via /me and auth responses
     const user = await User.findById(req.params.id)
-      .select('-password -email -__v -likedPosts -savedPosts -pendingRequests -sentRequests')
+      .select('-password -email -__v -likedPosts -savedPosts -pendingRequests -sentRequests -blockedUsers -pushTokens -tokenVersion -termsAcceptedAt')
       .lean()
     if (!user) return res.status(404).json({ message: 'User not found' })
 
@@ -641,6 +762,53 @@ router.get('/:id', protect, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
   }
+})
+
+// ─────────────────────────────────────────────────
+// POST /api/users/:id/block — also ends follow relations both ways
+// POST /api/users/:id/unblock
+// ─────────────────────────────────────────────────
+router.post('/:id/block', protect, async (req, res) => {
+  const targetId = req.params.id
+  if (!mongoose.isValidObjectId(targetId)) return res.status(404).json({ message: 'User not found' })
+  if (targetId === req.user._id.toString()) return res.status(400).json({ message: 'You cannot block yourself' })
+  const target = await User.findById(targetId).select('_id').lean()
+  if (!target) return res.status(404).json({ message: 'User not found' })
+
+  const relations = id => ({ following: id, followers: id, pendingRequests: id, sentRequests: id })
+  await Promise.all([
+    User.updateOne({ _id: req.user._id }, { $addToSet: { blockedUsers: target._id }, $pull: relations(target._id) }),
+    User.updateOne({ _id: target._id },   { $pull: relations(req.user._id) }),
+  ])
+  res.json({ message: 'User blocked', blocked: true })
+})
+
+router.post('/:id/unblock', protect, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'User not found' })
+  await User.updateOne({ _id: req.user._id }, { $pull: { blockedUsers: req.params.id } })
+  res.json({ message: 'User unblocked', blocked: false })
+})
+
+// ─────────────────────────────────────────────────
+// POST /api/users/:id/report { reason, note }
+// ─────────────────────────────────────────────────
+router.post('/:id/report', protect, async (req, res) => {
+  const { reason, note } = req.body || {}
+  if (!REPORT_REASONS.includes(reason)) return res.status(400).json({ message: 'Invalid reason' })
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'User not found' })
+  if (req.params.id === req.user._id.toString()) return res.status(400).json({ message: 'You cannot report yourself' })
+  const target = await User.findById(req.params.id).select('_id').lean()
+  if (!target) return res.status(404).json({ message: 'User not found' })
+  try {
+    await Report.create({
+      targetType: 'user', user: target._id, reportedBy: req.user._id,
+      reason, note: typeof note === 'string' ? note.trim().slice(0, 300) : '',
+    })
+  } catch (err) {
+    if (err.code === 11000) return res.status(400).json({ message: 'You already reported this user' })
+    throw err
+  }
+  res.json({ message: 'Report submitted. Thank you.' })
 })
 
 module.exports = router

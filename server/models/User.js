@@ -134,6 +134,34 @@ savedPosts: {
   createdAt: { type: Date, default: Date.now },
   isContributor: { type: Boolean, default: false },
 
+  // ── Sessions ─────────────────────────────────
+  // Embedded in every JWT as `tv`; incrementing it logs out all devices
+  tokenVersion: { type: Number, default: 0 },
+
+  // ── Mobile push (never returned by default) ──
+  pushTokens: {
+    type: [{
+      _id:      false,
+      token:    { type: String, required: true },
+      platform: { type: String, enum: ['ios', 'android'], required: true },
+      deviceId: { type: String, required: true },
+      updatedAt:{ type: Date, default: Date.now },
+    }],
+    default: [],
+    select: false,
+    validate: [arr => arr.length <= 10, 'Too many push tokens'],
+  },
+
+  // ── Safety ───────────────────────────────────
+  blockedUsers: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    default: [],
+    validate: [arr => arr.length <= 2000, 'Too many blocked users'],
+  },
+
+  // Set at signup (required) or via POST /api/users/me/accept-terms
+  termsAcceptedAt: { type: Date, default: null },
+
 }, { toJSON: { virtuals: true }, toObject: { virtuals: true } })
 
 // Virtuals
@@ -164,6 +192,8 @@ UserSchema.index({ college: 1 })
 UserSchema.index({ following: 1 })
 UserSchema.index({ followers: 1 })
 UserSchema.index({ pendingRequests: 1 })
+UserSchema.index({ blockedUsers: 1 })   // "who blocked me" lookups
+UserSchema.index({ 'pushTokens.token': 1 })
 UserSchema.index({ createdAt: -1 })
 
 module.exports = mongoose.model('User', UserSchema)
