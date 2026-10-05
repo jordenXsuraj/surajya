@@ -162,6 +162,15 @@ savedPosts: {
   // Set at signup (required) or via POST /api/users/me/accept-terms
   termsAcceptedAt: { type: Date, default: null },
 
+  // ── Email verification ───────────────────────
+  // Accounts created before verification existed stay unverified but are never
+  // blocked (see middleware/requireVerifiedEmail.js)
+  emailVerified:   { type: Boolean, default: false },
+  emailVerifiedAt: { type: Date, default: null },
+  // Set by the Resend webhook when mail to this address bounces / is marked spam
+  emailBounced:    { type: Boolean, default: false },
+  emailBouncedAt:  { type: Date, default: null },
+
 }, { toJSON: { virtuals: true }, toObject: { virtuals: true } })
 
 // Virtuals

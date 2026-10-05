@@ -8,6 +8,7 @@ const User         = require('../models/User')
 const Notification = require('../models/Notification')
 const Report       = require('../models/Report')
 const protect      = require('../middleware/auth')
+const requireVerifiedEmail = require('../middleware/requireVerifiedEmail')
 const { sanitizePost, sanitizeReply, sanitizeLikes } = require('../utils/sanitizePost')
 const { getBlockSets, addPostBlockFilter, isPostHidden } = require('../utils/blocks')
 const { notify, notifyFollowers } = require('../services/notify')
@@ -223,7 +224,7 @@ function extractYoutubeId(url = '') {
 // ─────────────────────────────────────────────────
 // POST /api/posts — Create post
 // ─────────────────────────────────────────────────
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, requireVerifiedEmail, async (req, res) => {
   try {
     const {
   type,
@@ -239,7 +240,7 @@ router.post('/', protect, async (req, res) => {
   todayOnly
 } = req.body
 
-    if (!text?.trim()) return res.status(400).json({ message: 'Post text required' })
+    if (typeof text !== 'string' || !text.trim()) return res.status(400).json({ message: 'Post text required' })
     if (text.trim().length < 5) return res.status(400).json({ message: 'Post too short' })
 
     const validTypes = ['social','placement','qa','study','project','confession']
@@ -553,11 +554,11 @@ router.delete('/:id', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 // POST /api/posts/:id/replies
 // ─────────────────────────────────────────────────
-router.post('/:id/replies', protect, async (req, res) => {
+router.post('/:id/replies', protect, requireVerifiedEmail, async (req, res) => {
   try {
     const { text } = req.body
 
-    if (!text?.trim()) {
+    if (typeof text !== 'string' || !text.trim()) {
       return res.status(400).json({ message: 'Reply text required' })
     }
 
@@ -649,7 +650,7 @@ router.delete('/:id/replies/:replyId', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 // POST /api/posts/:id/interested
 // ─────────────────────────────────────────────────
-router.post('/:id/interested', protect, async (req, res) => {
+router.post('/:id/interested', protect, requireVerifiedEmail, async (req, res) => {
   try {
     if (!(await visiblePost(req))) return res.status(404).json({ message: 'Post not found' })
     const post = await Post.findById(req.params.id).populate('postedBy', 'name _id')
@@ -676,7 +677,7 @@ router.post('/:id/interested', protect, async (req, res) => {
 })
 
 // POST /api/posts/:id/report
-router.post('/:id/report', protect, async (req, res) => {
+router.post('/:id/report', protect, requireVerifiedEmail, async (req, res) => {
   try {
     const { reason, note } = req.body
     const validReasons = ['spam','hate','harassment','misinformation','other']
@@ -706,7 +707,7 @@ router.post('/:id/report', protect, async (req, res) => {
 })
 
 // POST /api/posts/:id/replies/:replyId/report { reason, note }
-router.post('/:id/replies/:replyId/report', protect, async (req, res) => {
+router.post('/:id/replies/:replyId/report', protect, requireVerifiedEmail, async (req, res) => {
   const { reason, note } = req.body || {}
   if (!REPORT_REASONS.includes(reason)) return res.status(400).json({ message: 'Invalid reason' })
   if (!mongoose.isValidObjectId(req.params.id) || !mongoose.isValidObjectId(req.params.replyId)) {

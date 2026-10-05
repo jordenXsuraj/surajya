@@ -13,6 +13,11 @@ const { sanitizePost } = require('../utils/sanitizePost')
 const { getBlockSets, addPostBlockFilter, isBlockedEitherWay } = require('../utils/blocks')
 const { notify }   = require('../services/notify')
 const { deleteAccount } = require('../services/accountDeletion')
+const requireVerifiedEmail = require('../middleware/requireVerifiedEmail')
+const { mustVerify } = requireVerifiedEmail
+const verification = require('../services/verification')
+const mailer       = require('../services/email')
+const { signToken } = require('../utils/token')
 const { upload }   = require('../config/cloudinary')
 
 const REPORT_REASONS = ['spam','hate','harassment','misinformation','other']
@@ -58,6 +63,9 @@ function safeUser(u) {
   delete obj.__v
   obj.followingCount = obj.following?.length || 0
   obj.followerCount  = obj.followers?.length || 0
+  obj.emailVerified  = Boolean(obj.emailVerified)
+  obj.emailBounced   = Boolean(obj.emailBounced)
+  obj.verificationRequired = mustVerify(obj)
   return obj
 }
 
@@ -91,6 +99,65 @@ router.delete('/me', protect, deleteAccountLimiter, async (req, res) => {
   }
   await deleteAccount(user._id)
   res.status(204).end()
+})
+
+// ─────────────────────────────────────────────────
+// PUT /api/users/me/email { newEmail, password }
+// The new address must be verified again; every other session ends.
+// ─────────────────────────────────────────────────
+const changeEmailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit:    5,
+  keyGenerator: req => `user:${req.user._id}`,
+  message:  { message: 'Too many attempts. Try again in 15 minutes.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders:   false,
+})
+
+// a***@gmail.com — enough for the owner to recognise, not enough to harvest
+function maskEmail(email) {
+  const [local, domain] = email.split('@')
+  return `${local.slice(0, 1)}${'*'.repeat(Math.max(1, Math.min(local.length - 1, 6)))}@${domain}`
+}
+
+router.put('/me/email', protect, changeEmailLimiter, async (req, res) => {
+  const { newEmail, password } = req.body || {}
+  if (typeof password !== 'string' || !password) return res.status(400).json({ message: 'Password is required' })
+  const email = typeof newEmail === 'string' ? newEmail.trim().toLowerCase() : ''
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 254) {
+    return res.status(400).json({ message: 'Enter a valid email address' })
+  }
+
+  const user = await User.findById(req.user._id).select('+password +pushTokens')
+  if (!user || !(await user.matchPassword(password))) {
+    return res.status(400).json({ message: 'Incorrect password' })        // 400, not 401: the session is fine
+  }
+  if (email === user.email) return res.status(400).json({ message: 'That is already your email address' })
+  if (await User.exists({ email, _id: { $ne: user._id } })) {
+    return res.status(409).json({ code: 'EMAIL_TAKEN', message: 'An account with this email already exists' })
+  }
+
+  const oldEmail = user.email
+  user.email           = email
+  user.emailVerified   = false
+  user.emailVerifiedAt = null
+  user.emailBounced    = false
+  user.emailBouncedAt  = null
+  user.tokenVersion    = (user.tokenVersion || 0) + 1
+  user.pushTokens      = []                         // other devices are logged out, so they stop getting pushes
+  try {
+    await user.save({ validateModifiedOnly: true })
+  } catch (err) {
+    if (err.code === 11000) return res.status(409).json({ code: 'EMAIL_TAKEN', message: 'An account with this email already exists' })
+    throw err
+  }
+
+  // Best effort, after the change is saved: code to the new address, notice to the old one
+  verification.issueCode(user).catch(err => console.error('change-email: code email failed:', err.message))
+  mailer.sendEmailChangedNotice({ to: oldEmail, name: user.name, newEmailMasked: maskEmail(email) })
+    .catch(err => console.error('change-email: notice to old address failed:', err.message))
+
+  res.json({ message: `Email changed. We sent a code to ${email}.`, token: signToken(user), user: safeUser(user) })
 })
 
 // ─────────────────────────────────────────────────
@@ -498,7 +565,7 @@ router.get('/all', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 // POST /api/users/:id/connect — Send follow request
 // ─────────────────────────────────────────────────
-router.post('/:id/connect', protect, async (req, res) => {
+router.post('/:id/connect', protect, requireVerifiedEmail, async (req, res) => {
   try {
     const targetId = req.params.id
     const myId     = req.user._id.toString()
@@ -746,7 +813,7 @@ router.get('/:id', protect, async (req, res) => {
     if (!(await profileVisible(req, res))) return
     // Email, blocks, push tokens and sessions are private: only returned via /me and auth responses
     const user = await User.findById(req.params.id)
-      .select('-password -email -__v -likedPosts -savedPosts -pendingRequests -sentRequests -blockedUsers -pushTokens -tokenVersion -termsAcceptedAt')
+      .select('-password -email -__v -likedPosts -savedPosts -pendingRequests -sentRequests -blockedUsers -pushTokens -tokenVersion -termsAcceptedAt -emailVerified -emailVerifiedAt -emailBounced -emailBouncedAt')
       .lean()
     if (!user) return res.status(404).json({ message: 'User not found' })
 
@@ -792,7 +859,7 @@ router.post('/:id/unblock', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 // POST /api/users/:id/report { reason, note }
 // ─────────────────────────────────────────────────
-router.post('/:id/report', protect, async (req, res) => {
+router.post('/:id/report', protect, requireVerifiedEmail, async (req, res) => {
   const { reason, note } = req.body || {}
   if (!REPORT_REASONS.includes(reason)) return res.status(400).json({ message: 'Invalid reason' })
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'User not found' })

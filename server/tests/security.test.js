@@ -1,6 +1,7 @@
 // Security regression tests: data leaks on public endpoints + login rate limiting.
 process.env.NODE_ENV   = 'test'
 process.env.JWT_SECRET = 'test_secret_that_is_definitely_longer_than_32_chars'
+process.env.VERIFICATION_REQUIRED_FROM = '2999-01-01T00:00:00Z'   // these suites predate email verification
 
 const request  = require('supertest')
 const mongoose = require('mongoose')

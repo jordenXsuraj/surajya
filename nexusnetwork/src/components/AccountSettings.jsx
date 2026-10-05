@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { changePassword, logoutAllDevices } from '../services/api'
+import ChangeEmailForm from './ChangeEmailForm'
 
 // Profile → Account: change password, log out everywhere, delete account.
 // Both actions end every other session; the API returns a fresh token for this one.
 export default function AccountSettings({ onMessage }) {
   const { user, login } = useAuth()
+  const nav = useNavigate()
   const [open,    setOpen]    = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
   const [cur,     setCur]     = useState('')
   const [pw,      setPw]      = useState('')
   const [pw2,     setPw2]     = useState('')
@@ -71,6 +74,24 @@ export default function AccountSettings({ onMessage }) {
           <button className="ob-btn" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Change password'}</button>
           <Link to="/forgot-password" className="ob-link" style={{ textAlign: 'center', margin: 0 }}>Forgot your current password?</Link>
         </form>
+      )}
+
+      <button className="acct-row" onClick={() => setEmailOpen(o => !o)}>
+        <span>
+          ✉️ Change email
+          <span style={{ display: 'block', fontSize: '.72rem', color: 'var(--muted)', marginTop: 2 }}>
+            {user?.email}{user?.emailVerified ? ' · verified' : ' · not verified'}
+          </span>
+        </span>
+        <span>{emailOpen ? '▲' : '▼'}</span>
+      </button>
+      {emailOpen && (
+        <div className="acct-form">
+          <ChangeEmailForm onDone={() => { setEmailOpen(false); nav('/verify-email') }} />
+        </div>
+      )}
+      {!user?.emailVerified && !emailOpen && (
+        <Link to="/verify-email" className="acct-row"><span>✅ Verify email</span><span>›</span></Link>
       )}
 
       <button className="acct-row" onClick={logoutEverywhere} disabled={outBusy}>
