@@ -2,7 +2,6 @@ import {
   buildCreatePostBody,
   cleanTags,
   composeSchema,
-  extractYoutubeId,
   placeholderFor,
   submitLabel,
   youtubePreview,
@@ -42,22 +41,9 @@ describe('cleanTags (web Post.jsx)', () => {
   });
 });
 
-describe('extractYoutubeId (server regex)', () => {
-  it.each([
-    ['https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'dQw4w9WgXcQ'],
-    ['https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s', 'dQw4w9WgXcQ'],
-    ['https://youtu.be/dQw4w9WgXcQ?si=xyz', 'dQw4w9WgXcQ'],
-    ['https://www.youtube.com/embed/dQw4w9WgXcQ', 'dQw4w9WgXcQ'],
-    ['HTTPS://WWW.YOUTUBE.COM/watch?v=abc', 'abc'], // case-insensitive like the server
-    ['  https://youtu.be/xyz  ', 'xyz'],
-    ['https://youtube.com/shorts/abc123', ''], // the server can't read Shorts links
-    ['https://vimeo.com/1', ''],
-    ['not a link', ''],
-  ])('%s → %p', (url, id) => {
-    expect(extractYoutubeId(url)).toBe(id);
-  });
-
-  it('preview thumbnail uses hqdefault', () => {
+// Which links count as a YouTube video: src/lib/__tests__/youtube.test.ts
+describe('YouTube preview', () => {
+  it('compose preview thumbnail uses hqdefault', () => {
     expect(youtubePreview('abc')).toBe('https://img.youtube.com/vi/abc/hqdefault.jpg');
   });
 });
@@ -77,14 +63,19 @@ describe('composeSchema', () => {
 
   it('image and YouTube are mutually exclusive (server 400 otherwise)', () => {
     expect(issue({ imageUrl: 'https://res.cloudinary.com/x.jpg' })).toBeNull();
-    expect(issue({ youtubeUrl: 'https://youtu.be/abc' })).toBeNull();
+    expect(issue({ youtubeUrl: 'https://youtu.be/dQw4w9WgXcQ' })).toBeNull();
     expect(
-      issue({ imageUrl: 'https://res.cloudinary.com/x.jpg', youtubeUrl: 'https://youtu.be/abc' }),
+      issue({
+        imageUrl: 'https://res.cloudinary.com/x.jpg',
+        youtubeUrl: 'https://youtube.com/shorts/dQw4w9WgXcQ',
+      }),
     ).toBe('Choose either image or YouTube video');
   });
 
-  it('YouTube links must have a video id the server understands', () => {
-    expect(issue({ youtubeUrl: 'https://youtube.com/shorts/abc' })).toBe(
+  it('YouTube links must point to a video (Shorts and live included)', () => {
+    expect(issue({ youtubeUrl: 'https://youtube.com/shorts/dQw4w9WgXcQ' })).toBeNull();
+    expect(issue({ youtubeUrl: 'https://www.youtube.com/live/dQw4w9WgXcQ' })).toBeNull();
+    expect(issue({ youtubeUrl: 'https://www.youtube.com/@somechannel' })).toBe(
       "That doesn't look like a YouTube video link",
     );
   });

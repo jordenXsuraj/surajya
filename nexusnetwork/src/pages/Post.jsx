@@ -7,6 +7,7 @@ import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import { useEffect } from 'react'
 import { uploadPdf } from '../services/api'
+import { getYouTubeId } from '../utils/youtube'
 
 // ── NEW logical content from this file ────────────
 // - tip type added
@@ -243,7 +244,7 @@ useEffect(() => {
   const file = e.target.files[0]
   if (!file) return
   if (file.type !== 'application/pdf') { show('⚠️ Only PDF files allowed'); return }
-  if (file.size > 10 * 1024 * 1024)   {  show('⚠️ Large file, may take time to upload'); return }
+  if (file.size > 10 * 1024 * 1024)   {  show('⚠️ PDF must be under 10 MB'); return }
 
   setPdfUploading(true)
   setPdfProgress(0)
@@ -291,6 +292,7 @@ function removePdf() {
     if (uploading)           { show('⏳ Wait for image upload'); return }
     if (pdfUploading) { show('⏳ Wait for PDF upload'); return }
     if (imgPreview && !cloudUrl) { show('❌ Image upload failed. Remove it or try again.'); return }
+    if (youtubeUrl.trim() && !getYouTubeId(youtubeUrl)) { show("⚠️ That doesn't look like a YouTube video link"); return }
 
 
 
@@ -797,7 +799,12 @@ setPdfFile(null)
       setYoutubeUrl(e.target.value)
     }}
   />
-  {youtubeUrl && (
+  {youtubeUrl.trim() && !getYouTubeId(youtubeUrl) && (
+    <div className="ob-err" style={{ marginTop:10 }}>
+      That doesn't look like a YouTube video link
+    </div>
+  )}
+  {getYouTubeId(youtubeUrl) && (
   <div style={{
     marginTop:12,
     background:'var(--bg2)',
@@ -807,11 +814,7 @@ setPdfFile(null)
     position:'relative'
   }}>
     <img
-      src={`https://img.youtube.com/vi/${
-        youtubeUrl.match(
-          /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/
-        )?.[1] || ''
-      }/mqdefault.jpg`}
+      src={`https://img.youtube.com/vi/${getYouTubeId(youtubeUrl)}/mqdefault.jpg`}
       alt="YouTube preview"
       style={{
         width:'100%',

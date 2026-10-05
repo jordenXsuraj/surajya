@@ -13,6 +13,7 @@ const { sanitizePost, sanitizeReply, sanitizeLikes } = require('../utils/sanitiz
 const { getBlockSets, addPostBlockFilter, isPostHidden } = require('../utils/blocks')
 const { notify, notifyFollowers } = require('../services/notify')
 const validObjectIdParam = require('../middleware/validObjectId')
+const { extractYoutubeId } = require('../utils/youtube')
 
 const REPORT_REASONS = ['spam','hate','harassment','misinformation','other']
 
@@ -211,16 +212,6 @@ router.post('/upload-pdf', protect, pdfUpload.single('pdf'), (req, res) => {
     return res.status(500).json({ message: err.message })
   }
 })
-
-
-
-
-function extractYoutubeId(url = '') {
-  const m = url.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/i
-  )
-  return m ? m[1] : ''
-}
 
 
 

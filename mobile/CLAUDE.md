@@ -95,8 +95,11 @@ src/test/           test helpers (mockApi, fixtures)
 
 ## Compose and uploads
 
-- Rules live in `src/lib/compose.ts` (5–1000 characters, image XOR YouTube, server YouTube regex,
-  tags like the web, link https:// prefix) and are unit-tested; the screen only wires them up.
+- Rules live in `src/lib/compose.ts` (5–1000 characters, image XOR YouTube, tags like the web,
+  link https:// prefix) and are unit-tested; the screen only wires them up.
+- YouTube links (watch, youtu.be, embed, Shorts, live; www./m./music. hosts) go through
+  `getYouTubeId` in `src/lib/youtube.ts`. The server (`server/utils/youtube.js`) and the web
+  (`nexusnetwork/src/utils/youtube.js`) use the same rule and test cases; change all three together.
 - Photos are compressed on the device before upload (`compressPhoto`: max 1200 px wide, JPEG 0.82,
   which also converts HEIC), so photos over the server's 5 MB limit still work; PDFs over 10 MB
   are refused before upload ("PDF must be under 10 MB").

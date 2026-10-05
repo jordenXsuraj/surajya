@@ -26,13 +26,13 @@ import {
   buildCreatePostBody,
   cleanTags,
   composeSchema,
-  extractYoutubeId,
   placeholderFor,
   submitLabel,
   type ComposeValues,
 } from '@/lib/compose';
 import { clearDraft, isEmptyDraft, loadDraft, saveDraft } from '@/lib/composeDraft';
 import { normaliseLink } from '@/lib/postView';
+import { getYouTubeId } from '@/lib/youtube';
 import { useAppConfig } from '@/stores/appConfig.store';
 import { usePostUi } from '@/stores/postUi.store';
 import { useUiStore } from '@/stores/ui.store';
@@ -191,7 +191,7 @@ export default function ComposeScreen() {
     });
   }
 
-  const ytId = extractYoutubeId(youtubeUrl);
+  const ytId = getYouTubeId(youtubeUrl);
   const tagList = cleanTags(tags);
   const linkUrl = link.trim() ? normaliseLink(link.trim()) : null;
   const len = text.length;
