@@ -1,0 +1,90 @@
+// Design tokens ported from nexusnetwork/src/index.css (:root). Components use these only —
+// no raw colours or font names in screens.
+
+export const colors = {
+  bg: '#0d0d0d',
+  bg2: '#141414',
+  bg3: '#1c1c1c',
+  card: '#181818',
+  br: 'rgba(255,255,255,0.06)',
+  br2: 'rgba(255,255,255,0.11)',
+  text: '#f0f0f0',
+  muted: '#888888',
+  dim: '#444444',
+  accent: '#a73333',
+  accentPressed: '#ff1f42', // web: .bn-center.active / .custom-skill-add-btn:hover
+  al: 'rgba(255,59,92,0.12)',
+  ag: 'rgba(255,59,92,0.25)',
+  blue: '#3b82f6',
+  bl: 'rgba(59,130,246,0.12)',
+  green: '#22c55e',
+  gl: 'rgba(34,197,94,0.12)',
+  purple: '#a855f7',
+  pl: 'rgba(168,85,247,0.12)',
+  yellow: '#f59e0b',
+  yl: 'rgba(245,158,11,0.1)',
+  orange: '#f97316',
+  ol: 'rgba(249,115,22,0.1)',
+  white: '#ffffff',
+  toast: '#222222',
+  navBar: 'rgba(13,13,13,0.97)',
+} as const;
+
+export type ColorName = keyof typeof colors;
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+} as const;
+
+export const radius = {
+  sm: 9,
+  md: 12,
+  lg: 16,
+  pill: 999,
+} as const;
+
+// Minimum touch target (iOS HIG 44pt; Android 48dp is met by padding/hitSlop).
+export const touch = {
+  min: 44,
+  hitSlop: { top: 8, bottom: 8, left: 8, right: 8 },
+} as const;
+
+export const layout = {
+  tabBarHeight: 68, // web: --nav
+  gutter: 18, // web: .ob-form-wrap / .doc-page side padding
+  maxContentWidth: 430, // web: #root max-width
+} as const;
+
+// One font file per weight: Android ignores fontWeight for custom fonts.
+export const fonts = {
+  light: 'Outfit_300Light',
+  regular: 'Outfit_400Regular',
+  medium: 'Outfit_500Medium',
+  semibold: 'Outfit_600SemiBold',
+  bold: 'Outfit_700Bold',
+  extrabold: 'Outfit_800ExtraBold',
+  black: 'Outfit_900Black',
+  displayBold: 'Fraunces_700Bold',
+  display: 'Fraunces_800ExtraBold',
+} as const;
+
+export type FontWeightName =
+  'light' | 'regular' | 'medium' | 'semibold' | 'bold' | 'extrabold' | 'black';
+
+// Web sizes are rem-based (1rem = 16px).
+export const fontSize = {
+  xxs: 9.6, // .6rem — tab labels
+  xs: 11.2, // .7rem — notes
+  sm: 12.5, // .78rem — errors, chips
+  md: 14, // .875rem — body, inputs
+  lg: 16, // 1rem — buttons, h2
+  xl: 20.8, // 1.3rem — step titles
+  xxl: 24, // 1.5rem — page titles
+  display: 48, // 3rem — logo
+} as const;
