@@ -56,7 +56,7 @@ If a Render deploy fails (build error, or the app exits at startup), Render keep
 | `RESEND_API_KEY` | **Required for password-reset emails.** Without it in production, reset requests still answer 200 but no email is sent (an error is logged). See [Email](#email-resend). |
 | `EMAIL_FROM` | `MeetNet <no-reply@themeetnet.com>` (the domain must be verified in Resend) |
 | `EXPO_ACCESS_TOKEN` | Optional. Only if "Enhanced push security" is turned on in the Expo project. |
-| `CLIENT_IP_HEADER`, `CLIENT_IP_XFF_INDEX` | Which header carries the real client IP for rate limits. Empty = `req.ip`. See [Client IP](#client-ip-rate-limiting). |
+| `CLIENT_IP_HEADER`, `CLIENT_IP_XFF_INDEX` | Which header carries the real client IP for rate limits. **Production: `CLIENT_IP_HEADER=cf-connecting-ip`**, no index. Empty = `req.ip`. See [Client IP](#client-ip-rate-limiting). |
 | `DEBUG_IP_ROUTE` | `1` only **temporarily**, while choosing `CLIENT_IP_HEADER`. Remove afterwards. |
 | `APP_MIN_VERSION_ANDROID`, `APP_MIN_VERSION_IOS` | `x.y.z`. Apps below this see a force-update screen. Default `0.0.0`. |
 | `APP_LATEST_VERSION_ANDROID`, `APP_LATEST_VERSION_IOS` | `x.y.z`. Apps below this see an optional update prompt. Default `1.0.0`. |
@@ -96,7 +96,19 @@ On Render, `req.ip` is an internal proxy address shared by many users, so IP-key
 
 **Only use a header your proxies overwrite.** Anything a client can set itself would let an attacker pick a fresh IP per request and skip every limit.
 
-Procedure (once, and again if hosting changes):
+**Current setting: `CLIENT_IP_HEADER=cf-connecting-ip`** (measured 2026-10-05). Traffic goes client → Cloudflare → Render proxy (`10.x`) → app. What the app received:
+
+| Header | Value | Can a client fake it? |
+|---|---|---|
+| `req.ip` (`trust proxy 1`) | Render-internal `10.x`, varies per request | – (useless for limits) |
+| `X-Forwarded-For` | `<anything the client sent>, <real IP>, <Cloudflare edge>, <Render proxy>` | **Yes**, on the left; the real IP is always 3rd from the right |
+| `CF-Connecting-IP` | real IP | **No.** Cloudflare rejects a request that carries one (HTTP 403, error 1000) |
+| `True-Client-IP` | real IP | No (overwritten), but redundant |
+| `X-Real-IP` | not set | – |
+
+Verified after switching: one client's requests share one counter, fake `X-Forwarded-For`/`True-Client-IP`/`X-Real-IP` don't open a new one, and a second client (different IP) gets its own. If Cloudflare ever stops sending `CF-Connecting-IP`, the code falls back to `req.ip` (safe, just shared again). The fallback would be `CLIENT_IP_HEADER=x-forwarded-for` with `CLIENT_IP_XFF_INDEX=-3`, re-measured first.
+
+Procedure (rerun if hosting or the proxy chain changes):
 
 1. On Render set `DEBUG_IP_ROUTE=1` and deploy. `ADMIN_EMAIL` and `ADMIN_SECRET_KEY` must be set.
 2. Log in as the admin account and call it **from your own phone or computer**, not from a server:
@@ -104,28 +116,30 @@ Procedure (once, and again if hosting changes):
    curl -s https://surajya.onrender.com/api/_debug/ip -H "x-admin-key: $ADMIN_KEY" -H "Authorization: Bearer $ADMIN_JWT"
    ```
    It returns `reqIp`, `reqIps`, `x-forwarded-for`, `cf-connecting-ip`, `true-client-ip`, `x-real-ip` for **your request only** (nothing is logged). Compare them with your real IP (e.g. https://api.ipify.org).
-3. **Spoofing test:** call it again with a fake header, `-H "X-Forwarded-For: 203.0.113.99"` (and also try `-H "CF-Connecting-IP: 203.0.113.98"`). A header is safe only if it **still shows your real IP** while you send fake values. If a value changes to `203.0.113.x`, a client controls it, so don't use it.
+3. **Spoofing test:** call it again with **one** fake header per request, e.g. `-H "X-Forwarded-For: 203.0.113.99"`, then `True-Client-IP`, `X-Real-IP` and `CF-Connecting-IP`. Send them separately: Cloudflare blocks any request carrying `CF-Connecting-IP`, which hides the other results. A header is safe only if it **still shows your real IP** while you send fake values. If a value changes to `203.0.113.x`, a client controls it, so don't use it.
 4. Set `CLIENT_IP_HEADER` to the safe header, e.g. `cf-connecting-ip`. If only `x-forwarded-for` is safe at one position, set `CLIENT_IP_HEADER=x-forwarded-for` and `CLIENT_IP_XFF_INDEX` to that position (negative counts from the right: `-1` = last entry, `-2` = the one before; a client can only add entries on the left).
 5. Remove `DEBUG_IP_ROUTE` and deploy. `/api/_debug/ip` returns 404 again.
-6. Check: two different networks (Wi-Fi and mobile data) get separate `RateLimit: remaining=…` counters on `POST /api/auth/signup` with an empty body.
+6. Check with `curl -sI https://surajya.onrender.com/api/app/config | grep -i ratelimit` (logged-out requests are counted per client IP): repeated calls from one client count down by 1 each; calls with fake headers keep counting on the same counter; a second client on another network starts its own.
 
 ## Email (Resend)
 
 Password-reset emails go through the Resend HTTP API (`server/services/email.js`).
 
-1. Create a Resend account → **Domains → Add domain** → `themeetnet.com` (choose the region closest to your users).
-2. Resend shows DNS records with values unique to your domain. Add them **exactly as shown** at the DNS provider that manages `themeetnet.com` (the one with the Vercel `A`/`CNAME` records). Typically:
+**Current setup (done 2026-10-04):** `themeetnet.com` is verified in Resend, region `ap-northeast-1` (Tokyo). Render's `RESEND_API_KEY` is a **restricted key named `meetnet-render-sending`**: sending only, and only for `themeetnet.com`. It can't read or change the Resend account. A real reset email to a test account was reported `delivered` by Resend.
 
-   | Type | Name | Value (copy from Resend) |
-   |---|---|---|
-   | TXT | `resend._domainkey` | DKIM public key `p=MIGf…` |
-   | MX | `send` | `feedback-smtp.<region>.amazonses.com`, priority 10 |
-   | TXT | `send` | `v=spf1 include:amazonses.com ~all` |
-   | TXT (recommended) | `_dmarc` | `v=DMARC1; p=none;` |
+The DNS records live at **Hostinger** (hPanel → Domains → themeetnet.com → DNS records), not Vercel:
 
-   These are on the `send` subdomain and `_domainkey`, so they don't affect the website or any existing mail on the root domain.
-3. Wait until Resend shows the domain as **Verified**, then create an API key with "Sending access" and set `RESEND_API_KEY` and `EMAIL_FROM` on Render.
-4. Test: `/forgot-password` on the site with your own email. The email must arrive and its link must open `https://themeetnet.com/reset-password?token=…`.
+| Type | Name | Value | Priority | Purpose |
+|---|---|---|---|---|
+| TXT | `resend._domainkey` | DKIM public key `p=MIGf…` (copy from Resend → Domains) | – | DKIM signature |
+| MX | `send` | `feedback-smtp.ap-northeast-1.amazonses.com` | 10 | bounce handling (SPF return path) |
+| TXT | `send` | `v=spf1 include:amazonses.com ~all` | – | SPF |
+| CNAME | `rsend` | `send.forge.rmta.net` | – | Resend return path |
+| TXT | `_dmarc` | `v=DMARC1; p=none;` | – | DMARC (monitor only) |
+
+These sit on subdomains (`send`, `rsend`, `_domainkey`, `_dmarc`), so they don't affect the website, and they won't conflict with a future MX on the root domain. Don't delete them, or sending stops.
+
+To set it up again from scratch: Resend → **Domains → Add domain**, add the records it shows **exactly**, wait for **Verified** (DKIM took about 30 min), create a key with **Sending access** limited to the domain, then set `RESEND_API_KEY`, `EMAIL_FROM` and `PUBLIC_APP_URL` on Render and redeploy. Test with `/forgot-password` for an address that has an account: unknown addresses get the same answer but no email, by design.
 
 Locally, leave `RESEND_API_KEY` empty: the reset link is printed to the server console instead (never in production).
 
@@ -161,26 +175,49 @@ A free-plan instance sleeps after about 15 minutes idle, so the first request ca
 
 ## Domains and HTTPS
 
-Both names are on Vercel: the apex `A` record points to `76.76.21.21`, and `www` is a `CNAME` to `cname.vercel-dns.com`. Vercel issues and renews the Let's Encrypt certificates for both names. Both must keep valid HTTPS for the mobile app's Universal Links / App Links.
+DNS for `themeetnet.com` is hosted at **Hostinger** (nameservers `nova.dns-parking.com` / `cosmos.dns-parking.com`), so every DNS change is made in Hostinger's DNS zone editor. The site itself is on Vercel: the apex `A` record points to `76.76.21.21`, and `www` is a `CNAME` to `cname.vercel-dns.com`. Vercel issues and renews the Let's Encrypt certificates for both names. Both must keep valid HTTPS for the mobile app's Universal Links / App Links.
+The root domain has **no MX record**, so `@themeetnet.com` addresses can't receive email (Resend only sends).
 `surajya.in` is also attached to the Vercel project, but its DNS does not point at Vercel ("misconfigured").
 
-## Releasing Phase 1 (mobile backend APIs)
+## Backups
 
-After merging to `main` (both apps deploy together):
+Before any release that migrates data, dump the database **outside the repo**:
+```powershell
+# MongoDB Database Tools: winget install -e --id MongoDB.DatabaseTools
+mongodump --uri="<MONGO_URI from Render>" --gzip --out="$env:USERPROFILE\meetnet-backups\<yyyy-mm-dd>"
+# restore (only if needed): mongorestore --gzip --uri="<MONGO_URI>" "<that folder>"
+```
+On a mobile connection, append `&connectTimeoutMS=30000&socketTimeoutMS=300000&serverSelectionTimeoutMS=30000` to the URI (the first attempt on 2026-10-04 timed out during the TLS handshake without them).
+**A dump contains personal data** (names, emails, password hashes). Never commit or upload it, and delete it after 14 days.
 
-1. **Render env:** set `PUBLIC_APP_URL=https://themeetnet.com`, then `RESEND_API_KEY` and `EMAIL_FROM` once Resend has verified the domain. Until then forgot-password answers normally but sends nothing.
-2. **Startup migration** (automatic, idempotent): old reports get `targetType: 'post'`, and the old `{ post, reportedBy }` unique index is replaced. Check the Render log for `Report indexes dropped: post_1_reportedBy_1` on the first start.
-3. **Client IP:** run the [procedure](#client-ip-rate-limiting) and set `CLIENT_IP_HEADER`.
-4. **Signup now requires accepting the terms.** A browser still running the old cached bundle gets "Please accept the Terms…" until it reloads. Existing users aren't affected (`termsAcceptedAt: null`; the app can ask them via `POST /api/users/me/accept-terms`).
-5. **Nobody is logged out by this release:** tokens issued before it have no `tv` and stay valid until the user changes their password, resets it, or uses "log out of all devices".
-6. Replace the legal placeholders (`TODO(owner)` in `nexusnetwork/src/pages/{Terms,Privacy,CommunityGuidelines,DeleteAccount}.jsx` and `src/config/legal.js`), and the deep-link placeholders before the app ships.
-7. Verify: the checks above, plus `/terms`, `/privacy`, `/community-guidelines` and `/delete-account` load on the site, and a real forgot → reset password round trip works.
+## Phase 1 release (mobile backend APIs) — done 2026-10-04/05
+
+What happened, in order:
+
+1. Backup with `mongodump` (users 143, posts 208, reports 37, notifications 40), stored offline.
+2. Resend domain verified; restricted key, `EMAIL_FROM` and `PUBLIC_APP_URL` set on Render.
+3. `mobile/p1-backend-apis` merged into `main` (`1e9d23e`); Render deploy `dep-db114k5g1s2s7395e5j0` went live. The startup migration logged `Migrated 37 reports to targetType=post` and `Report indexes dropped: post_1_reportedBy_1`.
+4. Verified in production: health check, 400 for bad ids, no `password`/`email` in real posts, anonymous posts with `postedBy: null`, `/api/app/config`, both `.well-known` files served as JSON, CORS 403 for unknown origins, a real reset email delivered.
+5. Client IP measured and `CLIENT_IP_HEADER=cf-connecting-ip` set; `DEBUG_IP_ROUTE` removed again.
+
+Behaviour to know about:
+
+- **Signup now requires accepting the terms and 8+ character passwords.** A browser still on the old cached bundle gets "Please accept the Terms…" until it reloads. Existing users can still log in with 6–7 character passwords and have `termsAcceptedAt: null`; the app can ask them via `POST /api/users/me/accept-terms`.
+- **Nobody was logged out by this release:** tokens issued before it have no `tv` and stay valid until the user changes or resets their password, or uses "log out of all devices".
+
+Still to do before the app ships:
+
+- Legal placeholders: `TODO(owner)` in `nexusnetwork/src/pages/{Terms,Privacy,CommunityGuidelines,DeleteAccount}.jsx` and `src/config/legal.js`.
+- Deep-link placeholders: Play App Signing SHA-256, Apple Team ID (see [Mobile deep links](#mobile-deep-links)).
+- A working support mailbox (see Known issues).
 
 ## Known issues / follow-ups
 
-- **Client IP header not chosen yet.** Until `CLIENT_IP_HEADER` is set (see above), IP-keyed limits still use the shared Render proxy address.
+- **`support@themeetnet.com` can't receive email**: the root domain has no MX. Set up receiving (Hostinger email or forwarding) or change `SUPPORT_EMAIL` in `nexusnetwork/src/config/legal.js`; the app stores require a working contact.
 - **Cold starts** on the free plan (see above). Consider a paid instance before the mobile launch.
 
 ## History
 
 - 2026-06-11 → 2026-10-04: the public `GET /api/posts/:id` returned the author's password hash and email. Fixed in `ee9eec0`, which went live 2026-10-04 05:40 UTC after `JWT_SECRET` was rotated to a 96-character value (all sessions invalidated).
+- 2026-10-04: Phase 1 mobile backend APIs live (`1e9d23e`); Resend email set up.
+- 2026-10-05: rate limits switched to the real client IP (`CLIENT_IP_HEADER=cf-connecting-ip`).
