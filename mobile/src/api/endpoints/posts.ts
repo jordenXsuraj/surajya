@@ -1,5 +1,7 @@
 import { request } from '@/api/client';
+import type { CreatePostBody } from '@/lib/compose';
 import type { LikeResponse } from '@/lib/postView';
+import { uploadFile, type UploadFile } from '@/lib/upload';
 import type { MessageResponse } from '@/types/api';
 import type { Post, Reply } from '@/types/post';
 import type { ReportReason } from '@/types/report';
@@ -62,3 +64,22 @@ export const reportPost = (id: string, reason: ReportReason, note?: string) =>
     url: `/posts/${id}/report`,
     data: { reason, ...(note?.trim() ? { note: note.trim().slice(0, 300) } : {}) },
   });
+
+/** 201 with the new post (anonymous posts come back with postedBy: null). */
+export const createPost = (body: CreatePostBody) =>
+  request<Post>({ method: 'POST', url: '/posts', data: body });
+
+type UploadOptions = { onProgress?: (fraction: number) => void; signal?: AbortSignal };
+
+/** Field 'image'; JPG/PNG/WebP/HEIC, max 5 MB after the app's compression. */
+export const uploadPostImage = (file: UploadFile, options?: UploadOptions) =>
+  uploadFile<{ url: string }>('/posts/upload-image', 'image', file, options);
+
+/** Field 'pdf'; max 10 MB. */
+export const uploadPostPdf = (file: UploadFile, options?: UploadOptions) =>
+  uploadFile<{ url: string; name: string; size: number }>(
+    '/posts/upload-pdf',
+    'pdf',
+    file,
+    options,
+  );

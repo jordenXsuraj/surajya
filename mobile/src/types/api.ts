@@ -8,7 +8,9 @@ export type ApiErrorCode =
   | 'CODE_EXPIRED'
   | 'EMAIL_TAKEN'
   | 'FILE_TOO_LARGE'
-  | 'INVALID_FILE_TYPE';
+  | 'INVALID_FILE_TYPE'
+  /** Client-only: the request was aborted on purpose. */
+  | 'CANCELLED';
 
 export type ApiErrorBody = {
   message?: string;

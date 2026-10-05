@@ -13,6 +13,8 @@ type PostUiState = {
   imageUrl: string | null;
   videoId: string | null;
   reported: Record<string, true>;
+  /** Bumped to make the Home feed scroll to the top (e.g. after posting). */
+  homeTopSignal: number;
 
   openReplies: (postId: string, focus?: boolean) => void;
   closeReplies: () => void;
@@ -25,6 +27,7 @@ type PostUiState = {
   closeImage: () => void;
   openVideo: (id: string) => void;
   closeVideo: () => void;
+  scrollHomeToTop: () => void;
   reset: () => void;
 };
 
@@ -36,6 +39,7 @@ const initial = {
   imageUrl: null,
   videoId: null,
   reported: {},
+  homeTopSignal: 0,
 };
 
 export const usePostUi = create<PostUiState>()((set) => ({
@@ -51,5 +55,6 @@ export const usePostUi = create<PostUiState>()((set) => ({
   closeImage: () => set({ imageUrl: null }),
   openVideo: (id) => set({ videoId: id }),
   closeVideo: () => set({ videoId: null }),
+  scrollHomeToTop: () => set((s) => ({ homeTopSignal: s.homeTopSignal + 1 })),
   reset: () => set(initial),
 }));

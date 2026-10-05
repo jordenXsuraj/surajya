@@ -19,6 +19,7 @@ import { YouTubeModal } from '@/components/post/YouTubeModal';
 import { ToastHost } from '@/components/ui';
 import { persistOptions, queryClient } from '@/lib/queryClient';
 import { setupReactQueryNative } from '@/lib/reactQueryNative';
+import { loadAppConfig } from '@/stores/appConfig.store';
 import { bootstrapAuth, useAuthStore } from '@/stores/auth.store';
 import { fontAssets } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
@@ -29,6 +30,7 @@ void SplashScreen.preventAutoHideAsync();
 // knows which stack to show (no loading screen, cold-start deep links keep working).
 bootstrapAuth();
 setupReactQueryNative();
+loadAppConfig();
 
 const navigationTheme = {
   ...DarkTheme,

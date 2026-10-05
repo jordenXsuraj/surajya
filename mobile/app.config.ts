@@ -70,6 +70,14 @@ export function buildConfig(config: ExpoConfig, variant: AppVariant): ExpoConfig
     plugins: [
       ...(config.plugins ?? []),
       [
+        'expo-image-picker',
+        {
+          photosPermission: 'MeetNet uses your photos only when you choose one to add to a post.',
+          cameraPermission: 'MeetNet uses the camera only when you take a photo for a post.',
+          microphonePermission: false,
+        },
+      ],
+      [
         'expo-splash-screen',
         {
           backgroundColor: BG,

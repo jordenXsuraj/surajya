@@ -80,3 +80,26 @@ export async function refreshFeed(qc: QueryClient, key: QueryKey): Promise<void>
   );
   await qc.refetchQueries({ queryKey: key, exact: true });
 }
+
+/**
+ * A post the user just created: put it at the top of page 1 of every cached Home feed it belongs
+ * to (college and all colleges, "all" and its own type) and of the user's own posts.
+ * The Following feed only has other people's posts, so it is left alone.
+ */
+export function insertNewPost(qc: QueryClient, post: Post): void {
+  for (const query of qc.getQueryCache().findAll({ queryKey: queryKeys.feeds })) {
+    const [, scope, type] = query.queryKey as [string, string, string];
+    if (scope === 'following' || (type !== 'all' && type !== post.type)) continue;
+    qc.setQueryData<FeedData>(query.queryKey, (data) => {
+      if (!data || data.pages.length === 0) return data;
+      const [first, ...rest] = data.pages;
+      return {
+        ...data,
+        pages: [[post, ...(first ?? []).filter((p) => p._id !== post._id)], ...rest],
+      };
+    });
+  }
+  qc.setQueryData<Post[]>(queryKeys.myPosts, (posts) =>
+    posts ? [post, ...posts.filter((p) => p._id !== post._id)] : posts,
+  );
+}
