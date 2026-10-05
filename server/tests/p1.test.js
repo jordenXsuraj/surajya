@@ -1,6 +1,7 @@
 // Phase 1 backend: sessions, passwords, blocking, push, reports, deletion, config.
 process.env.NODE_ENV   = 'test'
 process.env.JWT_SECRET = 'test_secret_that_is_definitely_longer_than_32_chars'
+process.env.VERIFICATION_REQUIRED_FROM = '2999-01-01T00:00:00Z'   // these suites predate email verification
 process.env.ADMIN_EMAIL      = 'admin@college.edu'
 process.env.ADMIN_SECRET_KEY = 'test-admin-key'
 

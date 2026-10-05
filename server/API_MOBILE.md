@@ -10,8 +10,8 @@ Tests: `server/tests/` (run `npm test`).
 | Base URL | Production `https://surajya.onrender.com/api`. Local `http://<your-LAN-ip>:5000/api`. |
 | Auth | `Authorization: Bearer <token>`. Tokens are JWTs valid for 30 days, payload `{ id, tv }`. Store them in SecureStore. |
 | **401** | **Always means "the session is over"** (missing, expired or revoked token, or deleted user). Clear the token and show login. Wrong passwords never return 401. |
-| 400 | Validation error (including schema limits, e.g. reply > 350 or post > 1000 chars), malformed id, or wrong password. Body `{ message }` is safe to show to the user. |
-| 403 | Not allowed (e.g. following a user blocked either way, admin-only routes, CORS). |
+| 400 | Validation error (including schema limits, e.g. reply > 350 or post > 1000 chars), malformed id, or wrong password. Body `{ message }` is safe to show to the user. Requests whose JSON body or query has a key starting with `$` or containing `.` are refused with 400. |
+| 403 | Not allowed (e.g. following a user blocked either way, admin-only routes, CORS). **`{ code: 'EMAIL_NOT_VERIFIED', message }`** = this account must verify its email first: show the message with a button to the verify screen. |
 | 404 | Not found, **or hidden by a block**. Treat both the same way. |
 | 429 | Rate limited. Body `{ message }`. Header `RateLimit: limit=…, remaining=…, reset=<seconds>` and `RateLimit-Policy`. |
 | Errors | Always JSON `{ message: string }`. |
@@ -31,12 +31,19 @@ Tests: `server/tests/` (run `npm test`).
 | `POST /auth/forgot-password` | 3 / hour per email **and** 10 / hour per IP | email / IP |
 | `POST /auth/reset-password` | 10 / 15 min | IP |
 | `DELETE /users/me` | 5 / 15 min | user |
+| `POST /auth/send-verification` | 1 / 60 s and 5 / hour per user (sent codes only), 20 / hour per IP | user / IP |
+| `POST /auth/verify-email` | 30 / 15 min per user; each code allows 5 wrong tries | user |
+| `PUT /users/me/email` | 5 / 15 min | user |
 
 ## Shapes
 
-**AuthUser** (signup/login): `{ _id, name, avatar, username, email, college, year, branch, bio, skills[], projects[{name,link}], roadmap, isSenior, mediaItems[], following[id], followers[id], sentRequests[id], pendingRequests[id], termsAcceptedAt: ISO|null, createdAt }`
+**AuthUser** (signup/login): `{ _id, name, avatar, username, email, college, year, branch, bio, skills[], projects[{name,link}], roadmap, isSenior, mediaItems[], following[id], followers[id], sentRequests[id], pendingRequests[id], termsAcceptedAt: ISO|null, emailVerified, emailBounced, verificationRequired, createdAt }`
 
-**Me** (`GET /users/me`): all user fields **except** `password`, `pushTokens` and `tokenVersion`. Includes `email`, `blockedUsers[id]`, `termsAcceptedAt`, `followingCount`, `followerCount`, and `following`/`pendingRequests` populated as `{ _id, name, year, branch, skills, college, avatar }`.
+- `emailVerified`: the address was confirmed with a code.
+- `emailBounced`: mail to it bounced (webhook, optional). Ask the user to change it.
+- `verificationRequired`: **true = this account is blocked** from posting, replying, following, "interested" and reporting until verified (accounts created after verification launched). Older unverified accounts have `false`: show a soft reminder only.
+
+**Me** (`GET /users/me`): all user fields **except** `password`, `pushTokens` and `tokenVersion`. Includes `email`, `emailVerified`, `emailBounced`, `verificationRequired`, `blockedUsers[id]`, `termsAcceptedAt`, `followingCount`, `followerCount`, and `following`/`pendingRequests` populated as `{ _id, name, year, branch, skills, college, avatar }`.
 
 **PublicUser** (`GET /users/:id`): profile fields **without** `email`, `password`, `blockedUsers`, `pushTokens`, `tokenVersion`, `termsAcceptedAt`, `likedPosts`, `savedPosts`, or request lists, plus `followingCount`, `followerCount`.
 
@@ -72,6 +79,18 @@ Anonymity rule for clients: never try to identify anonymous authors, and never s
 
 Accounts created before terms existed have `termsAcceptedAt: null`: prompt them once and call `accept-terms`.
 
+### Email verification
+
+| Method | Path | Auth | Body | Success | Errors |
+|---|---|---|---|---|---|
+| POST | `/auth/send-verification` | ✓ | – | 200 `{ message, expiresInSeconds: 600, resendAfterSeconds: 60 }` — replaces any older code | 409 `ALREADY_VERIFIED`; 429 `RESEND_TOO_SOON` `{ retryAfterSeconds }` (+ `Retry-After` header) or rate limit |
+| POST | `/auth/verify-email` | ✓ | `{ code: '123456' }` | 200 `{ message, user: AuthUser }` (also when already verified) | 400 `{ code, message, attemptsLeft? }` with `code` = `INVALID_CODE` (wrong; `attemptsLeft` 4…1), `CODE_LOCKED` (5 wrong tries: request a new code), `CODE_EXPIRED` (older than 10 min, replaced, or sent to a previous email) |
+| PUT | `/users/me/email` | ✓ | `{ newEmail, password }` | 200 `{ message, token, user: Me }` — **replace the stored token**; other sessions get 401; push tokens cleared (register again); `emailVerified` becomes `false` and a code goes to the new address; the old address gets a notice | 400 invalid / same address / wrong password; 409 `EMAIL_TAKEN`; 429 |
+
+Signup sends the first code automatically, so start the resend countdown at 60 s right after signup.
+Codes are 6 digits, valid 10 minutes, and die after 5 wrong tries. Each new code (resend or email change) invalidates the previous one.
+Suggested flow: after signup, open the verify screen. Allow "skip" (browsing works). On any `EMAIL_NOT_VERIFIED`, bring the user back to it.
+
 ## Push notifications
 
 | Method | Path | Auth | Body | Success | Errors |
@@ -91,17 +110,17 @@ Push types: `connection_request`, `connection_accepted`, `post_replied`, `post_l
 |---|---|---|---|---|---|
 | GET | `/posts` | ✓ | `?type=&page=1&limit=20` (college feed), `&global=true`, `&connections=true` (following; never includes anonymous posts) | 200 `Post[]` (college/global feed: last 5 replies each) | 401 |
 | GET | `/posts/:id` | optional | – | 200 `Post` (with a token: block-filtered, `likedByMe`) | 400 bad id; 404 missing, expired or hidden |
-| POST | `/posts` | ✓ | `{ type, text (5–1000), tags?[≤5], link?, imageUrl?, youtubeUrl?, pdfUrl?, pdfName?, pdfSize?, isAnonymous?, todayOnly? }` | 201 `Post` | 400 |
+| POST | `/posts` | ✓ | `{ type, text (5–1000), tags?[≤5], link?, imageUrl?, youtubeUrl?, pdfUrl?, pdfName?, pdfSize?, isAnonymous?, todayOnly? }` | 201 `Post` | 400; **403 `EMAIL_NOT_VERIFIED`** |
 | POST | `/posts/upload-image` | ✓ | multipart `image` | 200 `{ url }` | 400, 500 |
 | POST | `/posts/upload-pdf` | ✓ | multipart `pdf` | 200 `{ url, name, size }` | 400, 500 |
 | PUT | `/posts/:id/like` | ✓ | – | 200 `{ liked, count, likeCount, likes }` (toggle) | 404 |
 | PUT | `/posts/:id/save` | ✓ | – | 200 `{ saved }` (toggle) | 404 |
 | DELETE | `/posts/:id` | ✓ | – | 200 `{ message }` | 403 not yours, 404 |
-| POST | `/posts/:id/replies` | ✓ | `{ text (≤350) }` | 201 `Reply` | 400 empty or longer than 350 (`Reply too long`), 404 |
+| POST | `/posts/:id/replies` | ✓ | `{ text (≤350) }` | 201 `Reply` | 400 empty or longer than 350 (`Reply too long`), 404; **403 `EMAIL_NOT_VERIFIED`** |
 | DELETE | `/posts/:id/replies/:replyId` | ✓ | – | 200 `{ message }` | 403, 404 |
-| POST | `/posts/:id/interested` | ✓ | – (project posts) | 200 `{ message }` | 400 not a project post, 404 |
-| POST | `/posts/:id/report` | ✓ | `{ reason, note? }` | 200 `{ message }` | 400 invalid reason / already reported, 404 |
-| POST | `/posts/:id/replies/:replyId/report` | ✓ | `{ reason, note? }` | 200 `{ message }` | 400 invalid reason / own reply / already reported, 404 |
+| POST | `/posts/:id/interested` | ✓ | – (project posts) | 200 `{ message }` | 400 not a project post, 404; **403 `EMAIL_NOT_VERIFIED`** |
+| POST | `/posts/:id/report` | ✓ | `{ reason, note? }` | 200 `{ message }` | 400 invalid reason / already reported, 404; **403 `EMAIL_NOT_VERIFIED`** |
+| POST | `/posts/:id/replies/:replyId/report` | ✓ | `{ reason, note? }` | 200 `{ message }` | 400 invalid reason / own reply / already reported, 404; **403 `EMAIL_NOT_VERIFIED`** |
 
 `reason` ∈ `spam | hate | harassment | misinformation | other`; `note` ≤ 300 characters.
 
@@ -122,11 +141,11 @@ Push types: `connection_request`, `connection_accepted`, `post_replied`, `post_l
 | GET | `/users/:id` | ✓ | – | 200 `PublicUser` | 404 missing or blocked either way |
 | GET | `/users/:id/posts` | ✓ | – | 200 `Post[]` (named posts only) | 404 blocked |
 | GET | `/users/:id/following` · `/users/:id/followers` | ✓ | – | 200 user list (blocked users removed) | 404 blocked |
-| POST | `/users/:id/connect` | ✓ | – | 200 `{ message }` (follow request) | 400 self / already, 403 blocked, 404 |
+| POST | `/users/:id/connect` | ✓ | – | 200 `{ message }` (follow request) | 400 self / already, 403 blocked, 404; **403 `EMAIL_NOT_VERIFIED`** |
 | POST | `/users/:id/accept` · `/reject` · `/unfollow` | ✓ | – | 200 `{ message }` | 400, 404 |
 | POST | `/users/:id/block` | ✓ | – | 200 `{ message, blocked: true }` — also removes follows/requests both ways | 400 self, 404 |
 | POST | `/users/:id/unblock` | ✓ | – | 200 `{ message, blocked: false }` | 404 bad id |
-| POST | `/users/:id/report` | ✓ | `{ reason, note? }` | 200 `{ message }` | 400 invalid / self / already reported, 404 |
+| POST | `/users/:id/report` | ✓ | `{ reason, note? }` | 200 `{ message }` | 400 invalid / self / already reported, 404; **403 `EMAIL_NOT_VERIFIED`** |
 
 **Blocking** hides the other person's profile, named posts, replies, follow requests and notifications, in both directions. Anonymous posts are hidden only from people their author blocked; a viewer blocking someone never hides that person's anonymous posts, so blocking can't be used to find out who wrote one.
 

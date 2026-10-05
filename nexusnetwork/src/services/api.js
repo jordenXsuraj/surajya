@@ -13,6 +13,23 @@ API.interceptors.request.use(cfg => {
   return cfg
 })
 
+// New accounts must verify their email before posting/replying/following/reporting.
+// Any such refusal (from API or from plain axios calls in pages) shows one global toast.
+export const EMAIL_NOT_VERIFIED_EVENT = 'meetnet:email-not-verified'
+export function reportEmailNotVerified(status, data) {
+  if (status === 403 && data?.code === 'EMAIL_NOT_VERIFIED') {
+    window.dispatchEvent(new CustomEvent(EMAIL_NOT_VERIFIED_EVENT, { detail: { message: data.message } }))
+    return true
+  }
+  return false
+}
+const emailNotVerifiedInterceptor = err => {
+  reportEmailNotVerified(err.response?.status, err.response?.data)
+  return Promise.reject(err)
+}
+API.interceptors.response.use(r => r, emailNotVerifiedInterceptor)
+axios.interceptors.response.use(r => r, emailNotVerifiedInterceptor)
+
 // Auto logout ONLY on 401 — NOT on network error (no internet)
 API.interceptors.response.use(
   r => r,
@@ -36,6 +53,11 @@ export const resetPassword  = (token, newPassword)  => API.post('/auth/reset-pas
 export const changePassword = (currentPassword, newPassword) =>
   API.post('/auth/change-password', { currentPassword, newPassword })
 export const logoutAllDevices = ()                  => API.post('/auth/logout-all')
+
+// Email verification (6-digit code by email)
+export const sendVerificationCode = ()         => API.post('/auth/send-verification')
+export const verifyEmailCode      = code       => API.post('/auth/verify-email', { code })
+export const changeEmail          = (newEmail, password) => API.put('/users/me/email', { newEmail, password })
 
 // Account
 export const deleteMyAccount = password => API.delete('/users/me', { data: { password } })

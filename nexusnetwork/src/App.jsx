@@ -20,6 +20,9 @@ import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import CommunityGuidelines from './pages/CommunityGuidelines'
 import SecurityNotice from './components/SecurityNotice'
+import VerifyEmailBanner from './components/VerifyEmailBanner'
+import EmailNotVerifiedToast from './components/EmailNotVerifiedToast'
+import VerifyEmail from './pages/VerifyEmail'
 function Guard({ children }) {
   const { user } = useAuth()
   return user ? children : <Navigate to="/" replace />
@@ -39,6 +42,8 @@ useEffect(() => {
   return (
     <div className="shell">
       {user && <SecurityNotice />}
+      {user && <VerifyEmailBanner />}
+      <EmailNotVerifiedToast />
       <Routes>
         <Route path="/" element={user ? <Navigate to="/home" /> : <Onboard />} />
         <Route path="/home"        element={<Guard><Home /></Guard>} />
@@ -50,6 +55,7 @@ useEffect(() => {
         <Route path="/post/:id" element={<SinglePost />} />
         <Route path="/admin" element={<Admin />} />
         {/* Public: account recovery, deletion and legal pages (linked from the app stores) */}
+        <Route path="/verify-email"         element={<Guard><VerifyEmail /></Guard>} />
         <Route path="/forgot-password"      element={<ForgotPassword />} />
         <Route path="/reset-password"       element={<ResetPassword />} />
         <Route path="/delete-account"       element={<DeleteAccount />} />

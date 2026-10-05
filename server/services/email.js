@@ -1,6 +1,7 @@
 // Transactional email via the Resend HTTP API (https://resend.com/docs/api-reference/emails/send-email).
 //   RESEND_API_KEY  — required in production
 //   EMAIL_FROM      — e.g. 'MeetNet <no-reply@themeetnet.com>' (domain must be verified in Resend)
+//   EMAIL_REPLY_TO  — optional; where replies go (themeetnet.com has no inbox)
 // Without a key outside production, the email is printed to the console instead.
 
 const DEFAULT_FROM = 'MeetNet <no-reply@themeetnet.com>'
@@ -23,7 +24,11 @@ async function sendEmail({ to, subject, html, text, devLog }) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM || DEFAULT_FROM, to: [to], subject, html, text }),
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM || DEFAULT_FROM, to: [to], subject, html, text,
+      // themeetnet.com can't receive mail, so replies go to a real inbox when configured
+      ...(process.env.EMAIL_REPLY_TO && { reply_to: process.env.EMAIL_REPLY_TO }),
+    }),
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
@@ -72,4 +77,48 @@ function sendPasswordReset({ to, name, link, minutes }) {
   return sendEmail({ to, subject: 'Reset your MeetNet password', html, text, devLog: `Reset link: ${link}` })
 }
 
-module.exports = { sendEmail, sendPasswordReset }
+function sendVerificationCode({ to, name, code, minutes }) {
+  const hello = name ? `Hi ${escapeHtml(name)},` : 'Hi,'
+  const text = [
+    name ? `Hi ${name},` : 'Hi,',
+    '',
+    'Your MeetNet verification code is:',
+    '',
+    `    ${code}`,
+    '',
+    `It expires in ${minutes} minutes.`,
+    '',
+    "If you didn't sign up for MeetNet, ignore this email.",
+  ].join('\n')
+  const html = layout({
+    heading: 'Verify your email',
+    bodyHtml: `<p>${hello}</p>
+      <p>Your MeetNet verification code is:</p>
+      <p style="font-size:34px;font-weight:800;letter-spacing:10px;color:#ffffff;margin:18px 0;font-family:'Courier New',Courier,monospace">${escapeHtml(code)}</p>
+      <p>It expires in ${minutes} minutes.</p>
+      <p style="font-size:13px;color:#888">If you didn't sign up for MeetNet, ignore this email.</p>`,
+  })
+  return sendEmail({ to, subject: 'Your MeetNet verification code', html, text, devLog: `Verification code for ${to}: ${code}` })
+}
+
+// Sent to the OLD address after an email change. Best effort: the old address may bounce.
+function sendEmailChangedNotice({ to, name, newEmailMasked }) {
+  const hello = name ? `Hi ${escapeHtml(name)},` : 'Hi,'
+  const text = [
+    name ? `Hi ${name},` : 'Hi,',
+    '',
+    `The email address on your MeetNet account was just changed to ${newEmailMasked}.`,
+    'If you made this change, you can ignore this email.',
+    "If you didn't, reply to this email so we can help you recover the account.",
+  ].join('\n')
+  const html = layout({
+    heading: 'Your email address was changed',
+    bodyHtml: `<p>${hello}</p>
+      <p>The email address on your MeetNet account was just changed to <strong>${escapeHtml(newEmailMasked)}</strong>.</p>
+      <p>If you made this change, you can ignore this email.</p>
+      <p style="font-size:13px;color:#888">If you didn't, reply to this email so we can help you recover the account.</p>`,
+  })
+  return sendEmail({ to, subject: 'Your MeetNet email address was changed', html, text, devLog: `Email-changed notice to ${to} (new: ${newEmailMasked})` })
+}
+
+module.exports = { sendEmail, sendPasswordReset, sendVerificationCode, sendEmailChangedNotice }

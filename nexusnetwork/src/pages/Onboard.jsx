@@ -2,6 +2,7 @@
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signup, login } from '../services/api'
+import { markCodeSent } from '../utils/verifyState'
 import { useState, useEffect, useRef } from 'react'
 // ── Branch → Skills mapping ──────────────────────
 const BRANCH_SKILLS = {
@@ -410,7 +411,8 @@ if (mode === 'signup') {
   })
 
   authLogin(res.data.user, res.data.token)
-  nav('/home')
+  markCodeSent()               // the API emails a verification code on signup
+  nav('/verify-email')
 }
     } catch (e) {
       setErr(e?.response?.data?.message || e.message || 'Something went wrong')
@@ -581,7 +583,8 @@ function addCustom() {
         roadmap
       })
       authLogin(res.data.user, res.data.token)
-      nav('/home')
+      markCodeSent()
+      nav('/verify-email')
     } catch (e) {
       setErr(e.response?.data?.message || 'Signup failed')
     } finally {

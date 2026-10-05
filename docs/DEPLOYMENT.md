@@ -58,6 +58,9 @@ If a Render deploy fails (build error, or the app exits at startup), Render keep
 | `EXPO_ACCESS_TOKEN` | Optional. Only if "Enhanced push security" is turned on in the Expo project. |
 | `CLIENT_IP_HEADER`, `CLIENT_IP_XFF_INDEX` | Which header carries the real client IP for rate limits. **Production: `CLIENT_IP_HEADER=cf-connecting-ip`**, no index. Empty = `req.ip`. See [Client IP](#client-ip-rate-limiting). |
 | `DEBUG_IP_ROUTE` | `1` only **temporarily**, while choosing `CLIENT_IP_HEADER`. Remove afterwards. |
+| `VERIFICATION_REQUIRED_FROM` | ISO date-time. Accounts created **at or after** it must verify their email before posting, replying, following, "interested" or reporting. Unset = the default in `server/middleware/requireVerifiedEmail.js` (the release time, see [Email verification](#email-verification)). An invalid value blocks nobody. |
+| `EMAIL_REPLY_TO` | Optional. Where replies to MeetNet emails go (themeetnet.com has no inbox). **Production: the owner's Gmail**, added manually in the Render dashboard. |
+| `RESEND_WEBHOOK_SECRET` | Optional, `whsec_…`. Turns on `POST /api/webhooks/resend` (404 without it). See [Resend webhook](#resend-webhook-optional). |
 | `APP_MIN_VERSION_ANDROID`, `APP_MIN_VERSION_IOS` | `x.y.z`. Apps below this see a force-update screen. Default `0.0.0`. |
 | `APP_LATEST_VERSION_ANDROID`, `APP_LATEST_VERSION_IOS` | `x.y.z`. Apps below this see an optional update prompt. Default `1.0.0`. |
 | `APP_STORE_URL_ANDROID`, `APP_STORE_URL_IOS` | Store links. Android defaults to the Play listing for `com.themeetnet.app`; iOS is empty until the app exists. |
@@ -141,7 +144,27 @@ These sit on subdomains (`send`, `rsend`, `_domainkey`, `_dmarc`), so they don't
 
 To set it up again from scratch: Resend → **Domains → Add domain**, add the records it shows **exactly**, wait for **Verified** (DKIM took about 30 min), create a key with **Sending access** limited to the domain, then set `RESEND_API_KEY`, `EMAIL_FROM` and `PUBLIC_APP_URL` on Render and redeploy. Test with `/forgot-password` for an address that has an account: unknown addresses get the same answer but no email, by design.
 
-Locally, leave `RESEND_API_KEY` empty: the reset link is printed to the server console instead (never in production).
+Locally, leave `RESEND_API_KEY` empty: reset links and verification codes are printed to the server console instead (never in production).
+
+## Email verification
+
+New accounts get a 6-digit code by email at signup, and can resend it from `/verify-email` (web) or the app.
+- **Codes:** valid 10 minutes, 5 wrong tries, stored only as an HMAC-SHA256 keyed with `JWT_SECRET`. If `JWT_SECRET` is ever rotated, codes sent in the last 10 minutes stop working; users just request a new one.
+- **Who is blocked:** only accounts created at or after `VERIFICATION_REQUIRED_FROM` (default **`2026-10-05T06:35:00Z`**, the release time plus a 15-minute deploy buffer; not set on Render), and only from creating posts, replying, follow requests, "interested" and reports (`403 { code: 'EMAIL_NOT_VERIFIED' }`). They can log in and browse.
+- **Older accounts:** never blocked; they only see a dismissible banner asking them to verify, so password reset can reach them.
+- **Changing email** (`PUT /api/users/me/email`): needs the password, makes the new address unverified, sends a code to it, sends a short notice to the old address, and ends every other session.
+
+### Resend webhook (optional)
+
+Marks users whose email bounces or is reported as spam (`emailBounced`), so the web banner says *"Your email bounced — please update it"*. Steps (Resend dashboard, nothing to change in code):
+
+1. Resend → **Webhooks → Add Webhook**. Endpoint URL: `https://surajya.onrender.com/api/webhooks/resend`. Events: **`email.bounced`** and **`email.complained`**. Create it.
+2. Open the new webhook and copy its **Signing Secret** (starts with `whsec_`).
+3. Render → `surajya` → **Environment** → add `RESEND_WEBHOOK_SECRET` with that value → **Save, rebuild and deploy**.
+4. Check it: the webhook's page in Resend lists deliveries. Each must answer **200** (401 = wrong secret, 404 = variable not set or not deployed). The free instance may be asleep; Resend retries failed deliveries.
+5. Optional end-to-end test: sign up a throwaway account with **`bounced@resend.dev`** (Resend's test address). The verification email bounces, the webhook marks the account, and the banner switches to the "bounced" text.
+
+Only bounces after the webhook is set up are recorded. Earlier ones, such as the security-notice campaign, are not backfilled.
 
 ## Mobile deep links
 
@@ -221,3 +244,5 @@ Still to do before the app ships:
 - 2026-06-11 → 2026-10-04: the public `GET /api/posts/:id` returned the author's password hash and email. Fixed in `ee9eec0`, which went live 2026-10-04 05:40 UTC after `JWT_SECRET` was rotated to a 96-character value (all sessions invalidated).
 - 2026-10-04: Phase 1 mobile backend APIs live (`1e9d23e`); Resend email set up.
 - 2026-10-05: rate limits switched to the real client IP (`CLIENT_IP_HEADER=cf-connecting-ip`).
+- 2026-10-05: security notice emailed to 138 users and shown as a banner until 2026-11-05.
+- 2026-10-05: email verification released; accounts created from `2026-10-05T06:35:00Z` must verify before posting. `express-mongo-sanitize` moved after the body parsers: request bodies were not sanitized before, and requests with `$`/dotted keys are now refused (400).

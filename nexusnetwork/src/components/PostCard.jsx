@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { addReply, deleteReply, sendInterest } from '../services/api'
+import { addReply, deleteReply, sendInterest, reportEmailNotVerified } from '../services/api'
 import { isOwnReply, isAnonAuthorReply, replyAuthorName, likeCountOf, isLikedBy } from '../utils/postView'
 
 
@@ -243,11 +243,16 @@ async function handleReport(reason) {
   try {
     const token = localStorage.getItem('nx_token')
     const base  = import.meta.env.VITE_API_URL
-    await fetch(`${base}/posts/${post._id}/report`, {
+    const res = await fetch(`${base}/posts/${post._id}/report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ reason })
     })
+    if (!res.ok) {
+      // New accounts must verify first (global toast); other failures leave it reportable
+      reportEmailNotVerified(res.status, await res.json().catch(() => null))
+      if (res.status !== 400) return            // 400 = already reported → show as reported
+    }
     setReported(true)
     setShowReport(false)
     // show a toast if you have access to show() here, otherwise just state

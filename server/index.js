@@ -73,8 +73,6 @@ const corsOptions = {
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))   // handle preflight for ALL routes
 
-// ── Sanitize MongoDB ──────────────────────────────
-app.use(mongoSanitize())
 
 // ── Rate limiting ─────────────────────────────────
 // General: 600 requests per 10 min, keyed per logged-in user so students
@@ -103,8 +101,26 @@ const generalLimit = rateLimit({
 
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 // ── Body parsers ──────────────────────────────────
-app.use(express.json({ limit: '1mb' }))
+app.use(express.json({
+  limit: '1mb',
+  // Webhook signatures are computed over the exact bytes received
+  verify: (req, res, buf) => { if (req.originalUrl.startsWith('/api/webhooks/')) req.rawBody = buf.toString('utf8') },
+}))
 app.use(express.urlencoded({ extended: true, limit: '1mb' }))
+
+// ── Sanitize MongoDB operators — AFTER the body parsers, so bodies are covered ──
+// Keys starting with "$" or containing "." are removed, and a request that had any
+// in its body or query string is refused: no legitimate client sends them. Webhook
+// payloads are only sanitized (their signature was checked on the raw body).
+app.use(mongoSanitize({
+  onSanitize: ({ req, key }) => { if (key === 'body' || key === 'query') req.hadOperatorKeys = true },
+}))
+app.use((req, res, next) => {
+  if (req.hadOperatorKeys && !req.originalUrl.startsWith('/api/webhooks/')) {
+    return res.status(400).json({ message: 'Invalid request: field names may not start with "$" or contain "."' })
+  }
+  next()
+})
 
 
 app.use(xss())
@@ -117,6 +133,7 @@ app.use('/api/users',         generalLimit, require('./routes/users'))
 app.use('/api/notifications', generalLimit, require('./routes/notifications'))
 app.use('/api/app',           generalLimit, require('./routes/app'))
 app.use('/api/_debug',        generalLimit, require('./routes/debug'))   // 404 unless DEBUG_IP_ROUTE=1
+app.use('/api/webhooks',                    require('./routes/webhooks'))  // 404 unless RESEND_WEBHOOK_SECRET is set
 
 //app.use('/api/admin',         generalLimit, require('./routes/admin'))
 

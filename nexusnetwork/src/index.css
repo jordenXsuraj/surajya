@@ -2805,3 +2805,12 @@ border-bottom: 1px solid rgba(255,255,255,0.05);
 .sec-notice-text { flex: 1; margin: 0; font-size: .76rem; line-height: 1.5; color: var(--text); }
 .sec-notice-close { flex-shrink: 0; background: none; border: none; color: var(--muted); font-size: .95rem; line-height: 1; padding: 4px 6px; cursor: pointer; border-radius: 6px; }
 .sec-notice-close:hover { color: var(--text); background: rgba(255,255,255,.06); }
+
+/* ── Email verification ─────────────────────────── */
+.code-boxes { display: flex; gap: 8px; justify-content: center; margin: 4px 0 14px; }
+.code-box { width: 46px; height: 56px; text-align: center; font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: 800; color: var(--text); background: var(--bg3); border: 1.5px solid var(--br2); border-radius: 12px; outline: none; caret-color: var(--accent); }
+.code-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--al); }
+@media (max-width: 360px) { .code-boxes { gap: 5px; } .code-box { width: 40px; height: 50px; font-size: 1.3rem; } }
+.verify-banner { background: var(--bl); border-bottom-color: rgba(59,130,246,.25); }
+.verify-banner a, .verify-toast a { color: var(--blue); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.verify-toast { cursor: default; }
