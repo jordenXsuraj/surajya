@@ -53,8 +53,11 @@ module.exports = async function protect(req, res, next) {
       return res.status(401).json({ message: 'Invalid token. Please log in.' })
     }
 
+    // Anything else (e.g. the database is unreachable) is our problem, not a dead session:
+    // 503 so clients keep the user signed in and retry instead of logging them out.
     console.error('Auth error:', err)
-    return res.status(401).json({ message: 'Authentication failed' })
+    res.set('Retry-After', '5')
+    return res.status(503).json({ message: 'Service temporarily unavailable. Please try again.' })
   }
 }
 

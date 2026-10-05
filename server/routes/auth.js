@@ -341,21 +341,40 @@ function rejectIfVerified(req, res, next) {
   if (req.user.emailVerified) return res.status(409).json({ code: 'ALREADY_VERIFIED', message: 'Your email is already verified.' })
   next()
 }
+// Too early for another code: always the same answer, with the seconds left
+function resendCooldown(res, seconds) {
+  const wait = Math.max(1, Math.ceil(seconds))
+  res.set('Retry-After', String(wait))
+  return res.status(429).json({
+    code: 'RESEND_COOLDOWN',
+    message: `Please wait ${wait} seconds before asking for another code.`,
+    retryAfterSeconds: wait,
+  })
+}
+
+// Every code sent (signup, resend, email change) starts the 60 s wait
+async function rejectDuringCooldown(req, res, next) {
+  const wait = await verification.resendWaitSeconds(req.user._id)
+  if (wait > 0) return resendCooldown(res, wait)
+  next()
+}
+
 // Per-user limits count only codes actually sent: a refused early resend must not extend the wait
 const countSent = { skipFailedRequests: true }
-const sendCodeMinuteLimiter = limiter(60e3, 1, req => `user:${req.user._id}`, 'Please wait a minute before asking for another code.', countSent)
+const sendCodeMinuteLimiter = limiter(60e3, 1, req => `user:${req.user._id}`, 'Please wait a minute before asking for another code.', {
+  ...countSent,
+  // Backstop for the DB cooldown above, answering the same way
+  handler: (req, res) => {
+    const reset = req.rateLimit?.resetTime
+    return resendCooldown(res, reset ? (reset.getTime() - Date.now()) / 1000 : 60)
+  },
+})
 const sendCodeHourLimiter   = limiter(60 * 60e3, 5, req => `user:${req.user._id}`, 'Too many codes requested. Try again in an hour.', countSent)
 const sendCodeIpLimiter     = limiter(60 * 60e3, 20, req => `ip:${ipKeyGenerator(clientIp(req))}`, 'Too many codes requested from this network. Try again later.')
 const verifyLimiter         = limiter(15 * 60e3, 30, req => `user:${req.user._id}`, 'Too many attempts. Try again in 15 minutes.')
 
 // POST /api/auth/send-verification — new code to the account's current email
-router.post('/send-verification', protect, rejectIfVerified, sendCodeIpLimiter, sendCodeMinuteLimiter, sendCodeHourLimiter, async (req, res) => {
-  // Also honours the code sent automatically at signup / email change
-  const wait = await verification.resendWaitSeconds(req.user._id)
-  if (wait > 0) {
-    res.set('Retry-After', String(wait))
-    return res.status(429).json({ code: 'RESEND_TOO_SOON', message: `Please wait ${wait} seconds before asking for another code.`, retryAfterSeconds: wait })
-  }
+router.post('/send-verification', protect, rejectIfVerified, rejectDuringCooldown, sendCodeIpLimiter, sendCodeMinuteLimiter, sendCodeHourLimiter, async (req, res) => {
   const user = await User.findById(req.user._id).select('_id name email')
   const info = await verification.issueCode(user)
   res.json({ message: `We sent a new code to ${user.email}.`, ...info })

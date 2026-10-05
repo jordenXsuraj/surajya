@@ -12,10 +12,6 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export const TIMEOUT_MS = 20_000;
 
-// The server answers 401 with this message when anything *inside* the auth check throws
-// (e.g. the database is down). That is not a dead session, so it must not sign the user out.
-export const AUTH_INTERNAL_ERROR = 'Authentication failed';
-
 export const api = create({ baseURL: API_URL, timeout: TIMEOUT_MS });
 
 api.interceptors.request.use((config) => {
@@ -64,9 +60,10 @@ export function toApiError(error: unknown): ApiError {
   const message = body?.message || fallbackMessage(status);
   const apiError = new ApiError(status, message, body);
 
-  if (status === 401 && message !== AUTH_INTERNAL_ERROR) {
-    // Only end the session the request was made with: a request still in flight with an old
-    // token (e.g. right after changing email) must not sign out the new session.
+  // 401 = the session is over. Server-side trouble during the auth check is 503 (status >= 500
+  // never signs out). Only end the session the request was made with: a request still in flight
+  // with an old token (e.g. right after changing email) must not sign out the new session.
+  if (status === 401) {
     const sentWith = String(error.config?.headers?.Authorization ?? '');
     const { token, logout } = useAuthStore.getState();
     if (token && sentWith === `Bearer ${token}`) logout();

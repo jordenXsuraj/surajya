@@ -57,12 +57,13 @@ src/test/           test helpers (mockApi, fixtures)
 
 ## API contract (read before touching the API layer)
 
-- Reference: `server/API_MOBILE.md` — but the route code in `server/routes/*.js` is the source of
-  truth; the doc has known gaps (id arrays vs populated lists, some 500s that should be 400s).
-- **401 = the session is over** → `client.ts` logs out. Exceptions: `401 'Authentication failed'` is the
-  server's internal-error answer (DB down) and must not log out; a 401 for a request sent with an
-  older token (e.g. right after an email change) must not end the new session. Network errors and
-  timeouts (`ApiError.status === 0`) never log out.
+- Reference: `server/API_MOBILE.md`; the route code in `server/routes/*.js` is the source of truth.
+- **401 = the session is over** → `client.ts` logs out — unless the request was sent with an older
+  token (e.g. right after an email change), which must not end the new session. Server trouble
+  during the auth check is **503**; 5xx, network errors and timeouts (`ApiError.status === 0`)
+  never log out.
+- **400 = the request was wrong**: validation errors, malformed ids (`'Invalid ID format'`), upload
+  errors (`code: 'FILE_TOO_LARGE' | 'INVALID_FILE_TYPE'`).
 - Wrong passwords are **400**, never 401.
 - **403 `{ code: 'EMAIL_NOT_VERIFIED' }`** → `client.ts` opens the verify bottom sheet automatically.
 - **404 can mean "hidden by a block"** — treat it like not found.
@@ -74,7 +75,7 @@ src/test/           test helpers (mockApi, fixtures)
   `PUT /users/me*` return id arrays. Keep the signed-in user as `SessionUser` via `toSessionUser()`.
 - Passwords: new passwords ≥ 8 characters (server rule); login accepts any non-empty password.
 - Verification codes are strings (leading zeros). Resend waits 60 s after **every** successful send
-  (`markCodeSent()`); honour `retryAfterSeconds` when present.
+  (`markCodeSent()`); a too-early resend answers `429 { code: 'RESEND_COOLDOWN', retryAfterSeconds }`.
 
 ## App identities (APP_VARIANT)
 

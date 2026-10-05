@@ -82,7 +82,7 @@ const BRANCHES = ['AI','CS','IT','CyberSecurity','Robotics','Civil','Mechanical'
 const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },
   qa:         { label:'❓ Q&A',         cls:'tag-purple' },
-  study:    { label:'📚 Study Meterial',    cls:'tag-green'  },
+  study:    { label:'📚 Study Material',    cls:'tag-green'  },
   project:    { label:'🚀 Project',    cls:'tag-yellow' },
   tip:        { label:'💡 Tip',        cls:'tag-orange' },
   confession: { label:'🤫 Confession', cls:'tag-red'    },

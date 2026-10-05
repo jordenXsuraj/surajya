@@ -11,9 +11,9 @@ const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },
   social:     { label:'🔥 Social',     cls:'tag-orange' },
   confession: { label:'🤫 Confession', cls:'tag-red'    },
-  project:    { label:'🚀Project/partner',    cls:'tag-yellow' },
+  project:    { label:'🚀 Project / Partner',    cls:'tag-yellow' },
   qa:         { label:'❓ Q&A',         cls:'tag-purple' },
-  study:    { label:'Study Meterial',    cls:'tag-green'  },
+  study:    { label:'📚 Study Material',    cls:'tag-green'  },
 }
 /*
 function ContributorBadge() {

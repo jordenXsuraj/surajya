@@ -12,7 +12,7 @@ import { isOwnReply, isAnonAuthorReply, replyAuthorName, likeCountOf, isLikedBy 
 const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },
   qa:         { label:'❓ Q&A',         cls:'tag-purple' },
-  study:    { label:'📚 Study Meterial',    cls:'tag-green'  },
+  study:    { label:'📚 Study Material',    cls:'tag-green'  },
   project:    { label:'🚀 Project',    cls:'tag-yellow' },
   tip:        { label:'💡 Tip',        cls:'tag-orange' },
   social:     { label:'🔥 Social',     cls:'tag-orange' },
@@ -381,7 +381,7 @@ const [reported, setReported] = useState(false)
   const TYPE_TAG_LOCAL = {
     placement:  { label:'💼 Placement',  cls:'tag-blue'   },
     qa:         { label:'❓ Q&A',         cls:'tag-purple' },
-    study:    { label:'📚 Study Meterial',    cls:'tag-green'  },
+    study:    { label:'📚 Study Material',    cls:'tag-green'  },
     project:    { label:'🚀 Project',    cls:'tag-yellow' },
     tip:        { label:'💡 Tip',        cls:'tag-orange' },
     social:     { label:'🔥 Social',     cls:'tag-orange' },

@@ -4,6 +4,10 @@ const router       = express.Router()
 const Notification = require('../models/Notification')
 const protect      = require('../middleware/auth')
 const { getBlockSets } = require('../utils/blocks')
+const validObjectIdParam = require('../middleware/validObjectId')
+
+// Malformed :id → 400 'Invalid ID format'
+router.param('id', validObjectIdParam)
 
 // Notifications from users blocked in either direction are hidden
 async function visibleFilter(user, extra = {}) {

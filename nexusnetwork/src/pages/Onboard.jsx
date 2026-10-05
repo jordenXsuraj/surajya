@@ -433,7 +433,7 @@ if (mode === 'signup') {
         </p>
         <div className="ob-chips">
           {['💼 Placement','🤫 Confession','🤝 Partner',
-            '📚 Exam','🔥 Social','📰 News' ,'project'].map(c => (
+            '📚 Exam','🔥 Social','📰 News' ,'🚀 Project'].map(c => (
             <span key={c} className="ob-chip">{c}</span>
           ))}
         </div>
