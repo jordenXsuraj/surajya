@@ -22,6 +22,9 @@ _Last updated: 2026-10-05._
 - **Node 20 is end-of-life: move to Node 22 LTS, then upgrade `expo-server-sdk`.**
   Why: no more security fixes for Node 20; newer `expo-server-sdk` versions need a newer Node.
   Where: `server/package.json` (`engines.node`), `server/Dockerfile`, Render service settings.
+- **`replyCount` is never decreased when a reply is deleted.**
+  Why: the college/global feeds send only the last 5 replies, so clients rely on `replyCount` for the total; after deletions it overcounts (the app works around it in `mobile/src/lib/postView.ts` `replyCountOf`).
+  Where: `server/routes/posts.js` (`DELETE /:id/replies/:replyId` pulls the reply without `$inc: { replyCount: -1 }`).
 - **Refresh tokens.**
   Why: sessions are a single 30-day JWT with no refresh, so users are logged out every 30 days and a stolen token stays valid until it expires (only `logout-all` / password change revoke it).
   Where: `server/utils/token.js` (`expiresIn: '30d'`), `server/middleware/auth.js`, clients' auth stores.

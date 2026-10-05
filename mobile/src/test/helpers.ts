@@ -14,11 +14,11 @@ import type { AuthUser, Me, SessionUser } from '@/types/user';
 type Reply = { status: number; data?: unknown } | 'network' | 'timeout';
 
 /** Replaces the HTTP layer of the real API client; every request goes to `handler`. */
-export function mockApi(handler: (config: InternalAxiosRequestConfig) => Reply) {
+export function mockApi(handler: (config: InternalAxiosRequestConfig) => Reply | Promise<Reply>) {
   const calls: InternalAxiosRequestConfig[] = [];
   const adapter: AxiosAdapter = async (config) => {
     calls.push(config);
-    const reply = handler(config);
+    const reply = await handler(config);
     if (reply === 'network') throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config);
     if (reply === 'timeout')
       throw new AxiosError('timeout of 20000ms exceeded', AxiosError.ECONNABORTED, config);
@@ -121,6 +121,7 @@ export function sessionUser(overrides: Partial<SessionUser> = {}): SessionUser {
     verificationRequired: true,
     followingIds: [],
     followerIds: [],
+    sentRequestIds: [],
     followingCount: 0,
     followerCount: 0,
     termsAcceptedAt: null,

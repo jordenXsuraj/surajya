@@ -28,6 +28,22 @@ export const colors = {
   white: '#ffffff',
   toast: '#222222',
   navBar: 'rgba(13,13,13,0.97)',
+  // Feed (web index.css .post-card / .act-btn / .post-connect-btn / ContributorBadge)
+  divider: '#1f1f1f',
+  actBg: '#111111',
+  actBorder: '#2a2a2a',
+  actText: '#aaaaaa',
+  like: '#ff2e63',
+  likeEnd: '#ff4d6d',
+  likeGlow: 'rgba(255,46,99,0.6)',
+  connect: '#00c6ff',
+  connectEnd: '#0072ff',
+  sent: '#333333',
+  contributor: '#f59e0b',
+  contributorEnd: '#f97316',
+  scrim: 'rgba(0,0,0,0.4)',
+  overlay: 'rgba(0,0,0,0.94)',
+  hint: 'rgba(255,255,255,0.7)',
 } as const;
 
 export type ColorName = keyof typeof colors;

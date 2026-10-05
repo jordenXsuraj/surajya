@@ -11,8 +11,14 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { refreshSession } from '@/api/session';
 import { EmailNotVerifiedSheet } from '@/components/EmailNotVerifiedSheet';
+import { ImageViewer } from '@/components/post/ImageViewer';
+import { PostMenuSheet } from '@/components/post/PostMenuSheet';
+import { RepliesSheet } from '@/components/post/RepliesSheet';
+import { ReportSheet } from '@/components/post/ReportSheet';
+import { YouTubeModal } from '@/components/post/YouTubeModal';
 import { ToastHost } from '@/components/ui';
 import { persistOptions, queryClient } from '@/lib/queryClient';
+import { setupReactQueryNative } from '@/lib/reactQueryNative';
 import { bootstrapAuth, useAuthStore } from '@/stores/auth.store';
 import { fontAssets } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
@@ -22,6 +28,7 @@ void SplashScreen.preventAutoHideAsync();
 // Synchronous: token from SecureStore + cached user from MMKV, so the first render already
 // knows which stack to show (no loading screen, cold-start deep links keep working).
 bootstrapAuth();
+setupReactQueryNative();
 
 const navigationTheme = {
   ...DarkTheme,
@@ -76,11 +83,21 @@ export default function RootLayout() {
                   <Stack.Screen name="post/[id]" />
                   <Stack.Screen name="profile/[id]/index" />
                   <Stack.Screen name="verify-email" />
+                  <Stack.Screen name="notifications" />
                 </Stack.Protected>
                 <Stack.Protected guard={!signedIn}>
                   <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
                 </Stack.Protected>
               </Stack>
+              {signedIn ? (
+                <>
+                  <RepliesSheet />
+                  <PostMenuSheet />
+                  <ReportSheet />
+                  <ImageViewer />
+                  <YouTubeModal />
+                </>
+              ) : null}
               <EmailNotVerifiedSheet />
               <ToastHost />
             </BottomSheetModalProvider>

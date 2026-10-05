@@ -73,6 +73,16 @@ export const POST_TYPES: readonly PostTypeInfo[] = [
   },
 ];
 
+/** Feed filter chips: web Home.jsx CATEGORIES (without "All"), same order and labels. */
+export const FEED_CATEGORIES: readonly { id: PostType; label: string; color: ColorName }[] = [
+  { id: 'social', label: '🔥 Social', color: 'orange' },
+  { id: 'study', label: '📚 Study Material', color: 'green' },
+  { id: 'placement', label: '💼 Placement', color: 'blue' },
+  { id: 'confession', label: '🤫 Confession', color: 'accent' },
+  { id: 'project', label: '🚀 Project', color: 'yellow' },
+  { id: 'qa', label: '❓ Q&A', color: 'purple' },
+];
+
 export function postTypeInfo(type: PostType): PostTypeInfo {
   return POST_TYPES.find((t) => t.id === type) ?? POST_TYPES[0]!;
 }

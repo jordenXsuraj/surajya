@@ -64,6 +64,8 @@ export type Me = Omit<AuthUser, 'following' | 'pendingRequests' | 'isSenior'> & 
   following: (UserRef | ObjectId)[];
   pendingRequests: (UserRef | ObjectId)[];
   blockedUsers?: ObjectId[];
+  savedPosts?: ObjectId[];
+  likedPosts?: ObjectId[];
   followingCount: number;
   followerCount: number;
   updatedAt?: IsoDate;
@@ -133,6 +135,8 @@ export type SessionUser = {
   verificationRequired: boolean;
   followingIds: ObjectId[];
   followerIds: ObjectId[];
+  /** Follow requests this user sent and that are still pending. */
+  sentRequestIds: ObjectId[];
   followingCount: number;
   followerCount: number;
   termsAcceptedAt: IsoDate | null;

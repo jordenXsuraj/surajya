@@ -4,20 +4,34 @@ import { getMe } from '@/api/endpoints/users';
 import { queryKeys } from '@/api/queryKeys';
 import { toSessionUser } from '@/lib/sessionUser';
 import { useAuthStore } from '@/stores/auth.store';
+import type { Me } from '@/types/user';
+
+async function fetchMe(): Promise<Me> {
+  const token = useAuthStore.getState().token;
+  const me = await getMe();
+  if (useAuthStore.getState().token === token) useAuthStore.getState().setUser(toSessionUser(me));
+  return me;
+}
 
 /** GET /users/me through React Query; keeps the auth store's cached user in sync. */
 export function useMe() {
   const token = useAuthStore((s) => s.token);
-  return useQuery({
+  return useQuery({ queryKey: queryKeys.me, enabled: Boolean(token), queryFn: fetchMe });
+}
+
+const EMPTY: ReadonlySet<string> = new Set();
+const selectSaved = (me: Me): ReadonlySet<string> => new Set((me.savedPosts ?? []).map(String));
+
+/** Ids of the posts this user saved (from GET /users/me `savedPosts`). */
+export function useSavedIds(): ReadonlySet<string> {
+  const token = useAuthStore((s) => s.token);
+  const query = useQuery({
     queryKey: queryKeys.me,
     enabled: Boolean(token),
-    queryFn: async () => {
-      const me = await getMe();
-      if (useAuthStore.getState().token === token)
-        useAuthStore.getState().setUser(toSessionUser(me));
-      return me;
-    },
+    queryFn: fetchMe,
+    select: selectSaved,
   });
+  return query.data ?? EMPTY;
 }
 
 export function useSessionUser() {

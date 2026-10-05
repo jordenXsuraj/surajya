@@ -29,6 +29,7 @@ export function toSessionUser(user: AuthUser | Me): SessionUser {
     verificationRequired: Boolean(user.verificationRequired),
     followingIds: following,
     followerIds: followers,
+    sentRequestIds: (user.sentRequests ?? []).map(String),
     followingCount: counts.followingCount ?? following.length,
     followerCount: counts.followerCount ?? followers.length,
     termsAcceptedAt: user.termsAcceptedAt ?? null,

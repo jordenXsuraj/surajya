@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui/Text';
+import { cloudinaryUrl } from '@/lib/cloudinary';
 import { initials } from '@/lib/text';
 import { colors, fonts } from '@/theme/tokens';
 
@@ -45,7 +46,7 @@ export function Avatar({ name, uri, size = 40, colorIndex, anonymous = false }: 
   if (uri) {
     return (
       <Image
-        source={{ uri }}
+        source={{ uri: cloudinaryUrl(uri, { width: size * 3 }) }}
         style={[box, { backgroundColor: colors.bg3 }]}
         contentFit="cover"
         transition={150}

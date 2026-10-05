@@ -13,3 +13,11 @@ export const changeEmail = (newEmail: string, password: string) =>
     url: '/users/me/email',
     data: { newEmail: newEmail.trim().toLowerCase(), password },
   });
+
+/** Follow request (403 EMAIL_NOT_VERIFIED for new unverified accounts, 403 when blocked). */
+export const connectUser = (id: string) =>
+  request<MessageResponse>({ method: 'POST', url: `/users/${id}/connect` });
+
+/** Hides each other's profiles, named posts, replies, requests and notifications; ends follows. */
+export const blockUser = (id: string) =>
+  request<MessageResponse & { blocked: true }>({ method: 'POST', url: `/users/${id}/block` });
