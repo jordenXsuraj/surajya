@@ -12,8 +12,12 @@ const requireVerifiedEmail = require('../middleware/requireVerifiedEmail')
 const { sanitizePost, sanitizeReply, sanitizeLikes } = require('../utils/sanitizePost')
 const { getBlockSets, addPostBlockFilter, isPostHidden } = require('../utils/blocks')
 const { notify, notifyFollowers } = require('../services/notify')
+const validObjectIdParam = require('../middleware/validObjectId')
 
 const REPORT_REASONS = ['spam','hate','harassment','misinformation','other']
+
+// Malformed ids in the path → 400 'Invalid ID format' before any lookup
+for (const name of ['id', 'replyId', 'reportId', 'postId']) router.param(name, validObjectIdParam)
 
 // Loads the fields needed for block checks; null when missing or hidden from this viewer
 async function visiblePost(req, fields = 'postedBy isAnonymous') {

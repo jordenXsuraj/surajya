@@ -14,10 +14,10 @@ import { likeCountOf, toggleLike, applyLikeResponse } from '../utils/postView'
 const CATEGORIES = [
   { id:'all',        label:'All',           color:'var(--text)'   },
   { id:'social',     label:'🔥 Social',     color:'var(--orange)' },
-  { id:'study',    label:'📚 Study Meterial',    color:'var(--green)'  },
+  { id:'study',    label:'📚 Study Material',    color:'var(--green)'  },
    { id:'placement',  label:'💼 Placement',  color:'var(--blue)'   },
   { id:'confession', label:'🤫 Confession', color:'var(--accent)' },
-  { id:'project',    label:'🚀Project',    color:'var(--yellow)' },
+  { id:'project',    label:'🚀 Project',    color:'var(--yellow)' },
   { id:'qa',         label:'❓ Q&A',         color:'var(--purple)' },
   
 ]
@@ -26,9 +26,9 @@ const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },
   social:     { label:'🔥 Social',     cls:'tag-orange' },
   confession: { label:'🤫 Confession', cls:'tag-red'    },
-  project:    { label:'🚀Project/partner',    cls:'tag-yellow' },
+  project:    { label:'🚀 Project / Partner',    cls:'tag-yellow' },
   qa:         { label:'❓ Q&A',         cls:'tag-purple' },
-  study:    { label:'Study Meterial',    cls:'tag-green'  },
+  study:    { label:'📚 Study Material',    cls:'tag-green'  },
 }
 
 

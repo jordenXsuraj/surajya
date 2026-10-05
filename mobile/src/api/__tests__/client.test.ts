@@ -38,11 +38,18 @@ describe('401 handling', () => {
     expect(secureStoreMap().has(TOKEN_KEY)).toBe(false);
   });
 
-  it("401 'Authentication failed' (server-side error) does not log out", async () => {
-    mockApi(() => ({ status: 401, data: { message: 'Authentication failed' } }));
+  it('503 from the auth check (server trouble, e.g. database down) does not log out', async () => {
+    const message = 'Service temporarily unavailable. Please try again.';
+    mockApi(() => ({ status: 503, data: { message } }));
     const error = await failure(getMe());
-    expect(error.message).toBe('Authentication failed');
+    expect(error).toMatchObject({ status: 503, message });
     expect(useAuthStore.getState().status).toBe('signedIn');
+  });
+
+  it('every 401 for the current token logs out, whatever the message', async () => {
+    mockApi(() => ({ status: 401, data: { message: 'Authentication failed' } }));
+    await failure(getMe());
+    expect(useAuthStore.getState().status).toBe('signedOut');
   });
 
   it('401 for a request sent with an older token does not end the new session', async () => {
@@ -97,7 +104,7 @@ describe('ApiError mapping', () => {
 
     mockApi(() => ({
       status: 429,
-      data: { code: 'RESEND_TOO_SOON', message: 'Please wait 42 seconds', retryAfterSeconds: 42 },
+      data: { code: 'RESEND_COOLDOWN', message: 'Please wait 42 seconds', retryAfterSeconds: 42 },
     }));
     expect(await failure(request({ url: '/auth/send-verification' }))).toMatchObject({
       status: 429,

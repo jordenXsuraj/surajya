@@ -2,11 +2,13 @@
 export type ApiErrorCode =
   | 'EMAIL_NOT_VERIFIED'
   | 'ALREADY_VERIFIED'
-  | 'RESEND_TOO_SOON'
+  | 'RESEND_COOLDOWN'
   | 'INVALID_CODE'
   | 'CODE_LOCKED'
   | 'CODE_EXPIRED'
-  | 'EMAIL_TAKEN';
+  | 'EMAIL_TAKEN'
+  | 'FILE_TOO_LARGE'
+  | 'INVALID_FILE_TYPE';
 
 export type ApiErrorBody = {
   message?: string;

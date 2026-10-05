@@ -21,10 +21,10 @@ const POST_TYPES = [
   { id:'social',     em:'🔥', label:'Social',       desc:'Hackathon, Events, Achievements, Announcements' },
  
     { id:'confession', em:'🤫', label:'Confession',   desc:'Anonymous, private, safe' },
-      { id:'study',    em:'📚', label:'Study Meterial',      desc:'Share what you Have which help other' },
+      { id:'study',    em:'📚', label:'Study Material',      desc:'Share what you have that helps others' },
   { id:'qa',         em:'❓', label:'Q&A',          desc:'Ask anything, get answers' },
 
-  { id:'project',    em:'🚀/🤝', label:'Project/Need Partner', desc:'Find project teammates,hare what you built' },
+  { id:'project',    em:'🚀/🤝', label:'Project / Need Partner', desc:'Find project teammates, share what you built' },
 
 
 ]

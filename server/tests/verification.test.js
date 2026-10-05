@@ -145,8 +145,10 @@ describe('POST /api/auth/send-verification', () => {
     const first = lastCodeFor(email)
     const tooSoon = await as(user, 'post', '/api/auth/send-verification')
     expect(tooSoon.status).toBe(429)
-    expect(tooSoon.body.code).toBe('RESEND_TOO_SOON')
-    expect(tooSoon.headers['retry-after']).toBeDefined()
+    expect(tooSoon.body.code).toBe('RESEND_COOLDOWN')
+    expect(tooSoon.body.retryAfterSeconds).toBeGreaterThan(0)
+    expect(tooSoon.body.retryAfterSeconds).toBeLessThanOrEqual(60)
+    expect(tooSoon.headers['retry-after']).toBe(String(tooSoon.body.retryAfterSeconds))
 
     await ageCodes(user._id)
     const ok = await as(user, 'post', '/api/auth/send-verification')
@@ -155,9 +157,19 @@ describe('POST /api/auth/send-verification', () => {
     const second = lastCodeFor(email)
     expect(await EmailVerification.countDocuments({ user: user._id })).toBe(1)
 
-    // The minute limiter also holds even if the DB cooldown were bypassed
+    // Straight after a successful resend: same RESEND_COOLDOWN answer (it used to be the generic limiter body)
+    const again = await as(user, 'post', '/api/auth/send-verification')
+    expect(again.status).toBe(429)
+    expect(again.body).toMatchObject({ code: 'RESEND_COOLDOWN', retryAfterSeconds: expect.any(Number) })
+
+    // The minute limiter also holds even if the DB cooldown were bypassed, and answers the same way
     await ageCodes(user._id)
-    expect((await as(user, 'post', '/api/auth/send-verification')).status).toBe(429)
+    const limited = await as(user, 'post', '/api/auth/send-verification')
+    expect(limited.status).toBe(429)
+    expect(limited.body.code).toBe('RESEND_COOLDOWN')
+    expect(limited.body.retryAfterSeconds).toBeGreaterThan(0)
+    expect(limited.body.retryAfterSeconds).toBeLessThanOrEqual(60)
+    expect(limited.headers['retry-after']).toBe(String(limited.body.retryAfterSeconds))
 
     if (first !== second) {
       expect((await as(user, 'post', '/api/auth/verify-email').send({ code: first })).status).toBe(400)   // older code invalid

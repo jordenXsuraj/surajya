@@ -19,8 +19,12 @@ const verification = require('../services/verification')
 const mailer       = require('../services/email')
 const { signToken } = require('../utils/token')
 const { upload }   = require('../config/cloudinary')
+const validObjectIdParam = require('../middleware/validObjectId')
 
 const REPORT_REASONS = ['spam','hate','harassment','misinformation','other']
+
+// Malformed :id → 400 'Invalid ID format' on every route below that takes one
+router.param('id', validObjectIdParam)
 
 // Wrong password on account deletion: 5 tries per 15 min per user
 const deleteAccountLimiter = rateLimit({
@@ -216,13 +220,51 @@ router.get('/me/blocked', protect, async (req, res) => {
 // ─────────────────────────────────────────────────
 // PUT /api/users/me
 // ─────────────────────────────────────────────────
+// Client mistakes in PUT /me are 400 with a readable message (never a 500)
+const PROFILE_TEXT_FIELDS = ['name', 'bio', 'branch', 'roadmap', 'username', 'youtubeUrl']
+const YEARS = ['1st', '2nd', '3rd', '4th']
+const MAX_NAME = 60
+const MAX_PROJECT_NAME = 60
+const MAX_MEDIA_ITEMS = 30
+
+function profileUpdateError(body) {
+  for (const field of PROFILE_TEXT_FIELDS) {
+    if (body[field] !== undefined && typeof body[field] !== 'string') return `${field} must be text`
+  }
+  const { name, year, skills, projects, mediaItems } = body
+  if (name !== undefined && !name.trim()) return 'Name cannot be empty'
+  if (name !== undefined && name.trim().length > MAX_NAME) return `Name can be at most ${MAX_NAME} characters`
+  if (year !== undefined && !YEARS.includes(year)) return 'Year must be 1st, 2nd, 3rd or 4th'
+  if (skills !== undefined && (!Array.isArray(skills) || skills.some(s => typeof s !== 'string'))) {
+    return 'skills must be a list of text'
+  }
+  if (projects !== undefined) {
+    if (!Array.isArray(projects)) return 'projects must be a list'
+    for (const p of projects) {
+      if (!p || typeof p !== 'object' || (p.name !== undefined && typeof p.name !== 'string') ||
+          (p.link !== undefined && typeof p.link !== 'string')) {
+        return 'Each project needs a text name and an optional text link'
+      }
+      if ((p.name || '').trim().length > MAX_PROJECT_NAME) return `Project names can be at most ${MAX_PROJECT_NAME} characters`
+    }
+  }
+  if (mediaItems !== undefined) {
+    if (!Array.isArray(mediaItems)) return 'mediaItems must be a list'
+    if (mediaItems.length > MAX_MEDIA_ITEMS) return `At most ${MAX_MEDIA_ITEMS} media items`
+    if (mediaItems.some(m => !m || typeof m !== 'object' || (m.url !== undefined && typeof m.url !== 'string'))) {
+      return 'Each media item needs a type and a text url'
+    }
+  }
+  return null
+}
+
 router.put('/me', protect, async (req, res) => {
   try {
-    
-const { name, bio, year, branch, skills, projects, roadmap, youtubeUrl, mediaItems, username } = req.body
-    if (name !== undefined && !name.trim()) {
-      return res.status(400).json({ message: 'Name cannot be empty' })
-    }
+    const body = req.body || {}
+    const invalid = profileUpdateError(body)
+    if (invalid) return res.status(400).json({ message: invalid })
+
+const { name, bio, year, branch, skills, projects, roadmap, youtubeUrl, mediaItems, username } = body
     const updates = {}
     if (name     !== undefined) updates.name     = name.trim()
     if (bio      !== undefined) updates.bio      = bio.trim().slice(0, 250)
@@ -248,7 +290,7 @@ if (mediaItems  !== undefined) updates.mediaItems  = Array.isArray(mediaItems)
   : []
 
 
-    if (skills   !== undefined) updates.skills   = Array.isArray(skills) ? skills : []
+    if (skills   !== undefined) updates.skills   = skills
     if (projects !== undefined) {
       updates.projects = projects
         .filter(p => p.name?.trim())
@@ -259,6 +301,12 @@ if (mediaItems  !== undefined) updates.mediaItems  = Array.isArray(mediaItems)
     ).select('-password -__v')
     res.json(safeUser(updated))
   } catch (err) {
+    // Anything the checks above missed that the schema refuses is still the client's input
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ message: Object.values(err.errors)[0]?.message || 'Invalid profile data' })
+    }
+    if (err.name === 'CastError') return res.status(400).json({ message: 'Invalid profile data' })
+    if (err.code === 11000 && err.keyPattern?.username) return res.status(400).json({ message: 'Username already taken' })
     res.status(500).json({ message: 'Server error' })
   }
 })

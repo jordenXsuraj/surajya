@@ -1,5 +1,5 @@
 
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signup, login } from '../services/api'
 import { markCodeSent } from '../utils/verifyState'
@@ -433,7 +433,7 @@ if (mode === 'signup') {
         </p>
         <div className="ob-chips">
           {['💼 Placement','🤫 Confession','🤝 Partner',
-            '📚 Exam','🔥 Social','📰 News' ,'project'].map(c => (
+            '📚 Exam','🔥 Social','📰 News' ,'🚀 Project'].map(c => (
             <span key={c} className="ob-chip">{c}</span>
           ))}
         </div>
@@ -704,9 +704,11 @@ export default function Onboard() {
   const [step,     setStep]    = useState(1)
   const [authData, setAuthData]= useState(null)
   const { user } = useAuth()
-  const nav = useNavigate()
+  // Already signed in when this page opened → Home. Signing in or up here navigates by itself
+  // (signup → /verify-email), so a redirect on every `user` change would race with it.
+  const [signedInOnArrival] = useState(() => Boolean(user))
 
-  if (user) { nav('/home'); return null }
+  if (signedInOnArrival) return <Navigate to="/home" replace />
 
   if (step === 1) return <StepAuth onNext={d => { setAuthData(d); setStep(2) }} />
   return <StepProfile authData={authData} />

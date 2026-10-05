@@ -10,6 +10,9 @@ cloudinary.config({
 
 const HEIC_TYPES = ['image/heic', 'image/heif']
 
+// A rejected file type is the client's mistake: 400 with a code (see middleware/errorHandler.js)
+const invalidType = message => Object.assign(new Error(message), { statusCode: 400, code: 'INVALID_FILE_TYPE' })
+
 // ── Image storage ─────────────────────────────────
 const storage = new CloudinaryStorage({
   cloudinary,
@@ -33,7 +36,7 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg','image/png','image/webp', ...HEIC_TYPES]
     if (allowed.includes(file.mimetype)) cb(null, true)
-    else cb(new Error('Only image files allowed'), false)
+    else cb(invalidType('Only image files allowed (JPG, PNG, WebP, HEIC)'), false)
   }
 })
 
@@ -53,7 +56,7 @@ const pdfUpload = multer({
   limits:  { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') cb(null, true)
-    else cb(new Error('Only PDF files allowed'), false)
+    else cb(invalidType('Only PDF files allowed'), false)
   },
 })
 

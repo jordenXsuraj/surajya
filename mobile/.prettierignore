@@ -5,3 +5,6 @@ coverage
 android
 ios
 package-lock.json
+
+# hand-formatted docs (tables)
+*.md
