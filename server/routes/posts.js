@@ -271,6 +271,9 @@ const expiresAt = todayOnly
   ? new Date(Date.now() + 24 * 60 * 60 * 1000)
   : null
 
+// Confessions are always anonymous, whatever the request says
+const anonymous = type === 'confession' || Boolean(isAnonymous)
+
 const post = await Post.create({
   type,
   text:        text.trim(),
@@ -281,7 +284,7 @@ const post = await Post.create({
 youtubeUrl: youtubeUrl || '',
 youtubeId: ytId || '',
 
-  isAnonymous: Boolean(isAnonymous),
+  isAnonymous: anonymous,
   expiresAt,
   postedBy:    req.user._id,
   college:     req.user.college.trim(),
@@ -292,8 +295,8 @@ youtubeId: ytId || '',
 
     await post.populate('postedBy', 'name year branch avatar isContributor')
 
-    // Notify followers in background
-    if (!isAnonymous) {
+    // Notify followers in background (never for anonymous posts: the message names the author)
+    if (!anonymous) {
       // Get fresh followers list
       const me = await User.findById(req.user._id).select('followers').lean()
       notifyFollowers({
