@@ -45,7 +45,7 @@ useEffect(() => {
       {user && <VerifyEmailBanner />}
       <EmailNotVerifiedToast />
       <Routes>
-        <Route path="/" element={user ? <Navigate to="/home" /> : <Onboard />} />
+        <Route path="/" element={<Onboard />} />
         <Route path="/home"        element={<Guard><Home /></Guard>} />
         <Route path="/feed" element={<Guard><ConnectionFeed /></Guard>} />
         <Route path="/post"        element={<Guard><Post /></Guard>} />
