@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "MeetNet",
+    "slug": "meetnet",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "meetnet",
+    "userInterfaceStyle": "dark",
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e9b8f796-314e-4501-bdca-29da9c72128f"
+      }
+    },
+    "owner": "aniket078s-team"
+  }
+}

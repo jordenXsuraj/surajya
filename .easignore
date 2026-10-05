@@ -1,0 +1,69 @@
+# EAS uploads this whole git repository for mobile/ builds. Once this file exists EAS no
+# longer reads any .gitignore, so every .gitignore rule in the repo is repeated below.
+
+# --- Not part of the mobile build ---------------------------------------------------------
+# The shallow .git clone EAS adds would still contain server/ and nexusnetwork/ source.
+.git
+/server/
+/nexusnetwork/
+/docs/
+/docker-compose.yml
+/.dockerignore
+/.env.example
+/gitignore
+/README.md
+*backup*
+*backups*
+*.bak
+.vscode/
+.idea/
+.claude/
+
+# --- Root .gitignore --------------------------------------------------------------------
+.env
+node_modules/
+
+# --- Environment files anywhere (only mobile/.env.example is uploaded) --------------------------
+.env.*
+!/mobile/.env.example
+.env*.local
+*.local
+
+# --- nexusnetwork/.gitignore ------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+dist/
+dist-ssr/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# --- mobile/.gitignore ------------------------------------------------------------------
+.expo/
+web-build/
+expo-env.d.ts
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.pem
+*.tsbuildinfo
+/mobile/**/example
+/mobile/ios/
+/mobile/android/
+coverage/
