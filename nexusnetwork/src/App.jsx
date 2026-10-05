@@ -19,6 +19,7 @@ import DeleteAccount from './pages/DeleteAccount'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import CommunityGuidelines from './pages/CommunityGuidelines'
+import SecurityNotice from './components/SecurityNotice'
 function Guard({ children }) {
   const { user } = useAuth()
   return user ? children : <Navigate to="/" replace />
@@ -37,6 +38,7 @@ useEffect(() => {
   const { user } = useAuth()
   return (
     <div className="shell">
+      {user && <SecurityNotice />}
       <Routes>
         <Route path="/" element={user ? <Navigate to="/home" /> : <Onboard />} />
         <Route path="/home"        element={<Guard><Home /></Guard>} />
