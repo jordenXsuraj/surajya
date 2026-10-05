@@ -4,6 +4,10 @@ process.env.JWT_SECRET = 'test_secret_that_is_definitely_longer_than_32_chars'
 process.env.VERIFICATION_REQUIRED_FROM = '2999-01-01T00:00:00Z'   // these suites predate email verification
 process.env.ADMIN_EMAIL      = 'admin@college.edu'
 process.env.ADMIN_SECRET_KEY = 'test-admin-key'
+// Cloudinary mode with a stubbed uploader (local-disk uploads: localUploads.test.js)
+process.env.CLOUDINARY_CLOUD_NAME  = 'demo'
+process.env.CLOUDINARY_API_KEY     = 'test-key'
+process.env.CLOUDINARY_API_SECRET  = 'test-secret'
 
 const crypto   = require('crypto')
 const request  = require('supertest')

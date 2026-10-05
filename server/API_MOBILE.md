@@ -20,7 +20,7 @@ Tests: `server/tests/` (run `npm test`).
 | Text | The API's XSS filter stores `<` as `&lt;` in user text (posts, replies, names, bios…); `>`, `&` and quotes are stored as typed. Decode entities before display; never render user text as HTML. |
 | Ids | MongoDB ObjectIds (24 hex characters). |
 | CORS | Native requests send no `Origin` and are always allowed. |
-| Uploads | `multipart/form-data`. Images: jpeg/png/webp/heic/heif, max 5 MB; HEIC/HEIF are stored as JPG. PDF: max 10 MB. Errors are 400: `{ code: 'INVALID_FILE_TYPE' }` (wrong type, or a file Cloudinary can't read), `{ code: 'FILE_TOO_LARGE' }`, or multer's `LIMIT_*` code (e.g. `LIMIT_UNEXPECTED_FILE` for a wrong field name). 500 only if Cloudinary itself fails. |
+| Uploads | `multipart/form-data`. Images: jpeg/png/webp/heic/heif, max 5 MB; HEIC/HEIF are stored as JPG. PDF: max 10 MB. Errors are 400: `{ code: 'INVALID_FILE_TYPE' }` (wrong type, or a file Cloudinary can't read), `{ code: 'FILE_TOO_LARGE' }`, or multer's `LIMIT_*` code (e.g. `LIMIT_UNEXPECTED_FILE` for a wrong field name). 500 only if Cloudinary itself fails. Local development without Cloudinary stores the same files in `server/uploads` and returns `http://<api host>/uploads/images/…` / `…/uploads/pdfs/…` URLs (HEIC kept as HEIC); same validation, limits and errors. |
 | Cold start | The API is on Render's free plan and sleeps after about 15 min idle. The first request can take up to about 60 s, so use a long timeout plus a "waking up…" state. |
 
 ### Rate limits

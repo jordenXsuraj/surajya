@@ -50,7 +50,7 @@ If a Render deploy fails (build error, or the app exits at startup), Render keep
 | `MONGO_URI` | MongoDB Atlas connection string |
 | `CLIENT_URL`, `FRONTEND_URL` | Allowed CORS origins in addition to the list in `server/index.js` |
 | `ADMIN_EMAIL`, `ADMIN_SECRET_KEY` | Admin endpoints (`/api/posts/admin/*`) |
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Uploads |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | **Required, all three.** Uploads. In production the server refuses to start if any is missing (`❌ Cloudinary is not configured … Refusing to start.`); it never falls back to local disk. Local development leaves them empty and stores uploads in `server/uploads` (see `server/config/uploadMode.js`). |
 | `MONGOMS_DISABLE_POSTINSTALL` | `1`. Stops the test-only `mongodb-memory-server` from downloading a MongoDB binary if dev dependencies are ever installed. |
 | `PUBLIC_APP_URL` | `https://themeetnet.com`. Base of emailed links (`/reset-password?token=…`). Defaults to that value. |
 | `RESEND_API_KEY` | **Required for password-reset emails.** Without it in production, reset requests still answer 200 but no email is sent (an error is logged). See [Email](#email-resend). |
