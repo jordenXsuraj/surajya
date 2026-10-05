@@ -11,6 +11,7 @@
 //   --exclude-domains=a,b     skip addresses at these domains (e.g. obvious typos)
 //   --from-index=<n>          resume a stopped run at recipient n (0-based, same order every run)
 //   --batch-size=<n>          1–100 (Resend's batch maximum), default 100
+//   --max=<n>                 send at most n emails in this run (e.g. the free plan's 100/day)
 //
 // Wording must match nexusnetwork/src/config/securityNotice.js (the web banner).
 
@@ -134,11 +135,12 @@ async function main() {
 
   const size = Math.min(100, Math.max(1, Number(args['batch-size']) || 100))
   const start = Math.max(0, Number(args['from-index']) || 0)
+  const end = args.max ? Math.min(recipients.length, start + Math.max(1, Number(args.max))) : recipients.length
   let sent = 0, failed = 0, index = start, stopped = false
   const stop = name => { stopped = true; console.log(`STOPPED: Resend ${name} (sending quota reached). Resume later with --from-index=${index}`) }
 
-  while (index < recipients.length && !stopped) {
-    const batch = recipients.slice(index, index + size)
+  while (index < end && !stopped) {
+    const batch = recipients.slice(index, Math.min(index + size, end))
     const key = `${CAMPAIGN}/` + crypto.createHash('sha256').update(batch.map(u => u._id).join(',')).digest('hex').slice(0, 40)
     const r = await resendRequest('/emails/batch', batch.map(u => emailFor(u, replyTo)), key)
     if (r.quota) { stop(r.name); break }
@@ -161,7 +163,8 @@ async function main() {
     }
     console.log(`progress: sent ${sent}, failed ${failed}, next index ${index}`)
   }
-  console.log(`${stopped ? 'PAUSED' : 'DONE'}: recipients ${recipients.length} | sent ${sent} | failed ${failed} | remaining ${recipients.length - index}${stopped ? ` | resume with --from-index=${index}` : ''}`)
+  const remaining = recipients.length - index
+  console.log(`${remaining > 0 ? 'PAUSED' : 'DONE'}: recipients ${recipients.length} | sent ${sent} | failed ${failed} | remaining ${remaining}${remaining > 0 ? ` | resume with --from-index=${index}` : ''}`)
 }
 
 main().catch(err => { console.error('ERROR:', err.message); process.exit(1) })
