@@ -59,7 +59,7 @@ If a Render deploy fails (build error, or the app exits at startup), Render keep
 | `CLIENT_IP_HEADER`, `CLIENT_IP_XFF_INDEX` | Which header carries the real client IP for rate limits. **Production: `CLIENT_IP_HEADER=cf-connecting-ip`**, no index. Empty = `req.ip`. See [Client IP](#client-ip-rate-limiting). |
 | `DEBUG_IP_ROUTE` | `1` only **temporarily**, while choosing `CLIENT_IP_HEADER`. Remove afterwards. |
 | `VERIFICATION_REQUIRED_FROM` | ISO date-time. Accounts created **at or after** it must verify their email before posting, replying, following, "interested" or reporting. Unset = the default in `server/middleware/requireVerifiedEmail.js` (the release time, see [Email verification](#email-verification)). An invalid value blocks nobody. |
-| `EMAIL_REPLY_TO` | Optional. Where replies to MeetNet emails go (themeetnet.com has no inbox). **Production: the owner's Gmail**, added manually in the Render dashboard. |
+| `EMAIL_REPLY_TO` | Optional. Where replies to MeetNet emails go (themeetnet.com has no inbox). **Production: set to the owner's Gmail** (2026-10-05). |
 | `RESEND_WEBHOOK_SECRET` | Optional, `whsec_…`. Turns on `POST /api/webhooks/resend` (404 without it). See [Resend webhook](#resend-webhook-optional). |
 | `APP_MIN_VERSION_ANDROID`, `APP_MIN_VERSION_IOS` | `x.y.z`. Apps below this see a force-update screen. Default `0.0.0`. |
 | `APP_LATEST_VERSION_ANDROID`, `APP_LATEST_VERSION_IOS` | `x.y.z`. Apps below this see an optional update prompt. Default `1.0.0`. |
@@ -153,6 +153,12 @@ New accounts get a 6-digit code by email at signup, and can resend it from `/ver
 - **Who is blocked:** only accounts created at or after `VERIFICATION_REQUIRED_FROM` (default **`2026-10-05T06:35:00Z`**, the release time plus a 15-minute deploy buffer; not set on Render), and only from creating posts, replying, follow requests, "interested" and reports (`403 { code: 'EMAIL_NOT_VERIFIED' }`). They can log in and browse.
 - **Older accounts:** never blocked; they only see a dismissible banner asking them to verify, so password reset can reach them.
 - **Changing email** (`PUT /api/users/me/email`): needs the password, makes the new address unverified, sends a code to it, sends a short notice to the old address, and ends every other session.
+
+**Verified on production (2026-10-05, after 06:35 UTC):**
+- **New account:** a throwaway account with a disposable inbox signed up (201, `emailVerified: false`, `verificationRequired: true`) and got **403 `EMAIL_NOT_VERIFIED`** on create-post.
+- **The email:** it arrived in 11 s, from `MeetNet <no-reply@themeetnet.com>` with Reply-To set to `EMAIL_REPLY_TO`, and contained a 6-digit code and the 10-minute notice.
+- **After verifying:** 200, and a post then got 201. The post and the account were deleted afterwards (login → 400).
+- **Old account:** an unverified account from May 2026 still passed the gate. A deliberately too-short post got 400 "Post too short", not 403, and nothing was created.
 
 ### Resend webhook (optional)
 
