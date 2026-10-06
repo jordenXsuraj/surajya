@@ -1,0 +1,29 @@
+# Prompt 3 · Double-tap the post image: like + heart burst. The runner samples the screen from the
+# "[watch]" command on and checks the heart's red pixels appear (the heart is hidden from
+# accessibility). The taps do not wait for the screen to settle: Maestro reading the screen then
+# slows the runner's own captures down.
+# The image takes a double-tap only within 260 ms (PostMedia maxDelay); on a busy emulator
+# Maestro's two taps can arrive further apart and count as a tap, which opens the image viewer:
+# then it is closed and the double-tap tried again.
+appId: com.themeetnet.app.dev
+name: Double-tap heart
+---
+- doubleTapOn:
+    text: "Post image. Double-tap.*"
+    below: ".*${RUN} image fixture.*"
+    waitToSettleTimeoutMs: 200
+    label: "Double-tap the image [watch]"
+- runFlow:
+    when:
+      visible: "Post image, full screen.*"
+    commands:
+      - tapOn: "Close"
+      - doubleTapOn:
+          text: "Post image. Double-tap.*"
+          below: ".*${RUN} image fixture.*"
+          waitToSettleTimeoutMs: 200
+- runFlow:
+    when:
+      visible: "Post image, full screen.*"
+    commands:
+      - tapOn: "Close"

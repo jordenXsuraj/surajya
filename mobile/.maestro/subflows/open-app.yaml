@@ -1,0 +1,26 @@
+# Cold-starts MeetNet Dev on the local Metro server (adb reverse 8081) and waits for the app itself.
+# Always stops the app first: opening the dev-client link while the app is still running makes
+# expo-dev-launcher recreate the activity and crash ("App react context shouldn't be created before").
+# Tried up to 3 times: a cold start now and then dies in the first render (SIGSEGV in React
+# Native's MountingCoordinator::pullTransaction, a react-native-screens race fixed in 4.28.0).
+# Markers are MeetNet-only ("Create a post" tab button / "Create account" on the welcome screen):
+# Expo's dev launcher has its own "Home" tab.
+appId: com.themeetnet.app.dev
+---
+- retry:
+    maxRetries: 2
+    commands:
+      - stopApp
+      - openLink: meetnet-dev://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+      - extendedWaitUntil:
+          visible: "Create a post|Create account|Continue"
+          timeout: 120000
+# Expo's developer-menu introduction (first load after install) covers the app
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+- extendedWaitUntil:
+    visible: "Create a post|Create account"
+    timeout: 60000

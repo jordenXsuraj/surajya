@@ -1,0 +1,24 @@
+# Prompt 3 · Delete the tester's own post from the ⋯ menu.
+appId: com.themeetnet.app.dev
+name: Delete own post
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://post/${OWN_POST_ID}
+- extendedWaitUntil:
+    visible: ".*${RUN} delete fixture.*"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: "More: save, share, report"
+- tapOn: ".*Delete Post"
+- assertVisible: "Delete this post."
+# the "🗑️ Deleted" toast is checked by the runner from screen frames (it is on screen for 2.6 s,
+# shorter than one of Maestro's screen reads on the emulator)
+- tapOn:
+    text: "(?i)delete"
+    waitToSettleTimeoutMs: 200
+    label: "Confirm delete [watch]"
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 15000
+- assertNotVisible: ".*${RUN} delete fixture.*"

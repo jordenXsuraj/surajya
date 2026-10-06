@@ -1,0 +1,8 @@
+# Prompt 4 · Network back: the same form publishes.
+appId: com.themeetnet.app.dev
+name: Post after network is back
+---
+- runFlow:
+    file: ../subflows/post-and-check-home.yaml
+    env:
+      POST_TEXT: "${RUN} offline post"

@@ -1,4 +1,5 @@
 import { router, useNavigation } from 'expo-router';
+import type { NativeStackNavigationProp } from 'expo-router/native-stack';
 import { usePreventRemove } from 'expo-router/react-navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View, type TextInput } from 'react-native';
@@ -105,6 +106,26 @@ export default function ComposeScreen() {
   useEffect(() => {
     if (!isEmptyDraft(initial)) toast('📝 Draft restored');
   }, [initial]);
+
+  // Focus the text box once the slide-in has finished, not on mount (autoFocus): focused during the
+  // transition, KeyboardAwareScrollView measures it mid-animation and can leave it under the
+  // keyboard. The timer covers a transition event that never comes.
+  useEffect(() => {
+    const stack = navigation as unknown as NativeStackNavigationProp<
+      Record<string, object | undefined>
+    >;
+    const focus = () => textRef.current?.focus();
+    const fallback = setTimeout(focus, 1000);
+    const unsubscribe = stack.addListener('transitionEnd', (e) => {
+      if (e.data.closing) return;
+      clearTimeout(fallback);
+      focus();
+    });
+    return () => {
+      clearTimeout(fallback);
+      unsubscribe();
+    };
+  }, [navigation]);
 
   const photoBusy = photo.state.status === 'compressing' || photo.state.status === 'uploading';
   const pdfBusy = pdf.state.status === 'uploading';
@@ -220,7 +241,9 @@ export default function ComposeScreen() {
         keyboardShouldPersistTaps="handled"
         bottomOffset={FOOTER_HEIGHT + 16}
       >
-        <Text style={styles.label}>What are you sharing?</Text>
+        <Text style={styles.label} testID="compose-heading">
+          What are you sharing?
+        </Text>
         <TypeGrid value={postType} onChange={selectType} confessionsEnabled={confessionsEnabled} />
 
         {postType === 'confession' ? (
@@ -251,10 +274,10 @@ export default function ComposeScreen() {
           onChangeText={setText}
           placeholder={placeholderFor(postType)}
           multiline
-          autoFocus
           maxLength={MAX_POST}
           style={styles.textarea}
           accessibilityLabel="Write your post"
+          testID="compose-text"
         />
         <View style={styles.counterRow}>
           <Text style={styles.hint}>

@@ -1,0 +1,11 @@
+# Prompt 3 · Before the double-tap on the post screen (a pushed screen): the image fixture post.
+appId: com.themeetnet.app.dev
+name: Heart on the post screen — prepare
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://post/${IMAGE_POST_ID}
+- extendedWaitUntil:
+    visible: ".*${RUN} image fixture.*"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000

@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import Animated, { FadeOut, SlideInDown } from 'react-native-reanimated';
+import { useEffect, useState } from 'react';
+import { Animated, Pressable, StyleSheet } from 'react-native';
+import { useKeyboardAnimation } from 'react-native-keyboard-controller';
+import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/Text';
@@ -26,6 +27,10 @@ export function ToastHost() {
 
   useEffect(() => {
     if (!toast) return;
+    // Development builds only: the Maestro runner (.maestro/run.mjs) reads every toast from logcat
+    // (on screen for 2.6 s, shorter than one of its screen reads)
+    if (__DEV__ && process.env.NODE_ENV !== 'test')
+      console.log(`[toast] ${toast.type} ${toast.message}`);
     const timer = setTimeout(hide, TOAST_MS);
     return () => clearTimeout(timer);
   }, [toast, hide]);
@@ -33,21 +38,69 @@ export function ToastHost() {
   if (!toast) return null;
 
   return (
-    <Animated.View
+    <ToastView
       key={toast.id}
-      entering={SlideInDown.springify().damping(18)}
-      exiting={FadeOut.duration(150)}
-      style={[styles.wrap, { bottom: insets.bottom + layout.tabBarHeight + 10 }]}
-      pointerEvents="box-none"
-    >
+      message={toast.message}
+      color={typeColor[toast.type]}
+      bottom={insets.bottom + layout.tabBarHeight + 10}
+      onPress={hide}
+    />
+  );
+}
+
+type ToastViewProps = { message: string; color: string; bottom: number; onPress: () => void };
+
+// Springs up into place with React Native's Animated (native driver). Reanimated entering
+// animations and springs started on mount never run on Android while a pushed screen (post,
+// compose) is open, so the toast stayed invisible there. With the keyboard open (compose,
+// replies) it sits just above the keyboard.
+function ToastView({ message, color, bottom, onPress }: ToastViewProps) {
+  const reduceMotion = useReducedMotion();
+  const [shown] = useState(() => new Animated.Value(reduceMotion ? 1 : 0));
+  const { height: keyboard } = useKeyboardAnimation(); // 0, or minus the keyboard height
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    Animated.spring(shown, {
+      toValue: 1,
+      damping: 18,
+      stiffness: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [shown, reduceMotion]);
+
+  const animatedStyle = {
+    opacity: shown.interpolate({
+      inputRange: [0, 0.6, 1],
+      outputRange: [0, 1, 1],
+      extrapolate: 'clamp',
+    }),
+    transform: [
+      {
+        translateY: Animated.add(
+          shown.interpolate({ inputRange: [0, 1], outputRange: [80, 0] }),
+          // keyboard + bottom - 10, never below 0: just above an open keyboard
+          keyboard.interpolate({
+            inputRange: [-2000, 10 - bottom, 0],
+            outputRange: [-2000 + bottom - 10, 0, 0],
+            extrapolate: 'clamp',
+          }),
+        ),
+      },
+    ],
+  } as const;
+
+  return (
+    <Animated.View style={[styles.wrap, { bottom }, animatedStyle]} pointerEvents="box-none">
       <Pressable
-        onPress={hide}
+        onPress={onPress}
         style={styles.toast}
         accessibilityRole="alert"
+        accessibilityLabel={message}
         accessibilityLiveRegion="polite"
         accessibilityHint="Tap to dismiss"
       >
-        <Text style={[styles.text, { color: typeColor[toast.type] }]}>{toast.message}</Text>
+        <Text style={[styles.text, { color }]}>{message}</Text>
       </Pressable>
     </Animated.View>
   );

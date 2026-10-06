@@ -1,0 +1,8 @@
+# Prompt 3 · Before the feed scroll: signed in, Home tab, at the top.
+appId: com.themeetnet.app.dev
+name: Feed scroll — prepare
+---
+- runFlow: ../subflows/ensure-home.yaml
+- extendedWaitUntil:
+    visible: ".*(ago|just now)"
+    timeout: 20000

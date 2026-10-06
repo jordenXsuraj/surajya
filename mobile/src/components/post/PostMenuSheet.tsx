@@ -5,12 +5,12 @@ import {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import { router, usePathname } from 'expo-router';
-import { useEffect, useRef } from 'react';
 import { Alert, Platform, Pressable, Share, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/Text';
 import { useSavedIds } from '@/hooks/useMe';
+import { useModalSheet } from '@/hooks/useModalSheet';
 import { useBlockUser, useDeletePost, useSave } from '@/hooks/usePostMutations';
 import { isOwnPost, postUrl, visibleAuthor } from '@/lib/postView';
 import { decodeEntities } from '@/lib/text';
@@ -41,9 +41,9 @@ export async function sharePost(post: Post): Promise<void> {
 
 // "⋯" on a post: Save, Share, Report, Block (named authors), Delete (own posts).
 export function PostMenuSheet() {
-  const ref = useRef<BottomSheetModal>(null);
   const post = usePostUi((s) => s.menuPost);
   const close = usePostUi((s) => s.closeMenu);
+  const { ref, onDismiss } = useModalSheet(Boolean(post), close);
   const reported = usePostUi((s) => (post ? Boolean(s.reported[post._id]) : false));
   const viewerId = useAuthStore((s) => s.user?._id ?? '');
   const savedIds = useSavedIds();
@@ -52,11 +52,6 @@ export function PostMenuSheet() {
   const { mutate: save } = useSave();
   const { mutate: block } = useBlockUser();
   const { mutate: remove } = useDeletePost();
-
-  useEffect(() => {
-    if (post) ref.current?.present();
-    else ref.current?.dismiss();
-  }, [post]);
 
   const author = post ? visibleAuthor(post) : null;
   const own = post ? isOwnPost(post, viewerId) : false;
@@ -100,7 +95,7 @@ export function PostMenuSheet() {
   return (
     <BottomSheetModal
       ref={ref}
-      onDismiss={close}
+      onDismiss={onDismiss}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
       handleIndicatorStyle={styles.handle}

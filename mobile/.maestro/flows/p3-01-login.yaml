@@ -1,0 +1,11 @@
+# Prompt 3 · Login: signed out → welcome → login form → Home feed with posts.
+appId: com.themeetnet.app.dev
+name: Login
+---
+- runFlow: ../subflows/open-app.yaml
+- runFlow: ../subflows/sign-out.yaml
+- assertVisible: "Create account"
+- runFlow: ../subflows/sign-in.yaml
+- assertVisible: "Create a post"
+# a post's time ("just now" / "5m ago"): the feed has loaded
+- assertVisible: ".*(ago|just now)"

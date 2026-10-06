@@ -1,0 +1,17 @@
+# Compose screen: scrolls to the bottom of the form (attachments). Swipes run along the form's left
+# padding, where nothing can be tapped: a swipe over a text box that cannot scroll any further can
+# count as a tap and open the keyboard (which then covers what the next step looks for).
+appId: com.themeetnet.app.dev
+---
+- runFlow: dismiss-keyboard.yaml
+- swipe:
+    start: 3%, 75%
+    end: 3%, 25%
+    duration: 400
+- swipe:
+    start: 3%, 75%
+    end: 3%, 25%
+    duration: 400
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow: hide-keyboard.yaml

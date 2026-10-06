@@ -5,9 +5,10 @@ import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { FullWindowOverlay } from 'react-native-screens';
 
 import { refreshSession } from '@/api/session';
 import { EmailNotVerifiedSheet } from '@/components/EmailNotVerifiedSheet';
@@ -44,6 +45,17 @@ const navigationTheme = {
     notification: colors.accent,
   },
 };
+
+// Toasts are mounted once, after the navigator. iOS native modals (compose) cover that root view,
+// so there the toast goes into a FullWindowOverlay (sheets use the same via containerComponent).
+function Toasts() {
+  if (Platform.OS !== 'ios') return <ToastHost />;
+  return (
+    <FullWindowOverlay>
+      <ToastHost />
+    </FullWindowOverlay>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(fontAssets);
@@ -101,7 +113,7 @@ export default function RootLayout() {
                 </>
               ) : null}
               <EmailNotVerifiedSheet />
-              <ToastHost />
+              <Toasts />
             </BottomSheetModalProvider>
           </ThemeProvider>
         </PersistQueryClientProvider>

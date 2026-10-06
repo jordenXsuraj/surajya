@@ -1,0 +1,17 @@
+# Signs in as ${EMAIL} / ${PASSWORD} unless the app is already signed in.
+appId: com.themeetnet.app.dev
+---
+- runFlow:
+    when:
+      notVisible: "Create a post"
+    commands:
+      - tapOn: "Log In"
+      - tapOn: "Enter your Email"
+      - inputText: ${EMAIL}
+      - tapOn: "Password"
+      - inputText: ${PASSWORD}
+      # the password field submits the form ("done" key)
+      - pressKey: Enter
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 30000

@@ -1,0 +1,22 @@
+# Prompt 4 · Confession: anonymous is forced (no switch), label says Anonymous, feed shows Anonymous.
+appId: com.themeetnet.app.dev
+name: Confession is anonymous
+---
+- runFlow: ../subflows/open-compose.yaml
+# the type grid scrolls off screen while the keyboard is open
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- tapOn: "Confession. .*"
+- assertVisible: ".*Confessions are always posted anonymously"
+- assertNotVisible: "Post anonymously.*"
+- assertVisible: "Say what you feel.*"
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} confession post"
+- assertVisible: "Post as Anonymous.*"
+- runFlow:
+    file: ../subflows/post-and-check-home.yaml
+    env:
+      POST_TEXT: "${RUN} confession post"
+- assertVisible:
+    text: "Anonymous"
+    above: ".*${RUN} confession post.*"

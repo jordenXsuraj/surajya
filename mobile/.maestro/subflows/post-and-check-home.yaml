@@ -1,0 +1,17 @@
+# Publishes the open compose form and checks the new post (${POST_TEXT}) is on top of Home.
+# The "✅ Posted!" toast is checked by the runner from screen frames: it is on screen for 2.6 s,
+# shorter than one of Maestro's screen reads on the emulator.
+appId: com.themeetnet.app.dev
+---
+- runFlow: dismiss-keyboard.yaml
+# "[watch]": the runner samples the screen from this command on
+- tapOn:
+    text: "Post as .*"
+    waitToSettleTimeoutMs: 200
+    label: "Publish [watch]"
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: ".*${POST_TEXT}.*"
+    timeout: 15000

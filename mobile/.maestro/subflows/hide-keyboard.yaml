@@ -1,0 +1,12 @@
+# Closes the on-screen keyboard if it is open: taps the keyboard's own Back button in the system
+# navigation bar, which only exists while the keyboard is shown. Never presses Back otherwise
+# (Maestro's hideKeyboard does, and that closes the screen).
+appId: com.themeetnet.app.dev
+---
+- runFlow:
+    when:
+      visible:
+        id: "android:id/input_method_nav_back"
+    commands:
+      - tapOn:
+          id: "android:id/input_method_nav_back"

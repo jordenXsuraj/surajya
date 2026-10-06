@@ -1,0 +1,13 @@
+# Prompt 3 · Like a post (opened by link).
+appId: com.themeetnet.app.dev
+name: Like
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://post/${POST_ID}
+- extendedWaitUntil:
+    visible: ".*${RUN} fixture post.*"
+    timeout: 20000
+- tapOn: "Like, 0 likes"
+- extendedWaitUntil:
+    visible: "Unlike, 1 like"
+    timeout: 10000

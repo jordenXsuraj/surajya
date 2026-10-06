@@ -1,0 +1,12 @@
+# Prompt 4 · Text rules, part 2: after 1100 characters were typed (runner, adb) the text stops at
+# 1000. Then the form is discarded.
+appId: com.themeetnet.app.dev
+name: Text limits (maximum)
+---
+- runFlow: ../subflows/hide-keyboard.yaml
+- assertVisible: "1000/1000"
+- tapOn: "Close"
+- tapOn: "(?i)discard"
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 10000

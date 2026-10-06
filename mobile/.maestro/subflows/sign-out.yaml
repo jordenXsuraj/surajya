@@ -1,0 +1,17 @@
+# Signs out from the Me tab if the app is signed in.
+appId: com.themeetnet.app.dev
+---
+- runFlow:
+    when:
+      visible: "Create a post"
+    commands:
+      - tapOn: "Me"
+      - scrollUntilVisible:
+          element: "Log out"
+      - tapOn: "Log out"
+      # the dialog's confirm button (Android positive button)
+      - tapOn:
+          id: "android:id/button1"
+- extendedWaitUntil:
+    visible: "Create account"
+    timeout: 20000

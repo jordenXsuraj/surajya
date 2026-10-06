@@ -1,0 +1,24 @@
+# Prompt 4 · Publishing without network fails clearly and keeps everything typed.
+# The runner turns the network off before this flow, and checks the "❌ …" error toast from screen
+# frames (on screen for 2.6 s only).
+appId: com.themeetnet.app.dev
+name: Post without network
+---
+- runFlow: ../subflows/open-compose.yaml
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} offline post"
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- tapOn:
+    text: "Post as You.*"
+    waitToSettleTimeoutMs: 200
+    label: "Publish offline [watch]"
+# the button is back (not "Posting…") once the request has failed
+- extendedWaitUntil:
+    visible:
+      text: "Post as You.*"
+      enabled: true
+    timeout: 30000
+- assertVisible:
+    id: "compose-text"
+- assertVisible: ".*${RUN} offline post"

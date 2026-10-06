@@ -18,6 +18,8 @@
 .vscode/
 .idea/
 .claude/
+# Maestro phone checks run from the developer's machine (reports can hold screenshots)
+/mobile/.maestro/
 
 # --- Root .gitignore --------------------------------------------------------------------
 .env

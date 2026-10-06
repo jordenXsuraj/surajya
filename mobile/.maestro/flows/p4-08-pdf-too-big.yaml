@@ -1,0 +1,22 @@
+# Prompt 4 · An 11.5 MB PDF is refused before upload. The "⚠️ PDF must be under 10 MB" toast is
+# checked by the runner (on screen for 2.6 s only), from the "[watch]" command on.
+appId: com.themeetnet.app.dev
+name: 11 MB PDF refused
+---
+- runFlow: ../subflows/open-compose.yaml
+- runFlow: ../subflows/form-bottom.yaml
+- tapOn: ".*PDF"
+- extendedWaitUntil:
+    visible: "meetnet-test-11mb.pdf"
+    timeout: 15000
+- tapOn:
+    text: "meetnet-test-11mb.pdf"
+    label: "Pick the 11 MB PDF [watch]"
+- extendedWaitUntil:
+    visible:
+      id: "compose-text"
+    timeout: 15000
+- runFlow: ../subflows/form-bottom.yaml
+- assertNotVisible: ".*Ready to post"
+- assertNotVisible: "Uploading PDF.*"
+- tapOn: "Close"
