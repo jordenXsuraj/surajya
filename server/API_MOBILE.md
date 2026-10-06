@@ -117,7 +117,7 @@ Push types: `connection_request`, `connection_accepted`, `post_replied`, `post_l
 |---|---|---|---|---|---|
 | GET | `/posts` | ✓ | `?type=&page=1&limit=20` (college feed), `&global=true`, `&connections=true` (following; never includes anonymous posts) | 200 `Post[]` (college/global feed: last 5 replies each) | 401 |
 | GET | `/posts/:id` | optional | – | 200 `Post` (with a token: block-filtered, `likedByMe`) | 400 `Invalid ID format`; 404 missing, expired or hidden |
-| POST | `/posts` | ✓ | `{ type, text (5–1000), tags?[≤5], link?, imageUrl?, youtubeUrl?, pdfUrl?, pdfName?, pdfSize?, isAnonymous?, todayOnly? }` | 201 `Post` | 400; **403 `EMAIL_NOT_VERIFIED`** |
+| POST | `/posts` | ✓ | `{ type, text (5–1000), tags?[≤5], link?, imageUrl?, youtubeUrl?, pdfUrl?, pdfName?, pdfSize?, isAnonymous?, todayOnly? }`. `type: 'confession'` is always saved anonymous, whatever `isAnonymous` says; anonymous posts never notify followers | 201 `Post` | 400; **403 `EMAIL_NOT_VERIFIED`** |
 | POST | `/posts/upload-image` | ✓ | multipart `image` | 200 `{ url }` | 400 no file, `INVALID_FILE_TYPE`, `FILE_TOO_LARGE` (> 5 MB); 500 Cloudinary down |
 | POST | `/posts/upload-pdf` | ✓ | multipart `pdf` | 200 `{ url, name, size }` | 400 no file, `INVALID_FILE_TYPE` (not a PDF), `FILE_TOO_LARGE` (> 10 MB); 500 Cloudinary down |
 | PUT | `/posts/:id/like` | ✓ | – | 200 `{ liked, count, likeCount, likes }` (toggle) | 404 |
