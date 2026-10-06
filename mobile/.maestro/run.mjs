@@ -537,6 +537,9 @@ const STEPS = [
     before: () => network(false), after: () => network(true), verify: noPost('offline post') },
   { id: 'p4-17', title: 'Post again when network is back', flow: 'p4-17-post-retry.yaml', toasts: POSTED, needs: 'p4-16',
     verify: async () => { await expectPost('offline post', { type: 'social' }); return 'post saved'; } },
+  { id: 'p4-18', title: 'Attachment chips all on screen; Link and Tags tappable (360 dp)', flow: 'p4-18-attachments-visible.yaml',
+    before: () => { ctx.count = testerPostCount(); },
+    verify: () => { expect(testerPostCount() === ctx.count, 'a post was created'); return 'Tags and Link fields opened; nothing posted'; } },
 ];
 
 // ── setup ─────────────────────────────────────────────────────────────────────────────────────

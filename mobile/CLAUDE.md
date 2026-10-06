@@ -24,6 +24,12 @@ always check the versioned Expo docs, never trust remembered APIs).
 Install packages with `npx expo install <pkg>` (dev tools: `npx expo install <pkg> -- --save-dev`, then
 check they landed in `devDependencies`).
 
+One exception: `react-native-screens` is pinned to exactly 4.28.0 and listed in `expo.install.exclude`
+(package.json, reason in its `"//"` entry): Expo SDK 57 expects ~4.26, whose cold-start race crashes
+the app now and then in its first render (SIGSEGV in `MountingCoordinator::pullTransaction`, fixed in
+4.28.0). Drop the pin and the exclude once `npx expo install --check` expects >= 4.28. Changing it
+needs a new development build.
+
 ## Layout
 
 ```

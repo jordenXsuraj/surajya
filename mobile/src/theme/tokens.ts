@@ -69,6 +69,8 @@ export const radius = {
 export const touch = {
   min: 44,
   hitSlop: { top: 8, bottom: 8, left: 8, right: 8 },
+  // Longest gap between the two taps of a double-tap: Android's own double-tap timeout
+  doubleTapMs: 300,
 } as const;
 
 export const layout = {

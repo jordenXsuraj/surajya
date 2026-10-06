@@ -2,7 +2,7 @@
 # "[watch]" command on and checks the heart's red pixels appear (the heart is hidden from
 # accessibility). The taps do not wait for the screen to settle: Maestro reading the screen then
 # slows the runner's own captures down.
-# The image takes a double-tap only within 260 ms (PostMedia maxDelay); on a busy emulator
+# The image takes a double-tap only within 300 ms (touch.doubleTapMs); on a busy emulator
 # Maestro's two taps can arrive further apart and count as a tap, which opens the image viewer:
 # then it is closed and the double-tap tried again.
 appId: com.themeetnet.app.dev

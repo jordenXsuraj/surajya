@@ -2,6 +2,12 @@
   "name": "meetnet",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "//": [
+    "react-native-screens is pinned to 4.28.0, newer than Expo SDK 57 expects (~4.26), and excluded from",
+    "`expo install` so it is not moved back: 4.28.0 fixes a cold-start crash (SIGSEGV in",
+    "MountingCoordinator::pullTransaction, react-native-screens PR #4413). Remove the exclude once the",
+    "Expo SDK expects >= 4.28 (`npx expo install --check`)."
+  ],
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
     "@expo-google-fonts/outfit": "^0.4.3",
@@ -44,7 +50,7 @@
     "react-native-nitro-modules": "^0.37.1",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.0",
+    "react-native-screens": "4.28.0",
     "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
     "react-native-webview": "13.16.1",
@@ -91,5 +97,12 @@
       "/node_modules/",
       "/.expo/"
     ]
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "react-native-screens"
+      ]
+    }
   }
 }
