@@ -1,37 +1,80 @@
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { TabPlaceholder } from '@/components/TabPlaceholder';
-import { Badge, Text } from '@/components/ui';
+import { queryKeys, type FeedType } from '@/api/queryKeys';
+import { ActiveFilters } from '@/components/feed/ActiveFilters';
+import { CategoryBar, type HomeScope } from '@/components/feed/CategoryBar';
+import { FeedHeader } from '@/components/feed/FeedHeader';
+import { FeedList } from '@/components/feed/FeedList';
+import { OfflineBanner } from '@/components/feed/OfflineBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { VerifyEmailBanner } from '@/components/VerifyEmailBanner';
-import { useMe } from '@/hooks/useMe';
-import { POST_TYPES } from '@/lib/postTypes';
+import { useFeed } from '@/hooks/useFeed';
+import { matchesSearch } from '@/lib/postView';
+import { colors } from '@/theme/tokens';
 
-// Home — the feed arrives in Prompt 3. The type tags below are the ones the feed cards will use.
+const DEFAULT_SCOPE: HomeScope = 'global'; // web Home.jsx: useState('global')
+
+// Port of nexusnetwork/src/pages/Home.jsx.
 export default function HomeScreen() {
-  const me = useMe();
+  const insets = useSafeAreaInsets();
+  const [scope, setScope] = useState<HomeScope>(DEFAULT_SCOPE);
+  const [category, setCategory] = useState<FeedType>('all');
+  const [search, setSearch] = useState('');
+  const query = useFeed(scope, category);
+  const posts = useMemo(
+    () => (query.data ?? []).filter((p) => matchesSearch(p, search)),
+    [query.data, search],
+  );
+
+  const empty = search.trim() ? (
+    <EmptyState
+      emoji="🔍"
+      title={`No results for "${search.trim()}"`}
+      message="Try a different name, tag, or keyword"
+      actionTitle="Clear search"
+      onAction={() => setSearch('')}
+    />
+  ) : (
+    <EmptyState
+      emoji="📭"
+      title="Nothing here yet"
+      message={scope === 'global' ? 'No posts from other colleges yet' : 'Be the first to post!'}
+      actionTitle={category !== 'all' || scope === 'global' ? 'Show all posts' : undefined}
+      onAction={() => {
+        // web: back to every type, my college
+        setCategory('all');
+        setScope('college');
+      }}
+    />
+  );
 
   return (
-    <TabPlaceholder
-      emoji="🏠"
-      heading="Your campus feed"
-      message="Posts from your college show up here in the next update."
-      banner={<VerifyEmailBanner />}
-      refreshing={me.isRefetching}
-      onRefresh={() => void me.refetch()}
-    >
-      <Text variant="label" style={styles.label}>
-        Post types
-      </Text>
-      <View style={styles.tags}>
-        {POST_TYPES.map((t) => (
-          <Badge key={t.id} label={t.tag} color={t.color} tint={t.tint} />
-        ))}
-      </View>
-    </TabPlaceholder>
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <FeedHeader search={search} onSearch={setSearch} />
+      <CategoryBar scope={scope} onScope={setScope} category={category} onCategory={setCategory} />
+      <ActiveFilters
+        scope={scope}
+        category={category}
+        defaultScope={DEFAULT_SCOPE}
+        onClear={() => {
+          setCategory('all');
+          setScope(DEFAULT_SCOPE);
+        }}
+      />
+      <OfflineBanner />
+      <VerifyEmailBanner />
+      <FeedList
+        query={query}
+        posts={posts}
+        queryKey={queryKeys.feed(scope, category)}
+        empty={empty}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { marginBottom: 10 },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  root: { flex: 1, backgroundColor: colors.bg },
 });

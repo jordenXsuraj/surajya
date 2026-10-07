@@ -25,6 +25,8 @@ export type Reply = {
   postedBy: PostAuthor | null;
   isAuthor?: true;
   isMine?: true;
+  /** Client-only: optimistic reply not confirmed by the server yet. */
+  pending?: boolean;
 };
 
 export type Post = {
@@ -47,7 +49,8 @@ export type Post = {
   likes: ObjectId[];
   likeCount: number;
   likedByMe?: boolean;
-  replyCount: number;
+  /** Incremented by the server on every reply but never decreased on delete (see replyCountOf). */
+  replyCount?: number;
   replies: Reply[];
   __v?: number;
 };

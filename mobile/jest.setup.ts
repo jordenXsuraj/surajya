@@ -31,3 +31,14 @@ jest.mock('expo-crypto', () => ({
     (count: number) => new Uint8Array(jest.requireActual('crypto').randomBytes(count)),
   ),
 }));
+
+// Native modules added for the feeds
+jest.mock('@react-native-community/netinfo', () =>
+  jest.requireActual('@react-native-community/netinfo/jest/netinfo-mock.js'),
+);
+require('react-native-gesture-handler/jestSetup');
+jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
+jest.mock('react-native-reanimated', () => ({
+  ...jest.requireActual('react-native-reanimated/mock'),
+  useReducedMotion: () => false,
+}));

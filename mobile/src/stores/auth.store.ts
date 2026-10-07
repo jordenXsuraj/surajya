@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 import { persister, queryClient } from '@/lib/queryClient';
 import { clearCache, getStorage, readJson, writeJson } from '@/lib/storage';
+import { usePostUi } from '@/stores/postUi.store';
 import { useSignupDraft } from '@/stores/signupDraft.store';
 import { useUiStore } from '@/stores/ui.store';
 import type { SessionUser } from '@/types/user';
@@ -89,6 +90,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     void persister.removeClient();
     clearCache(); // wipes MMKV data; the encryption key in SecureStore stays
     useUiStore.getState().reset();
+    usePostUi.getState().reset();
     useSignupDraft.getState().clear();
     set({
       status: 'signedOut',

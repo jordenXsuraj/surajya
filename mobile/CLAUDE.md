@@ -77,6 +77,22 @@ src/test/           test helpers (mockApi, fixtures)
 - Verification codes are strings (leading zeros). Resend waits 60 s after **every** successful send
   (`markCodeSent()`); a too-early resend answers `429 { code: 'RESEND_COOLDOWN', retryAfterSeconds }`.
 
+## Feeds and posts
+
+- Feeds are `useInfiniteQuery` (`src/hooks/useFeed.ts`, keys `['feed', scope, type]`); the single post is
+  `['post', id]`. Change posts only through `src/api/postCache.ts` (`updatePost`, `removePosts`,
+  snapshots) so every cached copy (all feeds + the post) stays in sync; mutations live in
+  `src/hooks/usePostMutations.ts` and are optimistic with rollback.
+- `PUT /posts/:id/like` is a **toggle**: likes for one post are sent one at a time (queue in
+  `useLike`); never fire them in parallel.
+- Home ranking (`src/lib/ranking.ts`) sorts each page as it arrives; never re-sort loaded pages
+  (posts would jump). Following stays newest-first.
+- FlashList v2 recycles item components: per-item state must use `useRecyclingState(initial, [post._id])`.
+- Post overlays (replies sheet, ⋯ menu, report sheet, image viewer, YouTube player) are mounted once
+  in `src/app/_layout.tsx` and opened through `usePostUi`; cards only receive the stable
+  `PostActions` object from `usePostActions()`.
+- Images: always through `cloudinaryUrl(url, { width })` (`src/lib/cloudinary.ts`).
+
 ## App identities (APP_VARIANT)
 
 | | development | preview / production |

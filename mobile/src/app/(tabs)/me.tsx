@@ -1,6 +1,6 @@
 import { router, useScrollToTop } from 'expo-router';
 import { useRef } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Badge, Button, Card, Text } from '@/components/ui';
@@ -9,8 +9,7 @@ import { useTabReselect } from '@/hooks/useTabReselect';
 import { needsEmailAttention } from '@/lib/sessionUser';
 import { decodeEntities } from '@/lib/text';
 import { useAuthStore } from '@/stores/auth.store';
-import { useUiStore } from '@/stores/ui.store';
-import { colors, fonts, layout, touch } from '@/theme/tokens';
+import { colors, fonts, layout } from '@/theme/tokens';
 
 // Me — the full profile arrives in a later prompt. For now: who is signed in, email status, log out.
 export default function MeScreen() {
@@ -97,36 +96,6 @@ export default function MeScreen() {
         )}
       </Card>
 
-      {__DEV__ && (
-        <Card>
-          <Text variant="label" style={styles.cardTitle}>
-            DEVELOPER
-          </Text>
-          <Pressable
-            onPress={() =>
-              useUiStore
-                .getState()
-                .showVerifySheet(
-                  'Please verify your email address first. We sent a 6-digit code to your inbox.',
-                )
-            }
-            style={styles.devRow}
-            accessibilityRole="button"
-          >
-            <Text style={styles.devText}>Test verify sheet</Text>
-            <Text variant="caption">›</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => useUiStore.getState().showToast('Toast test — tap to dismiss')}
-            style={styles.devRow}
-            accessibilityRole="button"
-          >
-            <Text style={styles.devText}>Test toast</Text>
-            <Text variant="caption">›</Text>
-          </Pressable>
-        </Card>
-      )}
-
       <Button title="Log out" variant="secondary" onPress={confirmLogout} />
     </ScrollView>
   );
@@ -142,13 +111,4 @@ const styles = StyleSheet.create({
   email: { fontFamily: fonts.medium, fontSize: 14, color: colors.text, marginBottom: 10 },
   badgeRow: { flexDirection: 'row' },
   cardButton: { marginTop: 14 },
-  devRow: {
-    minHeight: touch.min,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: colors.br,
-  },
-  devText: { fontFamily: fonts.regular, fontSize: 14, color: colors.text },
 });
