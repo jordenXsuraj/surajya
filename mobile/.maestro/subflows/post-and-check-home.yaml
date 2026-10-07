@@ -15,3 +15,9 @@ appId: com.themeetnet.app.dev
 - extendedWaitUntil:
     visible: ".*${POST_TEXT}.*"
     timeout: 15000
+# Re-tapping Home refetches the feed (ranked: people you follow first); the post just created
+# must still be on top
+- tapOn: "Home"
+- extendedWaitUntil:
+    visible: ".*${POST_TEXT}.*"
+    timeout: 15000

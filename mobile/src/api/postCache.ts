@@ -9,6 +9,40 @@ import type { Post } from '@/types/post';
 export type FeedData = InfiniteData<Post[], number>;
 export type CacheSnapshot = [QueryKey, unknown][];
 
+// Posts this user created in this app session stay at the top of Home's first page for a while,
+// also after a refetch: the server ranks posts from people you follow above your own new post, so
+// it would otherwise jump down a moment after "✅ Posted!". Ids only, kept in memory; this also
+// covers anonymous posts, whose author the feed never shows.
+export const PIN_OWN_POSTS_MS = 10 * 60_000;
+let recentOwnPosts: { id: string; userId: string; at: number }[] = [];
+
+export function rememberOwnPost(postId: string, userId: string, now: number = Date.now()): void {
+  recentOwnPosts = [
+    { id: postId, userId, at: now },
+    ...recentOwnPosts.filter((r) => r.id !== postId && now - r.at < PIN_OWN_POSTS_MS),
+  ];
+}
+
+/** The user's posts from the last 10 minutes of this session first (newest first), then the rest. */
+export function pinRecentOwnPosts(
+  posts: Post[],
+  userId: string | undefined,
+  now: number = Date.now(),
+): Post[] {
+  if (!userId) return posts;
+  const ids = recentOwnPosts
+    .filter((r) => r.userId === userId && now - r.at < PIN_OWN_POSTS_MS)
+    .map((r) => r.id);
+  const pinned = ids.flatMap((id) => posts.filter((p) => p._id === id));
+  if (pinned.length === 0) return posts;
+  return [...pinned, ...posts.filter((p) => !ids.includes(p._id))];
+}
+
+/** Tests only. */
+export function forgetOwnPosts(): void {
+  recentOwnPosts = [];
+}
+
 const mapFeed = (
   data: FeedData | undefined,
   fn: (page: Post[]) => Post[],

@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { getFeed, PAGE_SIZE } from '@/api/endpoints/posts';
-import type { FeedData } from '@/api/postCache';
+import { pinRecentOwnPosts, type FeedData } from '@/api/postCache';
 import { queryKeys, type FeedScope, type FeedType } from '@/api/queryKeys';
 import { smartSort } from '@/lib/ranking';
 import { useAuthStore } from '@/stores/auth.store';
@@ -25,7 +25,7 @@ export function flattenFeed(data: FeedData): Post[] {
 /**
  * Home (college / all colleges) and Following feeds. Pages of 20; a shorter page is the last one.
  * Home pages are ranked with the web's client-side scoring as they arrive (Following stays
- * newest-first, like the web).
+ * newest-first, like the web); a post the user just created stays first on page 1 for a while.
  */
 export function useFeed(scope: FeedScope, type: FeedType = 'all') {
   return useInfiniteQuery({
@@ -40,7 +40,11 @@ export function useFeed(scope: FeedScope, type: FeedType = 'all') {
         limit: PAGE_SIZE,
       });
       if (scope === 'following') return posts;
-      return smartSort(posts, useAuthStore.getState().user?.followingIds ?? []);
+      const { user } = useAuthStore.getState();
+      const ranked = smartSort(posts, user?.followingIds ?? []);
+      return pageParam === 1
+        ? pinRecentOwnPosts(ranked, user?._id ? String(user._id) : undefined)
+        : ranked;
     },
     getNextPageParam: (lastPage, _all, lastPageParam) =>
       lastPage.length < PAGE_SIZE ? undefined : lastPageParam + 1,
