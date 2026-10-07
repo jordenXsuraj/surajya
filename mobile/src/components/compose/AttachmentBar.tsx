@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui/Text';
 import { colors, fonts, touch } from '@/theme/tokens';
@@ -12,16 +12,12 @@ type AttachmentBarProps = {
   onPress: (kind: AttachmentKind) => void;
 };
 
-// The web's "+" menu as a row of chips (Photo, YouTube, PDF, Link, Tags).
+// The web's "+" menu as chips (Photo, YouTube, PDF, Link, Tags) that wrap onto a second line, so
+// every chip is on screen at 360 dp (a sideways-scrolling row hid Tags completely).
 // A chip is highlighted while that attachment has something in it.
 export function AttachmentBar({ items, onPress }: AttachmentBarProps) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View style={styles.row}>
       {items.map((item) => (
         <Pressable
           key={item.kind}
@@ -39,12 +35,12 @@ export function AttachmentBar({ items, onPress }: AttachmentBarProps) {
           <Text style={[styles.text, item.active && styles.activeText]}>{item.label}</Text>
         </Pressable>
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { gap: 8, paddingVertical: 4 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 4 },
   chip: {
     minHeight: touch.min - 6,
     justifyContent: 'center',

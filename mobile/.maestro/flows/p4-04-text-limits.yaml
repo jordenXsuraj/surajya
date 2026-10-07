@@ -1,0 +1,26 @@
+# Prompt 4 · Text rules, part 1: under 5 characters disabled with a hint, 5 enabled. Ends with the
+# text box empty and focused: the runner then types 1100 characters into it with adb (Maestro's
+# inputText types one key at a time and times out on that) before p4-04-text-max.yaml checks.
+appId: com.themeetnet.app.dev
+name: Text limits (minimum)
+---
+- runFlow: ../subflows/open-compose.yaml
+- tapOn:
+    id: "compose-text"
+- inputText: "abcd"
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: "At least 5 characters"
+- assertVisible:
+    text: "Post as You.*"
+    enabled: false
+- tapOn:
+    id: "compose-text"
+- inputText: "e"
+- runFlow: ../subflows/form-bottom.yaml
+- assertNotVisible: "At least 5 characters"
+- assertVisible:
+    text: "Post as You.*"
+    enabled: true
+- tapOn:
+    id: "compose-text"
+- eraseText: 10

@@ -1,2 +1,4 @@
 .env
 node_modules/
+# Local-disk uploads (development without Cloudinary, see server/config/uploadMode.js)
+server/uploads/

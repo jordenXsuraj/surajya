@@ -1,0 +1,16 @@
+# Prompt 3 · Reply to the post.
+appId: com.themeetnet.app.dev
+name: Reply
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://post/${POST_ID}
+- extendedWaitUntil:
+    visible: ".*${RUN} fixture post.*"
+    timeout: 20000
+- tapOn: "Write a reply"
+- inputText: "Maestro ${RUN} reply"
+- tapOn: "Send reply"
+- extendedWaitUntil:
+    visible: "0/350"
+    timeout: 15000
+- assertVisible: ".*${RUN} reply"

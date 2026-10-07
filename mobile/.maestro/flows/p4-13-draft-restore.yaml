@@ -1,0 +1,31 @@
+# Prompt 4 · A draft survives the app being killed: text and type come back.
+appId: com.themeetnet.app.dev
+name: Draft restore
+---
+- runFlow: ../subflows/open-compose.yaml
+# the type grid scrolls off screen while the keyboard is open
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- tapOn: "Q&A. .*"
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} draft text"
+- waitForAnimationToEnd:
+    timeout: 2000
+- stopApp
+- runFlow: ../subflows/open-app.yaml
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 30000
+# the "📝 Draft restored" toast is checked by the runner from screen frames (2.6 s only)
+- tapOn:
+    text: "Create a post"
+    label: "Open compose again [watch]"
+- extendedWaitUntil:
+    visible: ".*${RUN} draft text"
+    timeout: 15000
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- assertVisible:
+    text: "Q&A. .*"
+    checked: true
+- tapOn: "Close"
+- tapOn: "(?i)discard"

@@ -34,23 +34,6 @@ const TYPE_TAG = {
 
 
 
-function getYouTubeId(url) {
-  if (!url) return null
-
-  const patterns = [
-    /youtube\.com\/watch\?v=([^&\s]+)/,
-    /youtu\.be\/([^?\s]+)/,
-    /youtube\.com\/embed\/([^?\s]+)/,
-    /youtube\.com\/shorts\/([^?\s]+)/
-  ]
-
-  for (const p of patterns) {
-    const m = url.match(p)
-    if (m?.[1]) return m[1]
-  }
-
-  return null
-}
 
 function timeAgo(d) {
   const h = Math.floor((Date.now() - new Date(d)) / 3600000)

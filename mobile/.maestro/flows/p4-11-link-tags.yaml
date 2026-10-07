@@ -1,0 +1,31 @@
+# Prompt 4 · Link gets https://, tags are cleaned (no #, no duplicates, max 5).
+appId: com.themeetnet.app.dev
+name: Link and tags
+---
+- runFlow: ../subflows/open-compose.yaml
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} link tags post"
+- runFlow: ../subflows/form-bottom.yaml
+- tapOn: ".*Link"
+- runFlow: ../subflows/form-bottom.yaml
+- tapOn: "GitHub, Drive, LinkedIn, Notion..."
+- inputText: "github.com/test"
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: "Opens https://github.com/test"
+- tapOn: ".*Tags"
+- runFlow: ../subflows/form-bottom.yaml
+- tapOn: "DSA, placement, TCS"
+- inputText: "#DSA, placement, TCS, DSA, a, b, c"
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: "#DSA"
+- assertVisible: "#placement"
+- assertVisible: "#TCS"
+- assertVisible: "#a"
+- assertVisible: "#b"
+- assertNotVisible: "#c"
+- assertVisible: ".*5 Tags"
+- runFlow:
+    file: ../subflows/post-and-check-home.yaml
+    env:
+      POST_TEXT: "${RUN} link tags post"

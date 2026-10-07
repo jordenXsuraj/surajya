@@ -1,0 +1,19 @@
+# Prompt 4 · 12 MB photo (6000x4500): shrunk to 1200 px on the phone, uploaded, posted.
+appId: com.themeetnet.app.dev
+name: 12 MB photo
+---
+- runFlow: ../subflows/open-compose.yaml
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} 12mb photo post"
+- runFlow:
+    file: ../subflows/pick-photo.yaml
+    env:
+      PHOTO_DATE: "(Jan 1,|1 Jan) 2031"
+- extendedWaitUntil:
+    visible: ".*Uploaded"
+    timeout: 120000
+- runFlow:
+    file: ../subflows/post-and-check-home.yaml
+    env:
+      POST_TEXT: "${RUN} 12mb photo post"

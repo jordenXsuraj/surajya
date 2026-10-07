@@ -1,0 +1,13 @@
+# Picks the test photo dated ${PHOTO_DATE} (a regex: "Jan 1," on US-English devices, "1 Jan"
+# elsewhere) in the system photo picker. The test photos have dates no real photo has, so a
+# personal photo can never be selected. Ends at the bottom of the form, where the preview is.
+appId: com.themeetnet.app.dev
+---
+- runFlow: form-bottom.yaml
+- tapOn: ".*Photo"
+- tapOn: "(?i)choose from library"
+- extendedWaitUntil:
+    visible: "Photo taken on ${PHOTO_DATE}.*"
+    timeout: 20000
+- tapOn: "Photo taken on ${PHOTO_DATE}.*"
+- runFlow: form-bottom.yaml

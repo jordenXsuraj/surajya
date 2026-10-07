@@ -1,0 +1,32 @@
+# Prompt 4 · Image and YouTube exclude each other, both ways.
+appId: com.themeetnet.app.dev
+name: Image XOR YouTube
+---
+- runFlow: ../subflows/open-compose.yaml
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} xor check"
+- runFlow:
+    file: ../subflows/pick-photo.yaml
+    env:
+      PHOTO_DATE: "(Jan 3,|3 Jan) 2031"
+- extendedWaitUntil:
+    visible: ".*Uploaded"
+    timeout: 120000
+# both "Remove … first" toasts are checked by the runner from the "[watch]" command on
+- tapOn:
+    text: ".*YouTube"
+    label: "YouTube with a photo attached [watch]"
+- tapOn: "Remove photo"
+- runFlow: ../subflows/form-bottom.yaml
+- tapOn: ".*YouTube"
+- runFlow: ../subflows/form-bottom.yaml
+- tapOn: "Paste YouTube link"
+- inputText: "https://youtu.be/dQw4w9WgXcQ"
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: ".*YouTube Video Attached"
+- tapOn: ".*Photo"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn: "Close"
+- tapOn: "(?i)discard"

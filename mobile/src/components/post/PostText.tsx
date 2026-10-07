@@ -42,7 +42,7 @@ export const PostText = memo(function PostText({
     // Act only on taps that completed (onEnd also reports gestures that were cancelled)
     const double = Gesture.Tap()
       .numberOfTaps(2)
-      .maxDelay(260)
+      .maxDelay(touch.doubleTapMs)
       .runOnJS(true)
       .onEnd((_e, success) => success && onDoubleTap());
     if (!onPress) return double;

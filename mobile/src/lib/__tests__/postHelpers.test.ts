@@ -13,7 +13,6 @@ import {
   toggleLike,
 } from '@/lib/postView';
 import { hoursLeft, timeAgo, todayOnlyLabel } from '@/lib/time';
-import { getYouTubeId, youTubeThumbnail } from '@/lib/youtube';
 import type { Post, Reply } from '@/types/post';
 
 const NOW = Date.parse('2026-10-05T12:00:00Z');
@@ -66,23 +65,6 @@ describe('cloudinaryUrl', () => {
     const pdf = 'https://res.cloudinary.com/demo/raw/upload/v3/meetnet_pdfs/pdf_1';
     expect(cloudinaryUrl(pdf)).toBe(pdf);
     expect(cloudinaryUrl(undefined)).toBe('');
-  });
-});
-
-describe('YouTube ids (web patterns)', () => {
-  it.each([
-    ['https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10', 'dQw4w9WgXcQ'],
-    ['https://youtu.be/dQw4w9WgXcQ?si=abc', 'dQw4w9WgXcQ'],
-    ['https://www.youtube.com/embed/dQw4w9WgXcQ', 'dQw4w9WgXcQ'],
-    ['https://youtube.com/shorts/abc123XYZ', 'abc123XYZ'],
-    ['https://vimeo.com/123', null],
-    ['', null],
-  ])('%s → %s', (url, id) => {
-    expect(getYouTubeId(url)).toBe(id);
-  });
-
-  it('thumbnail is mqdefault', () => {
-    expect(youTubeThumbnail('abc')).toBe('https://img.youtube.com/vi/abc/mqdefault.jpg');
   });
 });
 

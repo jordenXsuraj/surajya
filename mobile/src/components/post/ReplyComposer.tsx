@@ -67,6 +67,7 @@ export function ReplyComposer({
           disabled={!trimmed || isPending}
           hitSlop={touch.hitSlop}
           accessibilityRole="button"
+          accessibilityLabel={isQa ? 'Send answer' : 'Send reply'}
           accessibilityState={{ disabled: !trimmed || isPending }}
           style={[styles.send, (!trimmed || isPending) && styles.sendDisabled]}
         >

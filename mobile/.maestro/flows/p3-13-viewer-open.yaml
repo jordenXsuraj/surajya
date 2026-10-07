@@ -1,0 +1,15 @@
+# Prompt 3 · Open the image fixture full screen (React Native Modal).
+appId: com.themeetnet.app.dev
+name: Image viewer — open
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://post/${IMAGE_POST_ID}
+- extendedWaitUntil:
+    visible: ".*${RUN} image fixture.*"
+    timeout: 20000
+- tapOn: "Post image.*"
+- extendedWaitUntil:
+    visible: "Post image, full screen.*"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 3000

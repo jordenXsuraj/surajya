@@ -1,0 +1,21 @@
+# Prompt 4 · Compose one post type: type selected, its placeholder, publish, post on top of Home.
+# Env: TYPE_RE (radio label), PLACEHOLDER_RE, TYPE_WORD
+appId: com.themeetnet.app.dev
+name: Compose ${TYPE_WORD}
+---
+- runFlow: ../subflows/open-compose.yaml
+# the type grid scrolls off screen while the keyboard is open
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- tapOn: "${TYPE_RE}"
+- assertVisible:
+    text: "${TYPE_RE}"
+    checked: true
+- assertVisible: "${PLACEHOLDER_RE}"
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} ${TYPE_WORD} post"
+- assertVisible: "Post as You.*"
+- runFlow:
+    file: ../subflows/post-and-check-home.yaml
+    env:
+      POST_TEXT: "${RUN} ${TYPE_WORD} post"

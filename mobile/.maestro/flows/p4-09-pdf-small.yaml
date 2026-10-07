@@ -1,0 +1,23 @@
+# Prompt 4 · A small PDF uploads, shows name and size, and is posted.
+appId: com.themeetnet.app.dev
+name: Small PDF
+---
+- runFlow: ../subflows/open-compose.yaml
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} pdf post"
+- runFlow: ../subflows/form-bottom.yaml
+- tapOn: ".*PDF"
+- extendedWaitUntil:
+    visible: "meetnet-test-notes.pdf"
+    timeout: 15000
+- tapOn: "meetnet-test-notes.pdf"
+- runFlow: ../subflows/form-bottom.yaml
+- extendedWaitUntil:
+    visible: "38 KB . Ready to post"
+    timeout: 120000
+- assertVisible: "meetnet-test-notes.pdf"
+- runFlow:
+    file: ../subflows/post-and-check-home.yaml
+    env:
+      POST_TEXT: "${RUN} pdf post"

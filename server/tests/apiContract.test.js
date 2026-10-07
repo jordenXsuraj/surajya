@@ -5,6 +5,12 @@ process.env.JWT_SECRET = 'test_secret_that_is_definitely_longer_than_32_chars'
 process.env.VERIFICATION_REQUIRED_FROM = '2999-01-01T00:00:00Z'   // email verification is covered elsewhere
 process.env.ADMIN_EMAIL      = 'admin@college.edu'
 process.env.ADMIN_SECRET_KEY = 'test-admin-key'
+// Cloudinary mode with a stubbed uploader (local-disk uploads: localUploads.test.js)
+process.env.CLOUDINARY_CLOUD_NAME  = 'demo'
+process.env.CLOUDINARY_API_KEY     = 'test-key'
+process.env.CLOUDINARY_API_SECRET  = 'test-secret'
+// Where local-disk uploads would go if this suite ever fell back to them (it must not)
+process.env.LOCAL_UPLOAD_DIR = require('path').join(require('os').tmpdir(), `meetnet-no-uploads-${process.pid}`)
 
 const crypto   = require('crypto')
 const { Writable } = require('stream')
@@ -18,6 +24,8 @@ const User = require('../models/User')
 const Post = require('../models/Post')
 const { signToken } = require('../utils/token')
 const { cloudinary } = require('../config/cloudinary')
+const { LOCAL_UPLOAD_DIR } = require('../config/uploadMode')
+const fs = require('fs')
 
 let mongo
 
@@ -200,6 +208,15 @@ describe('upload errors are 400 with a code', () => {
     const res = await as(user, 'post', '/api/posts/upload-image').attach('image', png, { filename: 'a.png', contentType: 'image/png' })
     expect(res.status).toBe(200)
     expect(res.body.url).toMatch(/^https:\/\/res\.cloudinary\.com\//)
+  })
+
+  test('with Cloudinary configured nothing is stored on disk or served under /uploads', async () => {
+    fakeCloudinary()
+    const user = await makeUser()
+    await as(user, 'post', '/api/posts/upload-image').attach('image', png, { filename: 'a.png', contentType: 'image/png' })
+    await as(user, 'post', '/api/posts/upload-pdf').attach('pdf', Buffer.from('%PDF-1.4\n'), { filename: 'a.pdf', contentType: 'application/pdf' })
+    expect(fs.existsSync(LOCAL_UPLOAD_DIR)).toBe(false)
+    expect((await request(app).get('/uploads/images/post_1_abcdef.png')).status).toBe(404)
   })
 })
 

@@ -8,6 +8,7 @@ import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import axios from 'axios'
 import { isOwnReply, isAnonAuthorReply, replyAuthorName, likeCountOf, isLikedBy } from '../utils/postView'
+import { getYouTubeId } from '../utils/youtube'
 
 const TYPE_TAG = {
   placement:  { label:'💼 Placement',  cls:'tag-blue'   },
@@ -58,21 +59,6 @@ function ContributorBadge() {
 
 
 // ── Media helpers ─────────────────────────────────
-function getYouTubeId(url) {
-  if (!url) return null
-  const patterns = [
-    /youtube\.com\/watch\?v=([^&\s]+)/,
-    /youtu\.be\/([^?\s]+)/,
-    /youtube\.com\/embed\/([^?\s]+)/,
-    /youtube\.com\/shorts\/([^?\s]+)/,
-  ]
-  for (const p of patterns) {
-    const m = url.match(p)
-    if (m?.[1]) return m[1]
-  }
-  return null
-}
-
 
 
 function getInstagramUsername(url) {

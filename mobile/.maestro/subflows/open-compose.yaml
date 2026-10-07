@@ -1,0 +1,25 @@
+# Opens an EMPTY compose screen: a draft restored from an earlier run is discarded first. ✕ sits in
+# the fixed header, so this works however long the restored text is (swipes would only scroll it).
+appId: com.themeetnet.app.dev
+---
+- runFlow: ensure-home.yaml
+- tapOn: "Create a post"
+- extendedWaitUntil:
+    visible:
+      id: "compose-text"
+    timeout: 15000
+- runFlow: hide-keyboard.yaml
+- tapOn: "Close"
+- runFlow:
+    when:
+      visible: "Discard post."
+    commands:
+      - tapOn: "(?i)discard"
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 10000
+- tapOn: "Create a post"
+- extendedWaitUntil:
+    visible:
+      id: "compose-text"
+    timeout: 15000

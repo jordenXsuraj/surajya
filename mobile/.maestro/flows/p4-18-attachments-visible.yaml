@@ -1,0 +1,26 @@
+# Prompt 4 · Every attachment chip is on screen and tappable at 360 dp (they wrap onto a second
+# line): Link and Tags open their fields without any sideways scrolling.
+appId: com.themeetnet.app.dev
+name: Attachment chips all on screen
+---
+- runFlow: ../subflows/open-compose.yaml
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: ".*Photo"
+- assertVisible: ".*YouTube"
+- assertVisible: ".*Link"
+- assertVisible: ".*Tags"
+- tapOn: ".*Tags"
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: "DSA, placement, TCS"
+- tapOn: ".*Link"
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: "GitHub, Drive, LinkedIn, Notion..."
+- tapOn: "Close"
+- runFlow:
+    when:
+      visible: "Discard post."
+    commands:
+      - tapOn: "(?i)discard"
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 10000

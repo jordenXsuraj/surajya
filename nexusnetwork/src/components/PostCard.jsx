@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { addReply, deleteReply, sendInterest, reportEmailNotVerified } from '../services/api'
 import { isOwnReply, isAnonAuthorReply, replyAuthorName, likeCountOf, isLikedBy } from '../utils/postView'
+import { getYouTubeId } from '../utils/youtube'
 
 
 
@@ -74,23 +75,6 @@ function av(name) {
 }
 
 
-function getYouTubeId(url) {
-  if (!url) return null
-
-  const patterns = [
-    /youtube\.com\/watch\?v=([^&\s]+)/,
-    /youtu\.be\/([^?\s]+)/,
-    /youtube\.com\/embed\/([^?\s]+)/,
-    /youtube\.com\/shorts\/([^?\s]+)/
-  ]
-
-  for (const p of patterns) {
-    const m = url.match(p)
-    if (m?.[1]) return m[1]
-  }
-
-  return null
-}
 
 function ReplyBox({ postId, postType, onAdded, onClose }) {
   const [text, setText] = useState('')

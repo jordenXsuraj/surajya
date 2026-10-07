@@ -3,7 +3,9 @@
 // run can simply be retried. On a replica set (MongoDB Atlas) it all runs in
 // one transaction. Cloudinary cleanup is best effort, after the data is gone.
 
+const fs = require('fs')
 const mongoose = require('mongoose')
+const { uploadMode, localUploadFile } = require('../config/uploadMode')
 const User = require('../models/User')
 const Post = require('../models/Post')
 const Notification = require('../models/Notification')
@@ -98,6 +100,14 @@ async function deleteCloudinaryAssets(urls) {
   return { attempted: assets.length, failed: failed.length }
 }
 
+// Development without Cloudinary: the same cleanup for files in server/uploads
+async function deleteLocalUploads(urls) {
+  if (uploadMode() !== 'local') return 0
+  const files = urls.map(localUploadFile).filter(Boolean)
+  const results = await Promise.allSettled(files.map(f => fs.promises.unlink(f)))
+  return results.filter(r => r.status === 'fulfilled').length
+}
+
 async function deleteAccount(userId) {
   let data
   if (await supportsTransactions()) {
@@ -116,7 +126,8 @@ async function deleteAccount(userId) {
     console.error('account deletion: Cloudinary cleanup failed:', err.message)
     return { attempted: 0, failed: 0 }
   })
-  return { posts: data.posts.length, cloudinary: cloud }
+  const localFiles = await deleteLocalUploads(urls)
+  return { posts: data.posts.length, cloudinary: cloud, localFiles }
 }
 
 module.exports = { deleteAccount, cloudinaryAsset, supportsTransactions }

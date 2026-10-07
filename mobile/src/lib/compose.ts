@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
 import { normaliseLink } from '@/lib/postView';
+import { getYouTubeId } from '@/lib/youtube';
 import type { PostType } from '@/types/post';
 
 // Rules from nexusnetwork/src/pages/Post.jsx and server/routes/posts.js + models/Post.js.
+// YouTube links: getYouTubeId (src/lib/youtube.ts), the same rule as the server.
 
 export const MIN_POST = 5; // server: 'Post too short'
 export const MAX_POST = 1000; // Post model maxlength
@@ -43,17 +45,6 @@ export function cleanTags(input: string): string[] {
         .filter((t) => t.length > 0),
     ),
   ].slice(0, MAX_TAGS);
-}
-
-/**
- * The server's extractYoutubeId (routes/posts.js): watch?v=, youtu.be/ and embed/ links.
- * A link the server can't read would be stored without a video id, so the app refuses it.
- */
-export function extractYoutubeId(url: string): string {
-  const m = url
-    .trim()
-    .match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/i);
-  return m?.[1] ?? '';
 }
 
 export const youtubePreview = (id: string): string =>
@@ -109,7 +100,7 @@ export const composeSchema = z
     if (text.length < MIN_POST) return fail('Too short — at least 5 characters', 'text');
     if (text.length > MAX_POST) return fail('Too long — at most 1000 characters', 'text');
     const yt = v.youtubeUrl.trim();
-    if (yt && !extractYoutubeId(yt))
+    if (yt && !getYouTubeId(yt))
       return fail("That doesn't look like a YouTube video link", 'youtubeUrl');
     if (yt && v.imageUrl) return fail('Choose either image or YouTube video', 'youtubeUrl');
     if (v.link.trim() && !normaliseLink(v.link.trim())) return fail('Enter a valid link', 'link');

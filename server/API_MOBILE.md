@@ -20,7 +20,7 @@ Tests: `server/tests/` (run `npm test`).
 | Text | The API's XSS filter stores `<` as `&lt;` in user text (posts, replies, names, bios…); `>`, `&` and quotes are stored as typed. Decode entities before display; never render user text as HTML. |
 | Ids | MongoDB ObjectIds (24 hex characters). |
 | CORS | Native requests send no `Origin` and are always allowed. |
-| Uploads | `multipart/form-data`. Images: jpeg/png/webp/heic/heif, max 5 MB; HEIC/HEIF are stored as JPG. PDF: max 10 MB. Errors are 400: `{ code: 'INVALID_FILE_TYPE' }` (wrong type, or a file Cloudinary can't read), `{ code: 'FILE_TOO_LARGE' }`, or multer's `LIMIT_*` code (e.g. `LIMIT_UNEXPECTED_FILE` for a wrong field name). 500 only if Cloudinary itself fails. |
+| Uploads | `multipart/form-data`. Images: jpeg/png/webp/heic/heif, max 5 MB; HEIC/HEIF are stored as JPG. PDF: max 10 MB. Errors are 400: `{ code: 'INVALID_FILE_TYPE' }` (wrong type, or a file Cloudinary can't read), `{ code: 'FILE_TOO_LARGE' }`, or multer's `LIMIT_*` code (e.g. `LIMIT_UNEXPECTED_FILE` for a wrong field name). 500 only if Cloudinary itself fails. Local development without Cloudinary stores the same files in `server/uploads` and returns `http://<api host>/uploads/images/…` / `…/uploads/pdfs/…` URLs (HEIC kept as HEIC); same validation, limits and errors. |
 | Cold start | The API is on Render's free plan and sleeps after about 15 min idle. The first request can take up to about 60 s, so use a long timeout plus a "waking up…" state. |
 
 ### Rate limits
@@ -117,7 +117,7 @@ Push types: `connection_request`, `connection_accepted`, `post_replied`, `post_l
 |---|---|---|---|---|---|
 | GET | `/posts` | ✓ | `?type=&page=1&limit=20` (college feed), `&global=true`, `&connections=true` (following; never includes anonymous posts) | 200 `Post[]` (college/global feed: last 5 replies each) | 401 |
 | GET | `/posts/:id` | optional | – | 200 `Post` (with a token: block-filtered, `likedByMe`) | 400 `Invalid ID format`; 404 missing, expired or hidden |
-| POST | `/posts` | ✓ | `{ type, text (5–1000), tags?[≤5], link?, imageUrl?, youtubeUrl?, pdfUrl?, pdfName?, pdfSize?, isAnonymous?, todayOnly? }`. `type: 'confession'` is always saved anonymous, whatever `isAnonymous` says; anonymous posts never notify followers | 201 `Post` | 400; **403 `EMAIL_NOT_VERIFIED`** |
+| POST | `/posts` | ✓ | `{ type, text (5–1000), tags?[≤5], link?, imageUrl?, youtubeUrl?, pdfUrl?, pdfName?, pdfSize?, isAnonymous?, todayOnly? }`. `type: 'confession'` is always saved anonymous, whatever `isAnonymous` says; anonymous posts never notify followers. `youtubeUrl`: watch, youtu.be, embed, Shorts or live link on youtube.com / www. / m. / music.; its 11-character id is saved as `youtubeId` (`''` for any other link — see `server/utils/youtube.js`) | 201 `Post` | 400 (incl. `Choose either image or YouTube video`); **403 `EMAIL_NOT_VERIFIED`** |
 | POST | `/posts/upload-image` | ✓ | multipart `image` | 200 `{ url }` | 400 no file, `INVALID_FILE_TYPE`, `FILE_TOO_LARGE` (> 5 MB); 500 Cloudinary down |
 | POST | `/posts/upload-pdf` | ✓ | multipart `pdf` | 200 `{ url, name, size }` | 400 no file, `INVALID_FILE_TYPE` (not a PDF), `FILE_TOO_LARGE` (> 10 MB); 500 Cloudinary down |
 | PUT | `/posts/:id/like` | ✓ | – | 200 `{ liked, count, likeCount, likes }` (toggle) | 404 |

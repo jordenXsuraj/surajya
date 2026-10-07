@@ -1,0 +1,19 @@
+# Compose screen: closes the keyboard (if open) and scrolls back to the top of the form, where the
+# post types are. Swipes run along the form's left padding: Maestro's own scrollUntilVisible swipes
+# through the middle of the screen, and a swipe starting on a text box can focus it, reopen the
+# keyboard and keep the form from scrolling.
+appId: com.themeetnet.app.dev
+---
+- runFlow: hide-keyboard.yaml
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: "compose-heading"
+    commands:
+      - swipe:
+          start: 3%, 30%
+          end: 3%, 85%
+          duration: 300
+- assertVisible:
+    id: "compose-heading"

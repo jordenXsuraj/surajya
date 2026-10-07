@@ -5,12 +5,13 @@ import {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import { router } from 'expo-router';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FullWindowOverlay } from 'react-native-screens';
 
 import { Button, Text } from '@/components/ui';
+import { useModalSheet } from '@/hooks/useModalSheet';
 import { useUiStore } from '@/stores/ui.store';
 import { colors, layout } from '@/theme/tokens';
 
@@ -27,15 +28,10 @@ const renderBackdrop = (props: BottomSheetBackdropProps) => (
 // Opened by the API client on 403 EMAIL_NOT_VERIFIED, anywhere in the app. Unlike the web toast,
 // "Verify now →" is a real, tappable button.
 export function EmailNotVerifiedSheet() {
-  const ref = useRef<BottomSheetModal>(null);
   const { visible, message } = useUiStore((s) => s.verifySheet);
   const hide = useUiStore((s) => s.hideVerifySheet);
+  const { ref, onDismiss } = useModalSheet(visible, hide);
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    if (visible) ref.current?.present();
-    else ref.current?.dismiss();
-  }, [visible]);
 
   function verifyNow() {
     hide();
@@ -45,7 +41,7 @@ export function EmailNotVerifiedSheet() {
   return (
     <BottomSheetModal
       ref={ref}
-      onDismiss={hide}
+      onDismiss={onDismiss}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.background}
       handleIndicatorStyle={styles.handle}

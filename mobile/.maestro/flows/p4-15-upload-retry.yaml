@@ -1,0 +1,12 @@
+# Prompt 4 · Network back: Retry uploads the photo, then the post is published.
+appId: com.themeetnet.app.dev
+name: Upload retry after network is back
+---
+- tapOn: ".*Retry"
+- extendedWaitUntil:
+    visible: ".*Uploaded"
+    timeout: 120000
+- runFlow:
+    file: ../subflows/post-and-check-home.yaml
+    env:
+      POST_TEXT: "${RUN} offline upload post"

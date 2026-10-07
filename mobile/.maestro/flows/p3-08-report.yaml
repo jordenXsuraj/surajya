@@ -1,0 +1,19 @@
+# Prompt 3 · Report the post (reason: spam).
+appId: com.themeetnet.app.dev
+name: Report
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://post/${POST_ID}
+- extendedWaitUntil:
+    visible: ".*${RUN} fixture post.*"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: "More: save, share, report"
+- tapOn: ".*Report Post"
+- assertVisible: "Why are you reporting."
+- tapOn: ".*Spam"
+- tapOn: "Submit report"
+- extendedWaitUntil:
+    visible: "Report submitted. Thank you."
+    timeout: 10000

@@ -1,0 +1,11 @@
+# Prompt 3 · Following tab shows posts from people the tester follows (Riya), not pending ones (Kabir).
+appId: com.themeetnet.app.dev
+name: Following tab
+---
+- runFlow: ../subflows/ensure-home.yaml
+- tapOn: "Following"
+- extendedWaitUntil:
+    visible: "Riya Deshmukh"
+    timeout: 20000
+- assertNotVisible: "Kabir Shah"
+- tapOn: "Home"

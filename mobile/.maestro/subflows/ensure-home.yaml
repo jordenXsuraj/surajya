@@ -1,0 +1,16 @@
+# Makes sure the app is open, signed in and on the Home tab. A pushed screen (post, profile) is
+# closed with Back; anything else (app closed, signed out, a dialog) gets a cold start.
+appId: com.themeetnet.app.dev
+---
+- runFlow:
+    when:
+      notVisible: "Create a post"
+    commands:
+      - back
+- runFlow:
+    when:
+      notVisible: "Create a post"
+    commands:
+      - runFlow: open-app.yaml
+      - runFlow: sign-in.yaml
+- tapOn: "Home"

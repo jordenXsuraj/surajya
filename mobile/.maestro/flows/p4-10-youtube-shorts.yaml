@@ -1,0 +1,30 @@
+# Prompt 4 · A channel link is refused; a YouTube Shorts link is accepted and posted.
+appId: com.themeetnet.app.dev
+name: YouTube Shorts
+---
+- runFlow: ../subflows/open-compose.yaml
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} shorts post"
+- runFlow: ../subflows/form-bottom.yaml
+- tapOn: ".*YouTube"
+- runFlow: ../subflows/form-bottom.yaml
+- tapOn: "Paste YouTube link"
+- inputText: "https://www.youtube.com/@somechannel"
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: "That doesn't look like a YouTube video link"
+- assertVisible:
+    text: "Post as You.*"
+    enabled: false
+# cursor to the end of the old link (a tap in the middle would leave its end behind the erase)
+- tapOn:
+    text: "Paste YouTube link"
+    point: "97%,50%"
+- eraseText: 60
+- inputText: "https://youtube.com/shorts/dQw4w9WgXcQ?feature=share"
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: ".*YouTube Video Attached"
+- runFlow:
+    file: ../subflows/post-and-check-home.yaml
+    env:
+      POST_TEXT: "${RUN} shorts post"

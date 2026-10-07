@@ -1,0 +1,19 @@
+# Prompt 3 · Save the post from the ⋯ menu.
+appId: com.themeetnet.app.dev
+name: Save
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://post/${POST_ID}
+- extendedWaitUntil:
+    visible: ".*${RUN} fixture post.*"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: "More: save, share, report"
+# the toast is checked by the runner from the "[watch]" command on (on screen for 2.6 s only)
+- tapOn:
+    text: ".*Save Post"
+    label: "Save [watch]"
+- extendedWaitUntil:
+    visible: ".*${RUN} fixture post.*"
+    timeout: 10000

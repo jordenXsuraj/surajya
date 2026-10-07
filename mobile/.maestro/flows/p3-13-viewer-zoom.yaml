@@ -1,0 +1,8 @@
+# Prompt 3 · Double-tap inside the image viewer zooms in (Reanimated in a Modal); the runner
+# compares the screen before and after. Closes the viewer afterwards.
+appId: com.themeetnet.app.dev
+name: Image viewer — zoom
+---
+- doubleTapOn: "Post image, full screen.*"
+- waitForAnimationToEnd:
+    timeout: 2000

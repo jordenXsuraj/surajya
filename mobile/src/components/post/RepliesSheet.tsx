@@ -6,7 +6,7 @@ import {
   type BottomSheetBackdropProps,
   type BottomSheetFooterProps,
 } from '@gorhom/bottom-sheet';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,6 +14,7 @@ import { ReplyComposer } from '@/components/post/ReplyComposer';
 import { ReplyItem } from '@/components/post/ReplyItem';
 import { Text } from '@/components/ui/Text';
 import { usePostActions } from '@/hooks/usePostActions';
+import { useModalSheet } from '@/hooks/useModalSheet';
 import { useDeleteReply } from '@/hooks/usePostMutations';
 import { usePost } from '@/hooks/usePost';
 import { useAuthStore } from '@/stores/auth.store';
@@ -29,16 +30,11 @@ const renderBackdrop = (props: BottomSheetBackdropProps) => (
 
 /** Replies for one post, mounted once in the root layout; opened from any PostCard. */
 export function RepliesSheet() {
-  const ref = useRef<BottomSheetModal>(null);
   const postId = usePostUi((s) => s.repliesPostId);
   const focus = usePostUi((s) => s.repliesFocus);
   const close = usePostUi((s) => s.closeReplies);
+  const { ref, onDismiss } = useModalSheet(Boolean(postId), close);
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    if (postId) ref.current?.present();
-    else ref.current?.dismiss();
-  }, [postId]);
 
   const renderFooter = useCallback(
     (props: BottomSheetFooterProps) => (
@@ -54,7 +50,7 @@ export function RepliesSheet() {
       ref={ref}
       snapPoints={SNAP_POINTS}
       enableDynamicSizing={false}
-      onDismiss={close}
+      onDismiss={onDismiss}
       backdropComponent={renderBackdrop}
       footerComponent={renderFooter}
       keyboardBehavior="interactive"

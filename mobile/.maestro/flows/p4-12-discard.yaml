@@ -1,0 +1,30 @@
+# Prompt 4 · Leaving with text asks "Discard post?" — from ✕ and from Android back.
+appId: com.themeetnet.app.dev
+name: Discard dialog
+---
+- runFlow: ../subflows/open-compose.yaml
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} discard test"
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- tapOn: "Close"
+- assertVisible: "Discard post."
+- tapOn: "(?i)keep editing"
+- assertVisible: ".*${RUN} discard test"
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- back
+- assertVisible: "Discard post."
+- tapOn: "(?i)discard"
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 10000
+- tapOn: "Create a post"
+- extendedWaitUntil:
+    visible:
+      id: "compose-text"
+    timeout: 10000
+- assertNotVisible: ".*${RUN} discard test"
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: "0/1000"
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- tapOn: "Close"

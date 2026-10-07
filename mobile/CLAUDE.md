@@ -24,6 +24,16 @@ always check the versioned Expo docs, never trust remembered APIs).
 Install packages with `npx expo install <pkg>` (dev tools: `npx expo install <pkg> -- --save-dev`, then
 check they landed in `devDependencies`).
 
+One exception: `react-native-screens` is pinned to exactly 4.28.0 and listed in `expo.install.exclude`
+(package.json, reason in its `"//"` entry): Expo SDK 57 expects ~4.26, whose cold-start race crashes
+the app now and then in its first render (SIGSEGV in `MountingCoordinator::pullTransaction`, fixed in
+4.28.0). Drop the pin and the exclude once `npx expo install --check` expects >= 4.28. Changing it
+needs a new development build.
+
+After any dependency version change, restart Metro with `--clear`: a Metro that kept running through
+the install served a mix of old and new files ("Tried to register two views with the same name
+RNSScrollViewMarker") and the app took ~90 s to start.
+
 ## Layout
 
 ```
@@ -91,12 +101,30 @@ src/test/           test helpers (mockApi, fixtures)
 - Post overlays (replies sheet, ⋯ menu, report sheet, image viewer, YouTube player) are mounted once
   in `src/app/_layout.tsx` and opened through `usePostUi`; cards only receive the stable
   `PostActions` object from `usePostActions()`.
+- Sheets are `BottomSheetModal` driven by `useModalSheet(open, close)` (`src/hooks/useModalSheet.ts`).
+  Never call `dismiss()` on a modal that is not showing: @gorhom/bottom-sheet then stays in its
+  DISMISSING status and ignores every later `present()` (this is why no post sheet ever opened).
+  The hook only dismisses what it presented, treats a swipe-down as dismissed, and makes Android
+  back close the sheet. Sheets that can open above the compose modal on iOS pass
+  `containerComponent` = `FullWindowOverlay` (see `EmailNotVerifiedSheet`).
+- Toasts (`Toast.tsx`) animate with React Native's `Animated` (native driver), not Reanimated: on
+  Android a Reanimated `entering` animation or mount-time spring on this root overlay never runs
+  while a pushed screen (post, compose) is open, so the toast stayed invisible there. Reanimated
+  itself works (feed, pushed screens, modals); don't move root overlays back to `entering`.
+  The toast sits above the keyboard; on iOS it is in a `FullWindowOverlay` (above native modals).
+- Reanimated / worklets: import hooks under their real names (`useAnimatedStyle`, `useSharedValue`,
+  `withSpring`, …) and **never alias them** (`useAnimatedStyle as useAS`): the worklets Babel
+  plugin finds worklets by those names, and an aliased callback is not workletized — it crashes at
+  runtime ("Tried to synchronously call a Remote Function").
 - Images: always through `cloudinaryUrl(url, { width })` (`src/lib/cloudinary.ts`).
 
 ## Compose and uploads
 
-- Rules live in `src/lib/compose.ts` (5–1000 characters, image XOR YouTube, server YouTube regex,
-  tags like the web, link https:// prefix) and are unit-tested; the screen only wires them up.
+- Rules live in `src/lib/compose.ts` (5–1000 characters, image XOR YouTube, tags like the web,
+  link https:// prefix) and are unit-tested; the screen only wires them up.
+- YouTube links (watch, youtu.be, embed, Shorts, live; www./m./music. hosts) go through
+  `getYouTubeId` in `src/lib/youtube.ts`. The server (`server/utils/youtube.js`) and the web
+  (`nexusnetwork/src/utils/youtube.js`) use the same rule and test cases; change all three together.
 - Photos are compressed on the device before upload (`compressPhoto`: max 1200 px wide, JPEG 0.82,
   which also converts HEIC), so photos over the server's 5 MB limit still work; PDFs over 10 MB
   are refused before upload ("PDF must be under 10 MB").
@@ -105,6 +133,9 @@ src/test/           test helpers (mockApi, fixtures)
 - The compose form is saved to MMKV on every change (`src/lib/composeDraft.ts`) and cleared after
   posting or discarding. Leaving with content always goes through the "Discard post?" check
   (`usePreventRemove`, covers ✕, Android back and iOS swipe-down).
+- No `autoFocus` on a text box inside a `KeyboardAwareScrollView` of a screen that slides in:
+  focused mid-transition, it can end up under the keyboard. Focus it on the screen's
+  `transitionEnd` event instead (compose does).
 - Remote switches from `GET /app/config` live in `useAppConfig` (loaded once at start; all on if
   the request fails).
 
@@ -174,7 +205,11 @@ npx eas-cli@latest build --profile development --platform android   # dev client
 npx eas-cli@latest build --profile preview --platform android       # installable test APK (prod API)
 npx eas-cli@latest build:inspect --platform android --profile development --stage archive \
   --output <dir> --force   # see exactly what EAS would upload (governed by ../.easignore)
+node .maestro/run.mjs     # Maestro checks on the emulator, verified in the DB (.maestro/README.md)
 ```
+
+Done for a phone-facing change = the checks above **and** the Maestro run on the `meetnet_oppo`
+emulator (never on someone's phone). Add or update a flow in `.maestro/flows/` for new behaviour.
 
 EAS uploads from the repository root; `../.easignore` limits the upload to `mobile/` and repeats
 every `.gitignore` rule (an `.easignore` replaces `.gitignore` for EAS). Update it when ignore

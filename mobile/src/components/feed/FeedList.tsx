@@ -135,6 +135,10 @@ export function FeedList({
       renderItem={renderItem}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
+      // Off: a post the user just created is added at the top while Home is under the compose
+      // screen; FlashList kept the old first post in place, the new one ended up above the screen
+      // and was not drawn after the scroll back to the top (an empty gap where it should be).
+      maintainVisibleContentPosition={{ disabled: true }}
       ListHeaderComponent={header}
       ListEmptyComponent={<View style={styles.empty}>{empty}</View>}
       ListFooterComponent={footer}

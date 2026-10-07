@@ -1,0 +1,25 @@
+# Prompt 4 · Social post with "Post anonymously" and "Today Only" switched on.
+appId: com.themeetnet.app.dev
+name: Anonymous + Today Only
+---
+- runFlow: ../subflows/open-compose.yaml
+# the type grid scrolls off screen while the keyboard is open
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- tapOn: "Social. .*"
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- tapOn: "Post anonymously.*"
+- assertVisible:
+    text: "Post anonymously.*"
+    checked: true
+- tapOn: ".*Today Only.*"
+- assertVisible:
+    text: ".*Today Only.*"
+    checked: true
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} anonymous today post"
+- assertVisible: "Post as Anonymous.*"
+- runFlow:
+    file: ../subflows/post-and-check-home.yaml
+    env:
+      POST_TEXT: "${RUN} anonymous today post"

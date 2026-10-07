@@ -1,0 +1,13 @@
+# Prompt 3 · Unlike the same post.
+appId: com.themeetnet.app.dev
+name: Unlike
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://post/${POST_ID}
+- extendedWaitUntil:
+    visible: "Unlike, 1 like"
+    timeout: 20000
+- tapOn: "Unlike, 1 like"
+- extendedWaitUntil:
+    visible: "Like, 0 likes"
+    timeout: 10000

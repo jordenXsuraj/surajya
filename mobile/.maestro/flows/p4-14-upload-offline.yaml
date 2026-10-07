@@ -1,0 +1,23 @@
+# Prompt 4 · Network lost (airplane mode + no route to the API) during a photo upload:
+# a readable error, Retry, and the text is kept. The runner turns the network off before this flow.
+appId: com.themeetnet.app.dev
+name: Upload without network
+---
+- runFlow: ../subflows/open-compose.yaml
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} offline upload post"
+- runFlow:
+    file: ../subflows/pick-photo.yaml
+    env:
+      PHOTO_DATE: "(Jan 3,|3 Jan) 2031"
+- extendedWaitUntil:
+    visible: "Network error. Check your connection."
+    timeout: 60000
+- assertVisible: ".*Retry"
+- assertVisible:
+    text: "Post as You.*"
+    enabled: false
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- assertVisible: ".*${RUN} offline upload post"
+- runFlow: ../subflows/form-bottom.yaml

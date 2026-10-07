@@ -1,0 +1,15 @@
+# Prompt 3 · Home feed reaches the end ("You're all caught up"), then a tap on Home goes back to the top.
+# The runner flings through most of the feed with adb first (Maestro reads the whole screen after
+# every swipe, which is slow on a long image feed); this flow finishes the scroll and checks.
+appId: com.themeetnet.app.dev
+name: Feed scrolls to the end
+---
+- scrollUntilVisible:
+    element: "You're all caught up.*"
+    direction: DOWN
+    timeout: 240000
+    speed: 90
+- tapOn: "Home"
+- extendedWaitUntil:
+    visible: "Search posts, tags.*"
+    timeout: 10000

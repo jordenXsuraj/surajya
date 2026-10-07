@@ -5,12 +5,13 @@ import {
   BottomSheetView,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
+import { useModalSheet } from '@/hooks/useModalSheet';
 import { useReportPost } from '@/hooks/usePostMutations';
 import { usePostUi } from '@/stores/postUi.store';
 import { colors, fonts, layout, radius, touch } from '@/theme/tokens';
@@ -22,20 +23,15 @@ const renderBackdrop = (props: BottomSheetBackdropProps) => (
 
 // Same reasons as the web report menu, plus the optional note the API accepts (≤ 300).
 export function ReportSheet() {
-  const ref = useRef<BottomSheetModal>(null);
   const postId = usePostUi((s) => s.reportPostId);
   const close = usePostUi((s) => s.closeReport);
+  const { ref, onDismiss } = useModalSheet(Boolean(postId), close);
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    if (postId) ref.current?.present();
-    else ref.current?.dismiss();
-  }, [postId]);
 
   return (
     <BottomSheetModal
       ref={ref}
-      onDismiss={close}
+      onDismiss={onDismiss}
       backdropComponent={renderBackdrop}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"

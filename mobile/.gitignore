@@ -47,3 +47,6 @@ coverage/
 
 # env files (only .env.example is committed)
 .env
+
+# Maestro run reports (screenshots can show the test phone)
+.maestro/reports/

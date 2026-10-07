@@ -22,6 +22,17 @@ if (process.env.NODE_ENV === 'production' &&
   process.exit(1)
 }
 
+// ── Uploads: Cloudinary, or local disk outside production only (config/uploadMode.js) ──
+const { uploadMode, warnIfProductionCloud, LOCAL_UPLOAD_DIR } = require('./config/uploadMode')
+let UPLOADS
+try {
+  UPLOADS = uploadMode()
+} catch (err) {
+  console.error(`❌ ${err.message} Refusing to start.`)
+  process.exit(1)
+}
+warnIfProductionCloud()
+
 const app = express()
 app.set('trust proxy', 1)
 app.disable('x-powered-by')
@@ -126,6 +137,11 @@ app.use((req, res, next) => {
 app.use(xss())
 app.use(hpp())
 
+// ── Local uploads (development without Cloudinary only) ──
+if (UPLOADS === 'local') {
+  app.use('/uploads', express.static(LOCAL_UPLOAD_DIR, { index: false, dotfiles: 'deny' }))
+}
+
 // ── Routes ────────────────────────────────────────
 app.use('/api/auth',                        require('./routes/auth'))
 app.use('/api/posts',         generalLimit, require('./routes/posts'))
@@ -163,11 +179,19 @@ if (require.main === module) {
   connectDB()
 
   const PORT = process.env.PORT || 5000
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`)
     console.log(`✅ Mode: ${process.env.NODE_ENV}`)
+    console.log(UPLOADS === 'local'
+      ? `📁 Uploads: local disk (${LOCAL_UPLOAD_DIR}, served under /uploads) — Cloudinary not configured`
+      : '✅ Uploads: Cloudinary')
     console.log(`✅ Allowed origins: ${allowedOrigins.join(', ')}`)
   })
+  // Keep idle connections open longer than clients and proxies keep them (Node's default is 5 s):
+  // otherwise a client can reuse a connection the server is just closing, and that request fails
+  // without a response. headersTimeout must stay above keepAliveTimeout.
+  server.keepAliveTimeout = 65_000
+  server.headersTimeout = 66_000
 }
 
 module.exports = app
