@@ -179,7 +179,7 @@ if (require.main === module) {
   connectDB()
 
   const PORT = process.env.PORT || 5000
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`)
     console.log(`✅ Mode: ${process.env.NODE_ENV}`)
     console.log(UPLOADS === 'local'
@@ -187,6 +187,11 @@ if (require.main === module) {
       : '✅ Uploads: Cloudinary')
     console.log(`✅ Allowed origins: ${allowedOrigins.join(', ')}`)
   })
+  // Keep idle connections open longer than clients and proxies keep them (Node's default is 5 s):
+  // otherwise a client can reuse a connection the server is just closing, and that request fails
+  // without a response. headersTimeout must stay above keepAliveTimeout.
+  server.keepAliveTimeout = 65_000
+  server.headersTimeout = 66_000
 }
 
 module.exports = app

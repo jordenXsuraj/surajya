@@ -30,6 +30,10 @@ the app now and then in its first render (SIGSEGV in `MountingCoordinator::pullT
 4.28.0). Drop the pin and the exclude once `npx expo install --check` expects >= 4.28. Changing it
 needs a new development build.
 
+After any dependency version change, restart Metro with `--clear`: a Metro that kept running through
+the install served a mix of old and new files ("Tried to register two views with the same name
+RNSScrollViewMarker") and the app took ~90 s to start.
+
 ## Layout
 
 ```
