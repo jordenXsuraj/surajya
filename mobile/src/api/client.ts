@@ -43,6 +43,11 @@ export function toApiError(error: unknown): ApiError {
     return new ApiError(0, error instanceof Error ? error.message : 'Something went wrong');
   }
 
+  // Stopped on purpose (AbortController), e.g. removing a photo while it uploads
+  if (error.code === AxiosError.ERR_CANCELED) {
+    return new ApiError(0, 'Request cancelled', { code: 'CANCELLED' });
+  }
+
   // No response: offline, DNS, timeout, server asleep. Never a reason to sign out.
   if (!error.response) {
     const timedOut = error.code === AxiosError.ECONNABORTED || error.code === AxiosError.ETIMEDOUT;

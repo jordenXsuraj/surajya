@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { VerifyEmailBanner } from '@/components/VerifyEmailBanner';
 import { useFeed } from '@/hooks/useFeed';
 import { matchesSearch } from '@/lib/postView';
+import { usePostUi } from '@/stores/postUi.store';
 import { colors } from '@/theme/tokens';
 
 const DEFAULT_SCOPE: HomeScope = 'global'; // web Home.jsx: useState('global')
@@ -22,6 +23,7 @@ export default function HomeScreen() {
   const [scope, setScope] = useState<HomeScope>(DEFAULT_SCOPE);
   const [category, setCategory] = useState<FeedType>('all');
   const [search, setSearch] = useState('');
+  const homeTopSignal = usePostUi((s) => s.homeTopSignal);
   const query = useFeed(scope, category);
   const posts = useMemo(
     () => (query.data ?? []).filter((p) => matchesSearch(p, search)),
@@ -70,6 +72,7 @@ export default function HomeScreen() {
         posts={posts}
         queryKey={queryKeys.feed(scope, category)}
         empty={empty}
+        scrollSignal={homeTopSignal}
       />
     </View>
   );

@@ -6,6 +6,8 @@ export type FeedType = PostType | 'all';
 // All React Query keys in one place so invalidation stays consistent.
 export const queryKeys = {
   me: ['me'] as const,
+  /** The signed-in user's own posts (GET /users/me/posts). */
+  myPosts: ['me', 'posts'] as const,
   feeds: ['feed'] as const,
   feed: (scope: FeedScope, type: FeedType) => ['feed', scope, type] as const,
   post: (id: string) => ['post', id] as const,

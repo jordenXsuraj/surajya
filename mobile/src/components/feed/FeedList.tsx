@@ -1,7 +1,15 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useScrollToTop } from 'expo-router';
-import { useCallback, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { refreshFeed } from '@/api/postCache';
@@ -26,6 +34,8 @@ type FeedListProps = {
   empty: ReactNode;
   /** Scrolls with the list (e.g. the verify-email banner). */
   header?: ReactElement | null;
+  /** Changing this number scrolls the list to the top (e.g. after posting). */
+  scrollSignal?: number;
 };
 
 const EMPTY_IDS: readonly string[] = [];
@@ -35,7 +45,14 @@ const EMPTY_IDS: readonly string[] = [];
  * "You're all caught up 🎉". Re-tapping the tab scrolls to the top and refreshes. Tabs stay mounted,
  * so the scroll position is kept when coming back from a post.
  */
-export function FeedList({ query, posts, queryKey, empty, header }: FeedListProps) {
+export function FeedList({
+  query,
+  posts,
+  queryKey,
+  empty,
+  header,
+  scrollSignal = 0,
+}: FeedListProps) {
   const qc = useQueryClient();
   const listRef = useRef<FlashListRef<Post>>(null);
   const [pulling, setPulling] = useState(false);
@@ -60,6 +77,10 @@ export function FeedList({ query, posts, queryKey, empty, header }: FeedListProp
 
   useScrollToTop(listRef);
   useTabReselect(refresh);
+
+  useEffect(() => {
+    if (scrollSignal > 0) listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [scrollSignal]);
 
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();

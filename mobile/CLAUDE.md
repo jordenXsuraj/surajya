@@ -93,6 +93,21 @@ src/test/           test helpers (mockApi, fixtures)
   `PostActions` object from `usePostActions()`.
 - Images: always through `cloudinaryUrl(url, { width })` (`src/lib/cloudinary.ts`).
 
+## Compose and uploads
+
+- Rules live in `src/lib/compose.ts` (5–1000 characters, image XOR YouTube, server YouTube regex,
+  tags like the web, link https:// prefix) and are unit-tested; the screen only wires them up.
+- Photos are compressed on the device before upload (`compressPhoto`: max 1200 px wide, JPEG 0.82,
+  which also converts HEIC), so photos over the server's 5 MB limit still work; PDFs over 10 MB
+  are refused before upload ("PDF must be under 10 MB").
+- Uploads go through `uploadFile` (`src/lib/upload.ts`): progress, `AbortSignal` cancel
+  (`UploadCancelled` is not an error to show) and readable error messages.
+- The compose form is saved to MMKV on every change (`src/lib/composeDraft.ts`) and cleared after
+  posting or discarding. Leaving with content always goes through the "Discard post?" check
+  (`usePreventRemove`, covers ✕, Android back and iOS swipe-down).
+- Remote switches from `GET /app/config` live in `useAppConfig` (loaded once at start; all on if
+  the request fails).
+
 ## App identities (APP_VARIANT)
 
 | | development | preview / production |
