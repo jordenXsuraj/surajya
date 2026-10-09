@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 
-import { useConnect, useInterested, useLike } from '@/hooks/usePostMutations';
+import { useFollowActions } from '@/hooks/useFollow';
+import { useInterested, useLike } from '@/hooks/usePostMutations';
 import { openWebPage } from '@/lib/links';
 import { isLikedBy, normaliseLink, pdfViewerUrl, visibleAuthor } from '@/lib/postView';
 import { useAuthStore } from '@/stores/auth.store';
@@ -33,7 +34,7 @@ type Overrides = {
 export function usePostActions({ openReplies }: Overrides = {}): PostActions {
   const { mutate: like } = useLike();
   const { mutate: interested } = useInterested();
-  const { mutate: connect } = useConnect();
+  const { follow: connect } = useFollowActions();
 
   return useMemo<PostActions>(() => {
     const showReplies: PostActions['openReplies'] =
@@ -54,8 +55,10 @@ export function usePostActions({ openReplies }: Overrides = {}): PostActions {
         if (url) void openWebPage(url);
       },
       openPdf: (pdfUrl) => void openWebPage(pdfViewerUrl(pdfUrl)),
+      // My own name opens the Me tab (the web sends /profile/<my id> to /profile too)
       openProfile: (userId) => {
-        if (userId !== useAuthStore.getState().user?._id) router.push(`/profile/${userId}`);
+        if (userId === useAuthStore.getState().user?._id) router.navigate('/me');
+        else router.push(`/profile/${userId}`);
       },
       openPost: (postId) => router.push(`/post/${postId}`),
       connect: (post) => {

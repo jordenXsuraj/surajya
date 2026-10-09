@@ -1,0 +1,10 @@
+# Opens someone's profile by its link (meetnet-dev://profile/${USER_ID}) and waits for ${NAME}.
+appId: com.themeetnet.app.dev
+---
+- runFlow: ensure-home.yaml
+- openLink: meetnet-dev://profile/${USER_ID}
+- extendedWaitUntil:
+    visible: "${NAME}"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000

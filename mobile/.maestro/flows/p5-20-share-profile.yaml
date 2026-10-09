@@ -1,0 +1,20 @@
+# Prompt 5 · Share Arjun's profile from the ⋯ menu: the Android share sheet opens with the
+# https://themeetnet.com/profile/<id> link.
+appId: com.themeetnet.app.dev
+name: Share profile
+---
+- runFlow:
+    file: ../subflows/open-profile.yaml
+    env:
+      USER_ID: ${ARJUN_ID}
+      NAME: "Arjun Patil"
+- tapOn: "More: share, report, block"
+- tapOn: ".*Share profile"
+- extendedWaitUntil:
+    visible: ".*themeetnet\\.com/profile/${ARJUN_ID}.*"
+    timeout: 15000
+- back
+- extendedWaitUntil:
+    visible: "Arjun Patil"
+    timeout: 10000
+- back

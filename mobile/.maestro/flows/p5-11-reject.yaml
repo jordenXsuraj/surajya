@@ -1,0 +1,21 @@
+# Prompt 5 · Me → Follow requests (Kabir, Rohan) → Reject Kabir → only Rohan is left.
+appId: com.themeetnet.app.dev
+name: Reject request
+---
+- runFlow: ../subflows/open-me.yaml
+- extendedWaitUntil:
+    visible: "🤝 Follow requests \\(2\\)"
+    timeout: 20000
+- tapOn: "🤝 Follow requests \\(2\\)"
+- extendedWaitUntil:
+    visible: "Kabir Shah"
+    timeout: 20000
+- assertVisible: "Rohan Kale"
+- tapOn:
+    text: "Reject Kabir Shah's follow request"
+    label: "Reject [watch]"
+- extendedWaitUntil:
+    notVisible: "Kabir Shah"
+    timeout: 10000
+- assertVisible: "Rohan Kale"
+- back

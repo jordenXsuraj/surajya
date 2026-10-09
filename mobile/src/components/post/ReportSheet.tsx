@@ -11,9 +11,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
+import { useReportUser } from '@/hooks/useFollow';
 import { useModalSheet } from '@/hooks/useModalSheet';
 import { useReportPost } from '@/hooks/usePostMutations';
-import { usePostUi } from '@/stores/postUi.store';
+import { usePostUi, type ReportTarget } from '@/stores/postUi.store';
 import { colors, fonts, layout, radius, touch } from '@/theme/tokens';
 import { MAX_REPORT_NOTE, REPORT_REASONS, type ReportReason } from '@/types/report';
 
@@ -22,10 +23,11 @@ const renderBackdrop = (props: BottomSheetBackdropProps) => (
 );
 
 // Same reasons as the web report menu, plus the optional note the API accepts (≤ 300).
+// Reports a post (post ⋯ menu) or a user (profile ⋯ menu).
 export function ReportSheet() {
-  const postId = usePostUi((s) => s.reportPostId);
+  const target = usePostUi((s) => s.report);
   const close = usePostUi((s) => s.closeReport);
-  const { ref, onDismiss } = useModalSheet(Boolean(postId), close);
+  const { ref, onDismiss } = useModalSheet(Boolean(target), close);
   const insets = useSafeAreaInsets();
 
   return (
@@ -40,20 +42,32 @@ export function ReportSheet() {
       handleIndicatorStyle={styles.handle}
     >
       <BottomSheetView style={[styles.content, { paddingBottom: insets.bottom + 16 }]}>
-        {postId ? <ReportForm key={postId} postId={postId} onDone={close} /> : null}
+        {target ? <ReportForm key={target.id} target={target} onDone={close} /> : null}
       </BottomSheetView>
     </BottomSheetModal>
   );
 }
 
-function ReportForm({ postId, onDone }: { postId: string; onDone: () => void }) {
+function ReportForm({ target, onDone }: { target: ReportTarget; onDone: () => void }) {
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [note, setNote] = useState('');
-  const { mutate, isPending } = useReportPost();
+  const reportPost = useReportPost();
+  const reportUser = useReportUser();
+  const isPending = reportPost.isPending || reportUser.isPending;
+
+  const submit = (picked: ReportReason) => {
+    if (target.kind === 'user') {
+      reportUser.mutate({ id: target.id, reason: picked, note }, { onSettled: onDone });
+    } else {
+      reportPost.mutate({ postId: target.id, reason: picked, note }, { onSettled: onDone });
+    }
+  };
 
   return (
     <>
-      <Text style={styles.title}>Why are you reporting?</Text>
+      <Text style={styles.title}>
+        {target.kind === 'user' ? 'Why are you reporting this person?' : 'Why are you reporting?'}
+      </Text>
       <View style={styles.reasons} accessibilityRole="radiogroup">
         {REPORT_REASONS.map((r) => {
           const on = reason === r.id;
@@ -90,7 +104,7 @@ function ReportForm({ postId, onDone }: { postId: string; onDone: () => void }) 
         loadingTitle="Sending…"
         loading={isPending}
         disabled={!reason}
-        onPress={() => reason && mutate({ postId, reason, note }, { onSettled: onDone })}
+        onPress={() => reason && submit(reason)}
       />
       <Button title="Cancel" variant="ghost" onPress={onDone} />
     </>

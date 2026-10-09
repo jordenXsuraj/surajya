@@ -1,0 +1,11 @@
+# Prompt 5 · A link to the tester's own profile opens the Me tab.
+appId: com.themeetnet.app.dev
+name: Own profile link
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://profile/${TESTER_ID}
+- extendedWaitUntil:
+    visible: "Edit profile"
+    timeout: 20000
+- assertVisible: "Settings"
+- tapOn: "Home"

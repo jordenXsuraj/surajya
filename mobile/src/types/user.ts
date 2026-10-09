@@ -92,6 +92,27 @@ export type PublicUser = {
   createdAt?: IsoDate;
 };
 
+/**
+ * A row in a people list: GET /users/followers, /users/following, /users/:id/followers,
+ * /users/:id/following, /users/requests (populated `name year branch skills college avatar`, some
+ * with `bio`) and /users/me/blocked (`name username avatar`).
+ */
+export type PersonRow = {
+  _id: ObjectId;
+  name: string;
+  username?: string;
+  year?: Year;
+  branch?: string;
+  college?: string;
+  skills?: string[];
+  avatar?: string;
+  bio?: string;
+};
+
+/** POST /users/me/avatar → `{ avatar, user }`, /users/me/cover → `{ coverImage, user }`. */
+export type AvatarResponse = { avatar: string; user: Me };
+export type CoverResponse = { coverImage: string; user: Me };
+
 /** Connect / followers / following lists. */
 export type UserCard = {
   _id: ObjectId;
@@ -133,10 +154,17 @@ export type SessionUser = {
   emailVerified: boolean;
   emailBounced: boolean;
   verificationRequired: boolean;
+  coverImage: string;
+  isContributor: boolean;
+  mediaItems: MediaItem[];
   followingIds: ObjectId[];
   followerIds: ObjectId[];
   /** Follow requests this user sent and that are still pending. */
   sentRequestIds: ObjectId[];
+  /** Follow requests other people sent to this user, still waiting for Accept / Reject. */
+  incomingRequestIds: ObjectId[];
+  /** People this user blocked. */
+  blockedIds: ObjectId[];
   followingCount: number;
   followerCount: number;
   termsAcceptedAt: IsoDate | null;

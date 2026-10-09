@@ -33,5 +33,17 @@ export const verifyEmail = (code: string) =>
 export const forgotPassword = (email: string) =>
   request<MessageResponse>({ method: 'POST', url: '/auth/forgot-password', data: { email } });
 
+/** Ends every other session; this device continues with the new token (replace the stored one). */
 export const logoutAllDevices = () =>
-  request<MessageResponse>({ method: 'POST', url: '/auth/logout-all' });
+  request<MessageResponse & { token: string }>({ method: 'POST', url: '/auth/logout-all' });
+
+/**
+ * 400 for a wrong current password, a new one under 8 characters or the same as before. Other
+ * devices are logged out; this one continues with the new token.
+ */
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  request<MessageResponse & { token: string }>({
+    method: 'POST',
+    url: '/auth/change-password',
+    data: { currentPassword, newPassword },
+  });

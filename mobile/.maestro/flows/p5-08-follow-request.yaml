@@ -1,0 +1,21 @@
+# Prompt 5 · Follow someone new (Ishaan): "+ Follow" → "⏳ Requested" (disabled) and a toast.
+appId: com.themeetnet.app.dev
+name: Follow request
+---
+- runFlow:
+    file: ../subflows/open-profile.yaml
+    env:
+      USER_ID: ${ISHAAN_ID}
+      NAME: "Ishaan Verma"
+- extendedWaitUntil:
+    visible: "Follow Ishaan Verma"
+    timeout: 15000
+- tapOn:
+    text: "Follow Ishaan Verma"
+    label: "Follow [watch]"
+- extendedWaitUntil:
+    visible: "Follow request sent to Ishaan Verma"
+    timeout: 10000
+- assertVisible:
+    text: "Follow request sent to Ishaan Verma"
+    enabled: false

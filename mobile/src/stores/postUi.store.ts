@@ -2,14 +2,20 @@ import { create } from 'zustand';
 
 import type { Post } from '@/types/post';
 
+/** What the report sheet is reporting: a post (⋯ menu) or a user (profile menu). */
+export type ReportTarget = { kind: 'post' | 'user'; id: string };
+
 // Overlays shared by every list (mounted once in the root layout): replies sheet, post menu,
-// report sheet, full-screen image, YouTube player. Also the posts reported in this session.
+// report sheet (posts and users), full-screen image, YouTube player. Also the posts and users
+// reported in this session (by id; post and user ids never clash).
 type PostUiState = {
   repliesPostId: string | null;
   /** Focus the reply input when the sheet opens (reply button / Interested). */
   repliesFocus: boolean;
   menuPost: Post | null;
-  reportPostId: string | null;
+  /** Profile ⋯ menu (Share profile, Report user, Block). */
+  menuUser: { id: string; name: string } | null;
+  report: ReportTarget | null;
   imageUrl: string | null;
   videoId: string | null;
   reported: Record<string, true>;
@@ -20,7 +26,9 @@ type PostUiState = {
   closeReplies: () => void;
   openMenu: (post: Post) => void;
   closeMenu: () => void;
-  openReport: (postId: string) => void;
+  openUserMenu: (user: { id: string; name: string }) => void;
+  closeUserMenu: () => void;
+  openReport: (target: ReportTarget) => void;
   closeReport: () => void;
   markReported: (postId: string) => void;
   openImage: (url: string) => void;
@@ -35,7 +43,8 @@ const initial = {
   repliesPostId: null,
   repliesFocus: false,
   menuPost: null,
-  reportPostId: null,
+  menuUser: null,
+  report: null,
   imageUrl: null,
   videoId: null,
   reported: {},
@@ -48,8 +57,10 @@ export const usePostUi = create<PostUiState>()((set) => ({
   closeReplies: () => set({ repliesPostId: null, repliesFocus: false }),
   openMenu: (post) => set({ menuPost: post }),
   closeMenu: () => set({ menuPost: null }),
-  openReport: (postId) => set({ reportPostId: postId }),
-  closeReport: () => set({ reportPostId: null }),
+  openUserMenu: (user) => set({ menuUser: user }),
+  closeUserMenu: () => set({ menuUser: null }),
+  openReport: (target) => set({ report: target }),
+  closeReport: () => set({ report: null }),
   markReported: (postId) => set((s) => ({ reported: { ...s.reported, [postId]: true } })),
   openImage: (url) => set({ imageUrl: url }),
   closeImage: () => set({ imageUrl: null }),

@@ -1,0 +1,29 @@
+# Prompt 5 · Meera's new post is in Following; unfollow her (confirm) → "Follow back" (she still
+# follows me); back in Following her post is gone without a pull-to-refresh.
+appId: com.themeetnet.app.dev
+name: Unfollow
+---
+- runFlow: ../subflows/ensure-home.yaml
+- tapOn: "Following"
+# a second tap on the tab refreshes it: Meera's post was created just before this step
+- tapOn: "Following"
+- extendedWaitUntil:
+    visible: "Maestro ${RUN} meera post"
+    timeout: 30000
+- openLink: meetnet-dev://profile/${MEERA_ID}
+- extendedWaitUntil:
+    visible: "Following Meera Joshi\\. Tap to unfollow"
+    timeout: 20000
+- tapOn: "Following Meera Joshi\\. Tap to unfollow"
+- extendedWaitUntil:
+    visible: "Unfollow Meera\\?"
+    timeout: 10000
+- tapOn:
+    text: "(?i)unfollow"
+    label: "Confirm unfollow [watch]"
+- extendedWaitUntil:
+    visible: "Follow Meera Joshi back"
+    timeout: 10000
+- back
+- tapOn: "Following"
+- assertNotVisible: "Maestro ${RUN} meera post"

@@ -1,0 +1,16 @@
+# Profile photo / cover: taps ${BUTTON} ("Change profile photo" / "📷 Edit cover"), "Choose from
+# library", then the test photo dated ${PHOTO_DATE} in the system photo picker, and waits for the
+# crop screen (${CROP_TITLE}).
+appId: com.themeetnet.app.dev
+---
+- tapOn: "${BUTTON}"
+- tapOn: "(?i)choose from library"
+- extendedWaitUntil:
+    visible: "Photo taken on ${PHOTO_DATE}.*"
+    timeout: 20000
+- tapOn: "Photo taken on ${PHOTO_DATE}.*"
+- extendedWaitUntil:
+    visible: "${CROP_TITLE}"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 3000

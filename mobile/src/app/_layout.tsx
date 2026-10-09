@@ -14,6 +14,7 @@ import { refreshSession } from '@/api/session';
 import { EmailNotVerifiedSheet } from '@/components/EmailNotVerifiedSheet';
 import { ImageViewer } from '@/components/post/ImageViewer';
 import { PostMenuSheet } from '@/components/post/PostMenuSheet';
+import { ProfileMenuSheet } from '@/components/profile/ProfileMenuSheet';
 import { RepliesSheet } from '@/components/post/RepliesSheet';
 import { ReportSheet } from '@/components/post/ReportSheet';
 import { YouTubeModal } from '@/components/post/YouTubeModal';
@@ -96,6 +97,23 @@ export default function RootLayout() {
                   />
                   <Stack.Screen name="post/[id]" />
                   <Stack.Screen name="profile/[id]/index" />
+                  <Stack.Screen name="profile/[id]/followers" />
+                  <Stack.Screen name="profile/[id]/following" />
+                  <Stack.Screen name="me/edit" />
+                  <Stack.Screen name="me/settings" />
+                  <Stack.Screen name="me/change-password" />
+                  <Stack.Screen name="me/blocked" />
+                  <Stack.Screen name="me/followers" />
+                  <Stack.Screen name="me/following" />
+                  <Stack.Screen name="me/requests" />
+                  <Stack.Screen
+                    name="crop"
+                    options={{
+                      presentation: 'fullScreenModal',
+                      animation: 'slide_from_bottom',
+                      gestureEnabled: false,
+                    }}
+                  />
                   <Stack.Screen name="verify-email" />
                   <Stack.Screen name="notifications" />
                 </Stack.Protected>
@@ -107,6 +125,7 @@ export default function RootLayout() {
                 <>
                   <RepliesSheet />
                   <PostMenuSheet />
+                  <ProfileMenuSheet />
                   <ReportSheet />
                   <ImageViewer />
                   <YouTubeModal />

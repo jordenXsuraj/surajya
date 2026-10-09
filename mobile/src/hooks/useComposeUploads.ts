@@ -2,10 +2,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useRef, useState } from 'react';
-import { Alert, Linking } from 'react-native';
 
 import { uploadPostImage, uploadPostPdf } from '@/api/endpoints/posts';
 import { IMAGE_MAX_WIDTH, IMAGE_QUALITY, MAX_PDF_BYTES } from '@/lib/compose';
+import { pickImage } from '@/lib/pickImage';
 import { UploadCancelled, type UploadFile } from '@/lib/upload';
 import { useUiStore } from '@/stores/ui.store';
 
@@ -34,30 +34,6 @@ export async function compressPhoto(asset: { uri: string; width: number }): Prom
   const image = await context.renderAsync();
   const result = await image.saveAsync({ compress: IMAGE_QUALITY, format: SaveFormat.JPEG });
   return { uri: result.uri, name: `photo-${Date.now()}.jpg`, type: 'image/jpeg' };
-}
-
-async function cameraAllowed(): Promise<boolean> {
-  const current = await ImagePicker.getCameraPermissionsAsync();
-  if (current.granted) return true;
-  if (!current.canAskAgain) {
-    Alert.alert(
-      'Camera access is off',
-      'Turn on camera access for MeetNet in Settings to take a photo for your post.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Open Settings', onPress: () => void Linking.openSettings() },
-      ],
-    );
-    return false;
-  }
-  const proceed = await new Promise<boolean>((resolve) =>
-    Alert.alert('Use the camera?', 'MeetNet uses the camera only to take a photo for this post.', [
-      { text: 'Not now', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Continue', onPress: () => resolve(true) },
-    ]),
-  );
-  if (!proceed) return false;
-  return (await ImagePicker.requestCameraPermissionsAsync()).granted;
 }
 
 export function usePhotoUpload(initialUrl = '') {
@@ -108,23 +84,8 @@ export function usePhotoUpload(initialUrl = '') {
   }
 
   async function pick(source: 'camera' | 'library') {
-    if (source === 'camera' && !(await cameraAllowed())) return;
-    const options: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ['images'],
-      quality: 1,
-      exif: false,
-    };
-    const result =
-      source === 'camera'
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync(options);
-    const asset = result.canceled ? undefined : result.assets[0];
-    if (!asset) return;
-    if (asset.mimeType && !asset.mimeType.startsWith('image/')) {
-      toast('⚠️ Only image files allowed', 'error');
-      return;
-    }
-    await processAsset(asset);
+    const asset = await pickImage(source, 'post');
+    if (asset) await processAsset(asset);
   }
 
   function retry() {

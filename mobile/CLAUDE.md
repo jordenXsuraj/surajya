@@ -16,7 +16,7 @@ always check the versioned Expo docs, never trust remembered APIs).
 | Cache / storage | react-native-mmkv v4 — one encrypted instance from `src/lib/storage.ts` |
 | Lists | @shopify/flash-list |
 | Images | expo-image |
-| Forms | react-hook-form + zod (`src/lib/validation.ts`); use `useWatch`, not `watch()` (React Compiler) |
+| Forms | react-hook-form + zod (`src/lib/validation.ts`); use `useWatch`, not `watch()`, and destructure `formState: { errors, isDirty, … }` at the `useForm` call (React Compiler: reads off `formState` later stay stale). Show server answers from state (or a `Controller`'s `fieldState`), not `setError` + a top-level `firstError(errors)`: `setError` changes the same `errors` object, so the compiler keeps the old message |
 | Sheets / keyboard | @gorhom/bottom-sheet, react-native-keyboard-controller |
 | Animation | react-native-reanimated 4 (`.get()` / `.set()` on shared values) |
 | Icons | react-native-svg, ported path-for-path from the web |
@@ -29,6 +29,17 @@ One exception: `react-native-screens` is pinned to exactly 4.28.0 and listed in 
 the app now and then in its first render (SIGSEGV in `MountingCoordinator::pullTransaction`, fixed in
 4.28.0). Drop the pin and the exclude once `npx expo install --check` expects >= 4.28. Changing it
 needs a new development build.
+
+**Native modules and the app version.** Any change that adds or upgrades a native module (an
+`expo-*` / `react-native-*` package with native code, or a config plugin) must bump the app
+`version` in `app.config.ts` (and `app.json`), so EAS Update can never deliver that JS to an older
+binary that lacks the native code: with `runtimeVersion: { policy: 'appVersion' }` an update only
+reaches binaries of the same version. Say so in the commit / PR message ("native: adds X → version
+1.1.0"). **The version-bump-on-native-change rule applies from the first public store release,
+once expo-updates / EAS Update is set up. Before that, keep 1.0.0** (still name native changes in
+the commit message). Status 9 Oct 2026: `runtimeVersion` is not set and `expo-updates` is not
+installed; add `runtimeVersion: { policy: 'appVersion' }` together with `expo-updates` before the
+first update is published.
 
 After any dependency version change, restart Metro with `--clear`: a Metro that kept running through
 the install served a mix of old and new files ("Tried to register two views with the same name
@@ -138,6 +149,44 @@ src/test/           test helpers (mockApi, fixtures)
   `transitionEnd` event instead (compose does).
 - Remote switches from `GET /app/config` live in `useAppConfig` (loaded once at start; all on if
   the request fails).
+
+## Profiles and the follow system
+
+- **Follow is a request** (like a private Instagram account): Follow → the other person accepts or
+  rejects. The relation comes from the signed-in user's own lists in `SessionUser`
+  (`followingIds`, `followerIds`, `sentRequestIds`, `incomingRequestIds`, `blockedIds`); `GET
+  /users/:id` says nothing about it. `src/lib/follow.ts` is the pure state machine (relation →
+  button: Follow / Follow back / ⏳ Requested / ✓ Following / Accept + Reject; events; the server's
+  "Already following" / "Request already sent" / "User already requested you" settle to the real
+  state). Every follow button (profile, people lists, post card Connect) goes through it.
+- "Requested" is disabled: the API has no way to withdraw a request.
+- Mutations live in `src/hooks/useFollow.ts` (`useFollowActions`, `useBlockUser`,
+  `useUnblockUser`, `useReportUser`): optimistic on the session and the cached profile counts,
+  rolled back on error, then they invalidate `me`, both people's lists, requests and suggestions.
+  Unfollow removes their posts from the Following feed at once; block removes their posts and rows
+  everywhere. When a `me` refetch finds a changed following list (accepted on their phone),
+  `applyMe` (`src/api/session.ts`) refetches the Following feed; Following, Me and profiles
+  refresh `me` when they gain focus.
+- `['me', …]` keys (my posts, saved, lists, requests, blocked) sit under `me`: invalidate the user
+  alone with `{ queryKey: queryKeys.me, exact: true }`.
+- **Post lists**: feeds, my posts (`['me','posts']`, infinite), saved (`['me','saved']`) and a
+  user's posts (`['user', id, 'posts']`) are all updated by `src/api/postCache.ts`
+  (`isPostListKey`); `updateAuthor` patches my posts and replies after a name or photo change.
+- `GET /users/:id/posts` returns at most 50, never anonymous ones, and does not leave out expired
+  "today only" posts (`withoutExpired` does).
+- **Photos**: pick (`src/lib/pickImage.ts`, shared with compose) → the app's own crop screen
+  (`app/crop.tsx`, 1:1 or 3:1, `src/lib/crop.ts`) → `ImageManipulator` crop + resize (600×600 /
+  1500×500 JPEG, which also converts HEIC) → `uploadFile`. Uploads live in
+  `profilePhoto.store`, so the Me tab shows their progress after the crop screen closes.
+- **Edit profile** (`app/me/edit.tsx`): sends only the changed fields (`buildProfileUpdate`).
+  Usernames are 3–20 of `a-z 0-9 _ .` (`PUT /users/me` refuses more than 20, although the model
+  allows 25); an empty username is never sent (old accounts). `PUT /users/me` keeps only media
+  types `youtube` and `instagram`, so older `yt-*` items are sent as `youtube`. Media links follow
+  `src/lib/media.ts` (web rules; Instagram adds only `instagram.com/<handle>`).
+- Log out is in Settings (`signOut()` removes this device's push token first, if Prompt 6
+  registered one). The version line uses `expo-application` (`src/lib/appVersion.ts`), a native
+  module: development clients built before 7 Oct 2026 lack it and show a red screen in Settings.
+- Local test data: `node .maestro/seed.mjs` (profile people, relations; see `.maestro/README.md`).
 
 ## App identities (APP_VARIANT)
 

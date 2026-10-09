@@ -1,0 +1,22 @@
+# Prompt 5 · Profile photo: 📷 → library → the small 2031 test photo → crop (1:1) → Use photo →
+# upload with progress around the photo → toast. The runner checks the stored file (600×600 JPEG).
+appId: com.themeetnet.app.dev
+name: Profile photo
+---
+- runFlow: ../subflows/open-me.yaml
+- runFlow:
+    file: ../subflows/pick-profile-photo.yaml
+    env:
+      BUTTON: "Change profile photo"
+      PHOTO_DATE: "(Jan 3,|3 Jan) 2031"
+      CROP_TITLE: "Crop profile photo"
+- assertVisible: "Pinch to zoom, drag to move"
+- tapOn:
+    text: "Use photo"
+    label: "Use photo [watch]"
+- extendedWaitUntil:
+    visible: "Edit profile"
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible: "Uploading photo.*"
+    timeout: 60000

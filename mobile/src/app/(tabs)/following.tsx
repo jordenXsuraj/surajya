@@ -1,5 +1,6 @@
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +20,14 @@ export default function FollowingScreen() {
   const [search, setSearch] = useState('');
   const query = useFeed('following');
   const all = query.data;
+  const qc = useQueryClient();
+  // Who I follow can change elsewhere (a request accepted on their phone): refreshing my own
+  // lists on every visit refetches this feed when they changed (applyMe in src/api/session.ts)
+  useFocusEffect(
+    useCallback(() => {
+      void qc.invalidateQueries({ queryKey: queryKeys.me, exact: true });
+    }, [qc]),
+  );
   const posts = useMemo(() => (all ?? []).filter((p) => matchesSearch(p, search)), [all, search]);
 
   const empty =

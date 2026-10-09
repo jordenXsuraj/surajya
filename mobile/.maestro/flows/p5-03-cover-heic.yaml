@@ -1,0 +1,21 @@
+# Prompt 5 · Cover from the iPhone HEIC test photo: 📷 Edit cover → library → crop (3:1) → upload.
+# The runner checks the stored file (1500×500 JPEG, so the HEIC was converted on the phone).
+appId: com.themeetnet.app.dev
+name: Cover photo (HEIC)
+---
+- runFlow: ../subflows/open-me.yaml
+- runFlow:
+    file: ../subflows/pick-profile-photo.yaml
+    env:
+      BUTTON: "📷 Edit cover"
+      PHOTO_DATE: "(Jan 2,|2 Jan) 2031"
+      CROP_TITLE: "Crop cover photo"
+- tapOn:
+    text: "Use photo"
+    label: "Use photo [watch]"
+- extendedWaitUntil:
+    visible: "Edit profile"
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible: "Uploading cover.*"
+    timeout: 60000

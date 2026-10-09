@@ -7,8 +7,11 @@ const idOf = (entry: UserRef | ObjectId): ObjectId =>
 /** Normalises the different user shapes the API returns (signup/login vs /users/me). */
 export function toSessionUser(user: AuthUser | Me): SessionUser {
   const following = (user.following ?? []).map(idOf);
-  const followers = user.followers ?? [];
-  const counts = user as Partial<Pick<Me, 'followingCount' | 'followerCount'>>;
+  const followers = (user.followers ?? []).map(String);
+  // Fields only GET /users/me (and the PUT /users/me* answers) carry
+  const extra = user as Partial<
+    Pick<Me, 'followingCount' | 'followerCount' | 'coverImage' | 'isContributor' | 'blockedUsers'>
+  >;
 
   return {
     _id: user._id,
@@ -27,11 +30,16 @@ export function toSessionUser(user: AuthUser | Me): SessionUser {
     emailVerified: Boolean(user.emailVerified),
     emailBounced: Boolean(user.emailBounced),
     verificationRequired: Boolean(user.verificationRequired),
+    coverImage: extra.coverImage ?? '',
+    isContributor: Boolean(extra.isContributor),
+    mediaItems: user.mediaItems ?? [],
     followingIds: following,
     followerIds: followers,
     sentRequestIds: (user.sentRequests ?? []).map(String),
-    followingCount: counts.followingCount ?? following.length,
-    followerCount: counts.followerCount ?? followers.length,
+    incomingRequestIds: (user.pendingRequests ?? []).map(idOf),
+    blockedIds: (extra.blockedUsers ?? []).map(String),
+    followingCount: extra.followingCount ?? following.length,
+    followerCount: extra.followerCount ?? followers.length,
     termsAcceptedAt: user.termsAcceptedAt ?? null,
     createdAt: user.createdAt,
   };

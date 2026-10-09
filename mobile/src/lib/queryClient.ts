@@ -29,5 +29,5 @@ export const persister = createAsyncStoragePersister({
 export const persistOptions = {
   persister,
   maxAge: DAY,
-  buster: '1', // bump when cached shapes change incompatibly
+  buster: '2', // bump when cached shapes change incompatibly (2: my posts became an infinite list)
 };

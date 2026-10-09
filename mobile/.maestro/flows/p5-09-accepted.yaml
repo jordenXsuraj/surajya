@@ -1,0 +1,14 @@
+# Prompt 5 · Tanvi accepted on her side (the runner, through the API). Without a pull-to-refresh:
+# the Following tab shows her new post, and her profile says "✓ Following".
+appId: com.themeetnet.app.dev
+name: Request accepted elsewhere
+---
+- back
+- tapOn: "Following"
+- extendedWaitUntil:
+    visible: "Maestro ${RUN} tanvi post"
+    timeout: 30000
+- openLink: meetnet-dev://profile/${TANVI_ID}
+- extendedWaitUntil:
+    visible: "Following Tanvi Rao\\. Tap to unfollow"
+    timeout: 20000

@@ -1,0 +1,25 @@
+# Prompt 5 · Me → ⚙ Settings → Blocked users: Dev → Unblock (confirm) → the list is empty.
+appId: com.themeetnet.app.dev
+name: Unblock
+---
+- runFlow: ../subflows/open-me.yaml
+- tapOn: "Settings"
+- extendedWaitUntil:
+    visible: ".*Blocked users"
+    timeout: 15000
+- tapOn: ".*Blocked users"
+- extendedWaitUntil:
+    visible: "Dev Malhotra"
+    timeout: 20000
+- tapOn: "Unblock Dev Malhotra"
+- extendedWaitUntil:
+    visible: "Unblock Dev\\?"
+    timeout: 10000
+- tapOn:
+    text: "(?i)unblock"
+    label: "Confirm unblock [watch]"
+- extendedWaitUntil:
+    visible: "No blocked users"
+    timeout: 10000
+- back
+- back

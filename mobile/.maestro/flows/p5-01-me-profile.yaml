@@ -1,0 +1,39 @@
+# Prompt 5 · Me tab shows the tester's seeded profile: header, counts, follow requests, sections,
+# and the Posts / Media / Saved tabs.
+appId: com.themeetnet.app.dev
+name: Me profile
+---
+- runFlow: ../subflows/open-me.yaml
+- extendedWaitUntil:
+    visible: "Following 3"
+    timeout: 20000
+- assertVisible: "Followers 3"
+- assertVisible: "Test Student"
+- assertVisible: "@test\\.student.*"
+- assertVisible: "Third-year CS student.*"
+- assertVisible: "3rd year"
+- assertVisible: "🏫 Seed Test College"
+- assertVisible: "🤝 Follow requests \\(2\\)"
+- scrollUntilVisible:
+    element: "JavaScript"
+- scrollUntilVisible:
+    element: "Campus Notes"
+- scrollUntilVisible:
+    element: "Finish the DSA sheet.*"
+- scrollUntilVisible:
+    element: "Media 🎬 \\(2\\)"
+- tapOn: "Media 🎬 \\(2\\)"
+- scrollUntilVisible:
+    element: "Play YouTube video"
+- scrollUntilVisible:
+    element: "@meetnet\\.tester"
+- scrollUntilVisible:
+    element: "🔖 Saved.*"
+    direction: UP
+- tapOn: "🔖 Saved.*"
+- scrollUntilVisible:
+    element: "No saved posts yet\\."
+- scrollUntilVisible:
+    element: "Posts \\(\\d+\\+?\\)"
+    direction: UP
+- tapOn: "Posts \\(\\d+\\+?\\)"

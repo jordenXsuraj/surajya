@@ -9,7 +9,6 @@ import {
   savePost,
   sendInterest,
 } from '@/api/endpoints/posts';
-import { blockUser, connectUser } from '@/api/endpoints/users';
 import { ApiError, errorMessage } from '@/api/errors';
 import {
   removePosts,
@@ -33,8 +32,6 @@ const toast = (message: string, type: 'info' | 'success' | 'error' = 'info') =>
 
 /** The verify sheet already explains EMAIL_NOT_VERIFIED; don't add a toast on top of it. */
 const isNotVerified = (e: unknown) => e instanceof ApiError && e.code === 'EMAIL_NOT_VERIFIED';
-
-const firstName = (name: string | undefined) => name?.split(' ')[0] || 'user';
 
 // ── Likes ──────────────────────────────────────────────────────────────────────────────────
 // PUT /like is a toggle, so requests for one post must reach the server in order: each like
@@ -91,8 +88,9 @@ export function useSave() {
     mutationFn: (post: Post) => savePost(post._id),
     onMutate: async (post) => {
       trackInteraction(post.type, 'save');
-      await qc.cancelQueries({ queryKey: queryKeys.me });
+      await qc.cancelQueries({ queryKey: queryKeys.me, exact: true });
       const previous = qc.getQueryData<Me>(queryKeys.me);
+      const previousSaved = qc.getQueryData<Post[]>(queryKeys.mySaved);
       const already = (previous?.savedPosts ?? []).map(String).includes(post._id);
       qc.setQueryData<Me>(queryKeys.me, (me) =>
         me
@@ -104,14 +102,22 @@ export function useSave() {
             }
           : me,
       );
-      return { previous, already };
+      // Unsaving from the Saved tab removes the card there at once
+      if (already) {
+        qc.setQueryData<Post[]>(queryKeys.mySaved, (list) =>
+          list?.filter((p) => p._id !== post._id),
+        );
+      }
+      return { previous, previousSaved, already };
     },
     onSuccess: (data, _post, context) => {
       const saved = data?.saved ?? !context?.already;
       toast(saved ? '🔖 Saved!' : 'Bookmark removed', 'success');
+      if (saved) void qc.invalidateQueries({ queryKey: queryKeys.mySaved, exact: true });
     },
     onError: (_error, _post, context) => {
       if (context?.previous) qc.setQueryData(queryKeys.me, context.previous);
+      if (context?.previousSaved) qc.setQueryData(queryKeys.mySaved, context.previousSaved);
       toast('❌ Save failed', 'error');
     },
   });
@@ -234,51 +240,6 @@ export function useReportPost() {
       } else if (!isNotVerified(error)) {
         toast(errorMessage(error, 'Could not send the report'), 'error');
       }
-    },
-  });
-}
-
-// ── People ─────────────────────────────────────────────────────────────────────────────────
-type PersonVars = { id: string; name?: string };
-
-export function useBlockUser() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id }: PersonVars) => blockUser(id),
-    onSuccess: (_data, { id, name }) => {
-      removePosts(qc, (p) => !p.isAnonymous && String(p.postedBy?._id ?? '') === id);
-      const user = useAuthStore.getState().user;
-      if (user) {
-        useAuthStore.getState().updateUser({
-          followingIds: user.followingIds.filter((x) => x !== id),
-          sentRequestIds: user.sentRequestIds.filter((x) => x !== id),
-        });
-      }
-      toast(`🚫 ${firstName(name)} blocked`, 'success');
-    },
-    onError: (error) => toast(`❌ ${errorMessage(error, 'Failed')}`, 'error'),
-  });
-}
-
-/** Follow request; the card shows "⏳" right away and goes back to "Connect" if it fails. */
-export function useConnect() {
-  return useMutation({
-    mutationFn: ({ id }: PersonVars) => connectUser(id),
-    onMutate: ({ id }) => {
-      const user = useAuthStore.getState().user;
-      if (user && !user.sentRequestIds.includes(id)) {
-        useAuthStore.getState().updateUser({ sentRequestIds: [...user.sentRequestIds, id] });
-      }
-    },
-    onSuccess: (_data, { name }) => toast(`✅ Request sent to ${firstName(name)}!`, 'success'),
-    onError: (error, { id }) => {
-      const user = useAuthStore.getState().user;
-      if (user) {
-        useAuthStore
-          .getState()
-          .updateUser({ sentRequestIds: user.sentRequestIds.filter((x) => x !== id) });
-      }
-      if (!isNotVerified(error)) toast(`❌ ${errorMessage(error, 'Failed')}`, 'error');
     },
   });
 }

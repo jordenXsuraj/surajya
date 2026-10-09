@@ -1,0 +1,24 @@
+# Prompt 5 · Rohan asked to follow the tester: Accept on his profile → "Follow back"; my follower
+# count goes up.
+appId: com.themeetnet.app.dev
+name: Accept request
+---
+- runFlow:
+    file: ../subflows/open-profile.yaml
+    env:
+      USER_ID: ${ROHAN_ID}
+      NAME: "Rohan Kale"
+- extendedWaitUntil:
+    visible: "Accept Rohan Kale's follow request"
+    timeout: 15000
+- tapOn:
+    text: "Accept Rohan Kale's follow request"
+    label: "Accept [watch]"
+- extendedWaitUntil:
+    visible: "Follow Rohan Kale back"
+    timeout: 10000
+- back
+- tapOn: "Me"
+- extendedWaitUntil:
+    visible: "Followers 4"
+    timeout: 20000

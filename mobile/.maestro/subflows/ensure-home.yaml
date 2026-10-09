@@ -2,6 +2,13 @@
 # closed with Back; anything else (app closed, signed out, a dialog) gets a cold start.
 appId: com.themeetnet.app.dev
 ---
+# A system "… isn't responding" dialog (e.g. another app opened by a step) covers everything:
+# close it (the runner lists every crash / ANR with its app in the report)
+- runFlow:
+    when:
+      visible: ".*isn't responding"
+    commands:
+      - tapOn: "Close app"
 - runFlow:
     when:
       notVisible: "Create a post"

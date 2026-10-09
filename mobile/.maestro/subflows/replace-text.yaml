@@ -1,0 +1,14 @@
+# Replaces everything in the text box ${FIELD_ID} with ${TEXT}: long-press → Select all → type.
+# (A tap puts the cursor where the finger lands, and eraseText only deletes what is before it,
+# so text after the cursor in a multi-line box would stay.)
+appId: com.themeetnet.app.dev
+---
+- longPressOn:
+    id: "${FIELD_ID}"
+- runFlow:
+    when:
+      visible: "(?i)select all"
+    commands:
+      - tapOn: "(?i)select all"
+- inputText: "${TEXT}"
+- runFlow: hide-keyboard.yaml

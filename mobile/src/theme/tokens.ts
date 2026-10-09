@@ -44,6 +44,23 @@ export const colors = {
   scrim: 'rgba(0,0,0,0.4)',
   overlay: 'rgba(0,0,0,0.94)',
   hint: 'rgba(255,255,255,0.7)',
+  // Profile (web .prof-cover, .cover-edit-btn, media cards .yt-badge / .ig-*)
+  coverFrom: '#0d0d0d',
+  coverMid: '#1a0a14',
+  coverTo: '#0a0d1a',
+  shade: 'rgba(0,0,0,0.3)',
+  shadeStrong: 'rgba(0,0,0,0.6)',
+  shadeHeavy: 'rgba(0,0,0,0.7)',
+  glassBorder: 'rgba(255,255,255,0.2)',
+  playButton: 'rgba(255,255,255,0.9)',
+  youtube: 'rgba(255,0,0,0.8)',
+  igFrom: '#f09433',
+  igMid: '#e6683c',
+  igMain: '#dc2743',
+  igTo: '#cc2366',
+  igTintFrom: 'rgba(240,148,51,0.12)',
+  igTintTo: 'rgba(204,39,102,0.12)',
+  igBorder: 'rgba(204,39,102,0.2)',
 } as const;
 
 export type ColorName = keyof typeof colors;
