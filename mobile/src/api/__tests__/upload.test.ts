@@ -114,7 +114,7 @@ describe('insertNewPost', () => {
       following: queryKeys.feed('following', 'all'),
     };
     for (const key of Object.values(keys)) qc.setQueryData(key, page([existing]));
-    qc.setQueryData(queryKeys.myPosts, [existing]);
+    qc.setQueryData(queryKeys.myPosts, page([existing]));
 
     insertNewPost(qc, mine);
 
@@ -125,7 +125,7 @@ describe('insertNewPost', () => {
     expect(first(keys.collegeQa)).toEqual(['new', 'old']);
     expect(first(keys.globalSocial)).toEqual(['old']); // other type
     expect(first(keys.following)).toEqual(['old']); // only other people's posts
-    expect(qc.getQueryData<Post[]>(queryKeys.myPosts)!.map((p) => p._id)).toEqual(['new', 'old']);
+    expect(first(queryKeys.myPosts)).toEqual(['new', 'old']);
 
     insertNewPost(qc, mine); // never twice
     expect(first(keys.globalAll)).toEqual(['new', 'old']);

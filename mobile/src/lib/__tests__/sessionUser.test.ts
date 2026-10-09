@@ -56,6 +56,37 @@ describe('toSessionUser', () => {
   });
 });
 
+describe('toSessionUser: profile and follow fields (Prompt 5)', () => {
+  it('keeps incoming requests, blocks, cover, contributor and media from GET /users/me', () => {
+    const user = toSessionUser({
+      ...me,
+      pendingRequests: [{ _id: 'r1', name: 'Rohan' }, 'r2'],
+      sentRequests: ['t1'],
+      blockedUsers: ['d1'],
+      coverImage: 'http://localhost:5000/uploads/images/c.jpg',
+      isContributor: true,
+      mediaItems: [{ type: 'instagram', url: 'https://instagram.com/asha' }],
+    });
+    expect(user).toMatchObject({
+      incomingRequestIds: ['r1', 'r2'],
+      sentRequestIds: ['t1'],
+      blockedIds: ['d1'],
+      coverImage: 'http://localhost:5000/uploads/images/c.jpg',
+      isContributor: true,
+      mediaItems: [{ type: 'instagram', url: 'https://instagram.com/asha' }],
+    });
+  });
+
+  it('defaults them for signup / login answers', () => {
+    expect(toSessionUser(authUser)).toMatchObject({
+      incomingRequestIds: [],
+      blockedIds: [],
+      coverImage: '',
+      isContributor: false,
+    });
+  });
+});
+
 describe('decodeEntities', () => {
   it('turns the API escaping back into text', () => {
     expect(decodeEntities('a &lt;b&gt; &amp; &quot;c&quot; &#39;d&#x27;')).toBe(

@@ -1,0 +1,37 @@
+# Prompt 5 · Arjun's profile: ★ contributor, @username, 🎓 Senior, bio, skills, projects, roadmap;
+# Posts shows his named posts but never his anonymous confession; Media shows his videos (with a
+# Short) and his Instagram, not the old channel link.
+appId: com.themeetnet.app.dev
+name: Someone's profile
+---
+- runFlow:
+    file: ../subflows/open-profile.yaml
+    env:
+      USER_ID: ${ARJUN_ID}
+      NAME: "Arjun Patil"
+- assertVisible: "Top Contributor"
+- assertVisible: "@arjun\\.patil"
+- assertVisible: "🎓 Senior"
+- assertVisible: "Final-year CS.*"
+- assertVisible: "Following Arjun Patil\\. Tap to unfollow"
+- scrollUntilVisible:
+    element: "System Design"
+- scrollUntilVisible:
+    element: "Placement Tracker"
+- scrollUntilVisible:
+    element: "Sem 7: system design.*"
+- scrollUntilVisible:
+    element: "Cracked my final round.*"
+- scrollUntilVisible:
+    element: "Which is better for the first internship.*"
+- scroll
+- scroll
+- assertNotVisible: "I almost dropped out.*"
+- scrollUntilVisible:
+    element: "Media 🎬 \\(6\\)"
+    direction: UP
+- tapOn: "Media 🎬 \\(6\\)"
+- scrollUntilVisible:
+    element: "Play YouTube Short"
+- scrollUntilVisible:
+    element: "@arjun\\.builds"

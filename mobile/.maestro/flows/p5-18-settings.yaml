@@ -1,0 +1,45 @@
+# Prompt 5 · Settings: the email (read-only), version + build number, Terms of Service in the in-app
+# browser, Notification settings (the phone's app settings), Email support without a mail app (info toast
+# with the address).
+appId: com.themeetnet.app.dev
+name: Settings
+---
+- runFlow: ../subflows/open-me.yaml
+- tapOn: "Settings"
+- extendedWaitUntil:
+    visible: "tester@meetnet\\.local"
+    timeout: 15000
+- assertVisible: "✅ Verified"
+- scrollUntilVisible:
+    element: "Version \\d+\\.\\d+\\.\\d+ \\(build \\d+\\)"
+- scrollUntilVisible:
+    element: "Terms of Service"
+    direction: UP
+- tapOn: "Terms of Service"
+- extendedWaitUntil:
+    visible: ".*themeetnet\\.com.*|.*Terms.*"
+    timeout: 30000
+- back
+- extendedWaitUntil:
+    visible: "Terms of Service"
+    timeout: 15000
+- tapOn: ".*Notification settings"
+- extendedWaitUntil:
+    visible: "MeetNet Dev"
+    timeout: 15000
+- back
+- extendedWaitUntil:
+    visible: ".*Notification settings"
+    timeout: 15000
+- scrollUntilVisible:
+    element: ".*Email support"
+# the test emulator has no mail app (README): the app says where to write instead
+- tapOn:
+    text: ".*Email support"
+    label: "Email support [watch]"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: ".*Email support"
+    timeout: 15000
+- back

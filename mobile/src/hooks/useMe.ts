@@ -2,14 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 
 import { getMe } from '@/api/endpoints/users';
 import { queryKeys } from '@/api/queryKeys';
-import { toSessionUser } from '@/lib/sessionUser';
+import { applyMe } from '@/api/session';
 import { useAuthStore } from '@/stores/auth.store';
 import type { Me } from '@/types/user';
 
 async function fetchMe(): Promise<Me> {
   const token = useAuthStore.getState().token;
   const me = await getMe();
-  if (useAuthStore.getState().token === token) useAuthStore.getState().setUser(toSessionUser(me));
+  applyMe(me, token);
   return me;
 }
 

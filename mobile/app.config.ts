@@ -72,8 +72,10 @@ export function buildConfig(config: ExpoConfig, variant: AppVariant): ExpoConfig
       [
         'expo-image-picker',
         {
-          photosPermission: 'MeetNet uses your photos only when you choose one to add to a post.',
-          cameraPermission: 'MeetNet uses the camera only when you take a photo for a post.',
+          photosPermission:
+            'MeetNet uses your photos only when you choose one for a post or your profile.',
+          cameraPermission:
+            'MeetNet uses the camera only when you take a photo for a post or your profile.',
           microphonePermission: false,
         },
       ],

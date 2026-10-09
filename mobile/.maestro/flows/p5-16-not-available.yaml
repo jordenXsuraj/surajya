@@ -1,0 +1,18 @@
+# Prompt 5 · Profiles hidden by a block show "This profile isn't available": Pooja (she blocked the
+# tester) and Dev (the tester blocked him).
+appId: com.themeetnet.app.dev
+name: Profile not available
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://profile/${POOJA_ID}
+- extendedWaitUntil:
+    visible: "This profile isn't available"
+    timeout: 20000
+- assertNotVisible: "Pooja Shinde"
+- back
+- openLink: meetnet-dev://profile/${DEV_ID}
+- extendedWaitUntil:
+    visible: "This profile isn't available"
+    timeout: 20000
+- assertNotVisible: "Dev Malhotra"
+- back

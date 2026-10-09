@@ -1,0 +1,34 @@
+# Prompt 5 · Nikhil's new post is in Home; block him from his profile (⋯ → Block → confirm) → the
+# profile closes and his post is gone from Home without a pull-to-refresh.
+appId: com.themeetnet.app.dev
+name: Block from profile
+---
+- runFlow: ../subflows/ensure-home.yaml
+# Home again refreshes it: Nikhil's post was created just before this step
+- tapOn: "Home"
+- tapOn: "Search posts, tags.*"
+- inputText: "${RUN} nikhil"
+- runFlow: ../subflows/hide-keyboard.yaml
+- extendedWaitUntil:
+    visible: "Maestro ${RUN} nikhil post"
+    timeout: 30000
+- openLink: meetnet-dev://profile/${NIKHIL_ID}
+- extendedWaitUntil:
+    visible: "Nikhil Jain"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: "More: share, report, block"
+- tapOn: ".*Block Nikhil"
+- assertVisible: "Block Nikhil Jain\\?"
+- tapOn:
+    text: "(?i)block"
+    label: "Confirm block [watch]"
+- extendedWaitUntil:
+    visible: "Search posts, tags.*|.*${RUN} nikhil.*"
+    timeout: 15000
+- assertNotVisible: "Maestro ${RUN} nikhil post"
+# leave Home unfiltered for the next steps
+- tapOn: "Search posts, tags.*"
+- eraseText: 30
+- runFlow: ../subflows/hide-keyboard.yaml

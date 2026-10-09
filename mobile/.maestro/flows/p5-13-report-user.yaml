@@ -1,0 +1,20 @@
+# Prompt 5 · Report Arjun from his profile's ⋯ menu (reason: harassment).
+appId: com.themeetnet.app.dev
+name: Report user
+---
+- runFlow:
+    file: ../subflows/open-profile.yaml
+    env:
+      USER_ID: ${ARJUN_ID}
+      NAME: "Arjun Patil"
+- tapOn: "More: share, report, block"
+- tapOn: ".*Report user"
+- extendedWaitUntil:
+    visible: "Why are you reporting this person\\?"
+    timeout: 10000
+- tapOn: ".*Harassment"
+- tapOn:
+    text: "Submit report"
+    label: "Submit report [watch]"
+- waitForAnimationToEnd:
+    timeout: 3000

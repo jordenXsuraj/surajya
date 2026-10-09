@@ -1,0 +1,31 @@
+# Prompt 5 · My Following list (Arjun, Meera, Riya; the search box filters it) and Followers list
+# (Nikhil follows me, I don't follow him: "Follow back").
+appId: com.themeetnet.app.dev
+name: My lists
+---
+- runFlow: ../subflows/open-me.yaml
+- extendedWaitUntil:
+    visible: "Following 3"
+    timeout: 20000
+- tapOn: "Following 3"
+- extendedWaitUntil:
+    visible: "Arjun Patil"
+    timeout: 20000
+- assertVisible: "Meera Joshi"
+- assertVisible: "Riya Deshmukh"
+- tapOn: "Search by name, branch, college or skill"
+- inputText: "mee"
+- assertVisible: "Meera Joshi"
+- assertNotVisible: "Arjun Patil"
+- runFlow: ../subflows/hide-keyboard.yaml
+- back
+- extendedWaitUntil:
+    visible: "Followers 3"
+    timeout: 10000
+- tapOn: "Followers 3"
+- extendedWaitUntil:
+    visible: "Nikhil Jain"
+    timeout: 20000
+- assertVisible: "Follow Nikhil Jain back"
+- assertVisible: "Following Arjun Patil\\. Tap to unfollow"
+- back

@@ -1,4 +1,4 @@
-# Signs out from the Me tab if the app is signed in.
+# Signs out (Me → ⚙ Settings → Log out) if the app is signed in.
 appId: com.themeetnet.app.dev
 ---
 - runFlow:
@@ -6,6 +6,7 @@ appId: com.themeetnet.app.dev
       visible: "Create a post"
     commands:
       - tapOn: "Me"
+      - tapOn: "Settings"
       - scrollUntilVisible:
           element: "Log out"
       - tapOn: "Log out"

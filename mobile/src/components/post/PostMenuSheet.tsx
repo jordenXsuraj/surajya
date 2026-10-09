@@ -11,7 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/Text';
 import { useSavedIds } from '@/hooks/useMe';
 import { useModalSheet } from '@/hooks/useModalSheet';
-import { useBlockUser, useDeletePost, useSave } from '@/hooks/usePostMutations';
+import { useBlockUser } from '@/hooks/useFollow';
+import { useDeletePost, useSave } from '@/hooks/usePostMutations';
 import { isOwnPost, postUrl, visibleAuthor } from '@/lib/postView';
 import { decodeEntities } from '@/lib/text';
 import { useAuthStore } from '@/stores/auth.store';
@@ -103,29 +104,35 @@ export function PostMenuSheet() {
       <BottomSheetView style={[styles.content, { paddingBottom: insets.bottom + 12 }]}>
         {post ? (
           <>
-            <Item
+            <MenuItem
               label={saved ? '🔖 Remove bookmark' : '🔖 Save Post'}
               onPress={() => then(() => save(post))}
             />
-            <Item label="🔗 Share Post" onPress={() => then(() => void sharePost(post))} />
+            <MenuItem label="🔗 Share Post" onPress={() => then(() => void sharePost(post))} />
             {!own ? (
-              <Item
+              <MenuItem
                 label={reported ? '🚩 Reported' : '🚩 Report Post'}
                 disabled={reported}
-                onPress={() => then(() => usePostUi.getState().openReport(post._id))}
+                onPress={() =>
+                  then(() => usePostUi.getState().openReport({ kind: 'post', id: post._id }))
+                }
               />
             ) : null}
             {!own && author ? (
-              <Item
+              <MenuItem
                 label={`🚫 Block ${decodeEntities(author.name).split(' ')[0]}`}
                 danger
                 onPress={() => then(() => confirmBlock(post))}
               />
             ) : null}
             {own ? (
-              <Item label="🗑️ Delete Post" danger onPress={() => then(() => confirmDelete(post))} />
+              <MenuItem
+                label="🗑️ Delete Post"
+                danger
+                onPress={() => then(() => confirmDelete(post))}
+              />
             ) : null}
-            <Item label="Cancel" muted onPress={close} />
+            <MenuItem label="Cancel" muted onPress={close} />
           </>
         ) : null}
       </BottomSheetView>
@@ -141,7 +148,8 @@ type ItemProps = {
   disabled?: boolean;
 };
 
-function Item({ label, onPress, danger, muted, disabled }: ItemProps) {
+/** One row of a ⋯ menu sheet (also used by the profile menu). */
+export function MenuItem({ label, onPress, danger, muted, disabled }: ItemProps) {
   return (
     <Pressable
       onPress={onPress}

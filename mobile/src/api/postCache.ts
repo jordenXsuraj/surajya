@@ -1,13 +1,24 @@
-import type { InfiniteData, QueryClient, QueryKey } from '@tanstack/react-query';
+import type { InfiniteData, Query, QueryClient, QueryKey } from '@tanstack/react-query';
 
 import { queryKeys } from '@/api/queryKeys';
-import type { Post } from '@/types/post';
+import type { Post, PostAuthor } from '@/types/post';
 
-// One post can sit in several cached feeds (home all/college, filtered types, following) and in
-// its own post cache. Optimistic updates go through these helpers so every copy stays in sync.
+// One post can sit in several cached lists (home all/college, filtered types, following, my
+// posts, my saved posts, someone's profile) and in its own post cache. Optimistic updates go
+// through these helpers so every copy stays in sync.
 
 export type FeedData = InfiniteData<Post[], number>;
+/** Feeds and my posts are infinite; saved posts and a user's posts are plain arrays. */
+type PostList = FeedData | Post[];
 export type CacheSnapshot = [QueryKey, unknown][];
+
+/** Every cached list of posts: feeds, my posts, my saved posts, another user's posts. */
+export const isPostListKey = (key: QueryKey): boolean =>
+  key[0] === 'feed' ||
+  (key[0] === 'me' && (key[1] === 'posts' || key[1] === 'saved')) ||
+  (key[0] === 'user' && key[2] === 'posts');
+
+const allPostLists = { predicate: (query: Query) => isPostListKey(query.queryKey) };
 
 // Posts this user created in this app session stay at the top of Home's first page for a while,
 // also after a refetch: the server ranks posts from people you follow above your own new post, so
@@ -57,10 +68,16 @@ const mapFeed = (
   return changed ? { ...data, pages } : data;
 };
 
-/** Applies `updater` to the post with this id in every feed page and in the post cache. */
+const mapList = (data: PostList | undefined, fn: (page: Post[]) => Post[]): PostList | undefined =>
+  Array.isArray(data) ? fn(data) : mapFeed(data, fn);
+
+const pagesOf = (data: PostList | undefined): Post[][] =>
+  !data ? [] : Array.isArray(data) ? [data] : data.pages;
+
+/** Applies `updater` to the post with this id in every cached list and in the post cache. */
 export function updatePost(qc: QueryClient, postId: string, updater: (post: Post) => Post): void {
-  qc.setQueriesData<FeedData>({ queryKey: queryKeys.feeds }, (data) =>
-    mapFeed(data, (page) =>
+  qc.setQueriesData<PostList>(allPostLists, (data) =>
+    mapList(data, (page) =>
       page.some((p) => p._id === postId)
         ? page.map((p) => (p._id === postId ? updater(p) : p))
         : page,
@@ -69,23 +86,70 @@ export function updatePost(qc: QueryClient, postId: string, updater: (post: Post
   qc.setQueryData<Post>(queryKeys.post(postId), (post) => (post ? updater(post) : post));
 }
 
-/** Removes matching posts from every cached feed (and their post caches). */
-export function removePosts(qc: QueryClient, predicate: (post: Post) => boolean): void {
-  qc.setQueriesData<FeedData>({ queryKey: queryKeys.feeds }, (data) =>
-    mapFeed(data, (page) => (page.some(predicate) ? page.filter((p) => !predicate(p)) : page)),
+/**
+ * Removes matching posts from every cached list (and their post caches), or only from the lists
+ * under `scope` (e.g. the Following feed after an unfollow), leaving the post caches alone.
+ */
+export function removePosts(
+  qc: QueryClient,
+  predicate: (post: Post) => boolean,
+  scope?: QueryKey,
+): void {
+  qc.setQueriesData<PostList>(scope ? { queryKey: scope } : allPostLists, (data) =>
+    mapList(data, (page) => (page.some(predicate) ? page.filter((p) => !predicate(p)) : page)),
   );
+  if (scope) return;
   for (const query of qc.getQueryCache().findAll({ queryKey: ['post'] })) {
     const post = query.state.data as Post | undefined;
     if (post && predicate(post)) qc.removeQueries({ queryKey: query.queryKey, exact: true });
   }
 }
 
-/** The freshest copy of a post we have: its own cache first, then any feed. */
+/**
+ * The signed-in user changed their name or photo: patch their posts and replies in every cached
+ * list and post, so cards show the new one without a refetch. Anonymous posts carry no author.
+ */
+export function updateAuthor(
+  qc: QueryClient,
+  userId: string,
+  patch: Partial<Pick<PostAuthor, 'name' | 'avatar'>>,
+): void {
+  const mine = (author: PostAuthor | null | undefined) => !!author && String(author._id) === userId;
+  const patchPost = (post: Post): Post => {
+    const ownPost = mine(post.postedBy);
+    const ownReplies = post.replies?.some((r) => mine(r.postedBy)) ?? false;
+    if (!ownPost && !ownReplies) return post;
+    return {
+      ...post,
+      ...(ownPost && post.postedBy ? { postedBy: { ...post.postedBy, ...patch } } : {}),
+      ...(ownReplies
+        ? {
+            replies: post.replies.map((r) =>
+              mine(r.postedBy) && r.postedBy ? { ...r, postedBy: { ...r.postedBy, ...patch } } : r,
+            ),
+          }
+        : {}),
+    };
+  };
+  qc.setQueriesData<PostList>(allPostLists, (data) =>
+    mapList(data, (page) => {
+      const next = page.map(patchPost);
+      return next.some((p, i) => p !== page[i]) ? next : page;
+    }),
+  );
+  for (const query of qc.getQueryCache().findAll({ queryKey: ['post'] })) {
+    const post = query.state.data as Post | undefined;
+    const next = post && patchPost(post);
+    if (next && next !== post) qc.setQueryData<Post>(query.queryKey, next);
+  }
+}
+
+/** The freshest copy of a post we have: its own cache first, then any list. */
 export function findPost(qc: QueryClient, postId: string): Post | undefined {
   const own = qc.getQueryData<Post>(queryKeys.post(postId));
   if (own) return own;
-  for (const [, data] of qc.getQueriesData<FeedData>({ queryKey: queryKeys.feeds })) {
-    for (const page of data?.pages ?? []) {
+  for (const [, data] of qc.getQueriesData<PostList>(allPostLists)) {
+    for (const page of pagesOf(data)) {
       const hit = page.find((p) => p._id === postId);
       if (hit) return hit;
     }
@@ -95,10 +159,10 @@ export function findPost(qc: QueryClient, postId: string): Post | undefined {
 
 /** Everything a mutation might touch, to restore on error. */
 export function snapshotPosts(qc: QueryClient, postId?: string): CacheSnapshot {
-  const feeds = qc.getQueriesData({ queryKey: queryKeys.feeds });
+  const lists = qc.getQueriesData(allPostLists);
   return postId
-    ? [...feeds, [queryKeys.post(postId), qc.getQueryData(queryKeys.post(postId))]]
-    : feeds;
+    ? [...lists, [queryKeys.post(postId), qc.getQueryData(queryKeys.post(postId))]]
+    : lists;
 }
 
 export function restoreSnapshot(qc: QueryClient, snapshot: CacheSnapshot): void {
@@ -133,7 +197,12 @@ export function insertNewPost(qc: QueryClient, post: Post): void {
       };
     });
   }
-  qc.setQueryData<Post[]>(queryKeys.myPosts, (posts) =>
-    posts ? [post, ...posts.filter((p) => p._id !== post._id)] : posts,
-  );
+  qc.setQueryData<FeedData>(queryKeys.myPosts, (data) => {
+    if (!data || data.pages.length === 0) return data;
+    const [first, ...rest] = data.pages;
+    return {
+      ...data,
+      pages: [[post, ...(first ?? []).filter((p) => p._id !== post._id)], ...rest],
+    };
+  });
 }

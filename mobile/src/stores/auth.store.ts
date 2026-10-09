@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persister, queryClient } from '@/lib/queryClient';
 import { clearCache, getStorage, readJson, writeJson } from '@/lib/storage';
 import { usePostUi } from '@/stores/postUi.store';
+import { useProfilePhotoStore } from '@/stores/profilePhoto.store';
 import { useSignupDraft } from '@/stores/signupDraft.store';
 import { useUiStore } from '@/stores/ui.store';
 import type { SessionUser } from '@/types/user';
@@ -28,6 +29,8 @@ type AuthState = {
   signIn: (token: string, user: SessionUser, options?: { pendingVerify?: boolean }) => void;
   setUser: (user: SessionUser) => void;
   updateUser: (patch: Partial<SessionUser>) => void;
+  /** Change password / log out of all devices answer with a new token for this device. */
+  setToken: (token: string) => void;
   clearPendingVerify: () => void;
   markCodeSent: () => void;
   setResendWait: (seconds: number) => void;
@@ -78,6 +81,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     if (current) get().setUser({ ...current, ...patch });
   },
 
+  setToken: (token) => {
+    if (get().status !== 'signedIn') return;
+    SecureStore.setItem(TOKEN_KEY, token);
+    set({ token });
+  },
+
   clearPendingVerify: () => set({ pendingVerify: false }),
 
   markCodeSent: () => set({ resendAvailableAt: Date.now() + RESEND_SECONDS * 1000 }),
@@ -91,6 +100,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     clearCache(); // wipes MMKV data; the encryption key in SecureStore stays
     useUiStore.getState().reset();
     usePostUi.getState().reset();
+    useProfilePhotoStore.getState().reset();
     useSignupDraft.getState().clear();
     set({
       status: 'signedOut',

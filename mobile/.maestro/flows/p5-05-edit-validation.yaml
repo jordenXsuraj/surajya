@@ -1,0 +1,68 @@
+# Prompt 5 · Edit profile rules: Save is off until something changes; the username box lowercases
+# and drops spaces ("Ab C" → abc); too short is refused; a taken username shows the server's
+# "Username already taken" under the field; the bio stops at 250; an Instagram post link is refused;
+# leaving with changes asks first (Keep editing, then Discard). Nothing is saved.
+appId: com.themeetnet.app.dev
+name: Edit profile (rules)
+---
+- runFlow: ../subflows/open-me.yaml
+- tapOn: "Edit profile"
+- extendedWaitUntil:
+    visible: "Basic Info"
+    timeout: 20000
+- assertVisible:
+    id: "edit-save"
+    enabled: false
+- tapOn:
+    id: "edit-username"
+- eraseText: 30
+- inputText: "Ab C"
+- assertVisible: "✅ @abc"
+- eraseText: 10
+- inputText: "ab"
+- assertVisible: "⚠️ 3-20 chars, only letters/numbers/\\._"
+- eraseText: 10
+- inputText: "arjun.patil"
+- runFlow: ../subflows/hide-keyboard.yaml
+- tapOn:
+    id: "edit-save"
+- extendedWaitUntil:
+    visible: "Username already taken"
+    timeout: 15000
+- tapOn:
+    id: "edit-bio"
+- eraseText: 120
+- inputText: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+- assertVisible: "250/250"
+- runFlow: ../subflows/hide-keyboard.yaml
+- scrollUntilVisible:
+    element:
+      id: "edit-media-url"
+- tapOn:
+    id: "edit-media-url"
+- inputText: "instagram.com/p/xyz"
+- runFlow: ../subflows/hide-keyboard.yaml
+- scrollUntilVisible:
+    element: "⚠️ Paste your Instagram profile link.*"
+- scrollUntilVisible:
+    element:
+      id: "media-add"
+- assertVisible:
+    id: "media-add"
+    enabled: false
+- back
+- extendedWaitUntil:
+    visible: "Discard changes\\?"
+    timeout: 10000
+- tapOn: "(?i)keep editing"
+# still on the form (scrolled down to the media box)
+- assertVisible:
+    id: "edit-save"
+- back
+- extendedWaitUntil:
+    visible: "Discard changes\\?"
+    timeout: 10000
+- tapOn: "(?i)discard"
+- extendedWaitUntil:
+    visible: "Edit profile"
+    timeout: 15000

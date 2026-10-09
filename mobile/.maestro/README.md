@@ -1,6 +1,8 @@
-# Maestro checks (Prompts 3 and 4)
+# Maestro checks (Prompts 3, 4 and 5)
 
-Automated version of the phone checklists: login, feed, post actions and the whole compose flow.
+Automated version of the phone checklists: login, feed, post actions, the whole compose flow, and
+profiles: own profile, photo and cover upload, edit profile, other profiles, the follow system
+(request, accept, reject, unfollow), lists, report and block, settings, change password, log out.
 `run.mjs` runs each flow on an Android emulator, turns the network off and on where a step needs
 it, and checks the result in the **local database** and in **`server/uploads`** (the local API
 stores uploads on disk when Cloudinary is not configured), not only on screen. It only ever talks
@@ -22,7 +24,10 @@ to the local stack.
    and toasts are missed and it can stop responding),
    install the MeetNet Dev APK (`adb -s emulator-5554 install -r meetnet-dev.apk`; the development
    build contains x86_64 libraries).
-5. Test files in the emulator's `Download` folder (`adb -s emulator-5554 push <file> /sdcard/Download/`):
+5. No mail app on the emulator: `adb -s emulator-5554 shell pm disable-user --user 0 com.google.android.gm`
+   (the image's Gmail is not set up and stops responding when Settings → Email support opens it;
+   without a mail app the app shows the support address in a toast, which `p5-18` checks).
+6. Test files in the emulator's `Download` folder (`adb -s emulator-5554 push <file> /sdcard/Download/`):
    - `meetnet-test-12mb-2031.jpg` (12 MB, 6000×4500, taken 1 Jan 2031)
    - `meetnet-test-iphone-2031.heic` (4032×3024 HEIC, taken 2 Jan 2031)
    - `meetnet-test-small-2031.jpg` (taken 3 Jan 2031)
@@ -33,9 +38,15 @@ to the local stack.
 
 ## Before a run
 
-- Docker Mongo `meetnet-mongo` (db `meetnet_local`) with the seed users (Riya, Kabir, Sneha;
-  password `seedpass123`) and `tester@meetnet.local` / `MeetNet-Test-2026`, who follows Riya and
-  has Kabir's request pending.
+- Docker Mongo `meetnet-mongo` (db `meetnet_local`) with the seed: `node .maestro/seed.mjs` (local
+  only, safe to run again). It creates what is missing: `tester@meetnet.local` / `MeetNet-Test-2026`,
+  the feed authors Riya, Kabir and Sneha with ~120 posts, and eight profile people
+  (`seed-p-<name>@example.com`, password `seedpass123`) with photos uploaded through the API,
+  bios, skills, projects, media and posts. The relations are in `seed-data.mjs`: the tester follows
+  Riya, Arjun and Meera (Arjun and Meera follow back), Nikhil follows the tester, Kabir and Rohan
+  asked to follow the tester, the tester asked Tanvi, the tester blocked Dev, Pooja blocked the
+  tester; Ishaan has an empty profile. Every run (and every Prompt 5 step) puts these relations and
+  the tester's profile back first.
 - The local API on port 5000 **without** `CLOUDINARY_*` (uploads then go to `server/uploads`; the
   runner refuses Cloudinary URLs) and Metro on 8081 (`npm run start`).
 
@@ -57,7 +68,22 @@ devices are named in a warning; the normal adb server is started again when the 
 run is killed hard, `adb kill-server` brings the phone back.
 
 Each run creates its own fixture posts (tagged `Maestro <run id>`), removes the previous run's
-Maestro posts, unblocks the test user it blocks and clears the tester's saved posts.
+Maestro posts and the tester's user reports, puts the seed relations back and clears the tester's
+saved posts.
+
+Prompt 5 specifics:
+
+- **The other side** of a follow request (someone accepting on their phone) is played by the runner
+  through the API with that seed account's login (`p5-09`); fixture posts by Tanvi, Meera and
+  Nikhil show that the Following and Home feeds change without a pull-to-refresh.
+- **Photos**: `p5-02` / `p5-03` pick the 2031 test photos, crop them on the app's own crop screen
+  (no pinch / drag: the centred crop) and check the stored file is a JPEG of exactly 600×600 /
+  1500×500 (the HEIC cover converted on the phone).
+- **Change password** (`p5-19`) changes the tester's password to `MeetNet-Test-2026-b`; the runner
+  checks it works and changes it back right away (and at the start of the next run, if a run
+  stopped in between). The server allows 5 changes per 15 minutes, so run `p5-19` at most twice in
+  a row.
+- Log out is in Settings now (`subflows/sign-out.yaml`: Me → ⚙ → Log out).
 The report goes to `.maestro/reports/<run>/report.md` (git-ignored) with screenshots of failures.
 
 Network-loss steps use airplane mode **and** remove `adb reverse tcp:5000`: the app reaches the
@@ -91,4 +117,6 @@ Things the flows work around on purpose:
 ## Not automated (check by eye on the phone)
 
 Camera permission prompt and taking a photo; how the uploaded photos look; haptics; the phone's own
-keyboard never covering the text box, the Post button or the toast; how the animations feel.
+keyboard never covering the text box, the Post button or the toast; how the animations feel;
+pinch and drag on the crop screen (Maestro cannot pinch); a second phone or the web as the other
+side of a request (the runner uses the API for that).

@@ -1,0 +1,111 @@
+# Prompt 5 · Edit profile: name, bio, year, skills (+ suggestion, + own, − one), projects (− one,
+# + one), roadmap, media (− video, + Instagram) → Save → back on Me with the changes; my post in
+# Home (loaded before the edit) shows the new name without a refresh. The runner checks every field in the database.
+appId: com.themeetnet.app.dev
+name: Edit profile (save)
+---
+# my post (created by the runner) is in the Home feed before the edit: tapping Home again
+# refreshes it; the search box shows just that post (no long scroll past other photo posts)
+- runFlow: ../subflows/ensure-home.yaml
+- tapOn: "Home"
+- tapOn: "Search posts, tags.*"
+- inputText: "${RUN} p5 own"
+- runFlow: ../subflows/hide-keyboard.yaml
+- extendedWaitUntil:
+    visible: "Maestro ${RUN} p5 own post"
+    timeout: 30000
+- assertVisible: "Test Student"
+- runFlow: ../subflows/open-me.yaml
+- tapOn: "Edit profile"
+- extendedWaitUntil:
+    visible: "Basic Info"
+    timeout: 20000
+- runFlow:
+    file: ../subflows/replace-text.yaml
+    env:
+      FIELD_ID: "edit-name"
+      TEXT: "Tester Maestro"
+- runFlow:
+    file: ../subflows/replace-text.yaml
+    env:
+      FIELD_ID: "edit-bio"
+      TEXT: "Maestro ${RUN} bio"
+- scrollUntilVisible:
+    element: "2nd"
+- tapOn: "2nd"
+- scrollUntilVisible:
+    element: "Python"
+- tapOn: "Python"
+- tapOn: "DSA"
+- scrollUntilVisible:
+    element: "\\+ Add your own skill"
+- tapOn: "\\+ Add your own skill"
+- inputText: "Maestro skill"
+- tapOn:
+    id: "skill-add"
+- runFlow: ../subflows/hide-keyboard.yaml
+- scrollUntilVisible:
+    element: "Remove project Campus Notes"
+- tapOn: "Remove project Campus Notes"
+- scrollUntilVisible:
+    element:
+      id: "edit-project-name"
+- tapOn:
+    id: "edit-project-name"
+- inputText: "Maestro project"
+- runFlow: ../subflows/hide-keyboard.yaml
+- scrollUntilVisible:
+    element:
+      id: "edit-project-link"
+- tapOn:
+    id: "edit-project-link"
+- inputText: "github.com/maestro/test"
+- runFlow: ../subflows/hide-keyboard.yaml
+- scrollUntilVisible:
+    element: "\\+ Add Project"
+- tapOn: "\\+ Add Project"
+- scrollUntilVisible:
+    element:
+      id: "edit-roadmap"
+- runFlow:
+    file: ../subflows/replace-text.yaml
+    env:
+      FIELD_ID: "edit-roadmap"
+      TEXT: "Maestro roadmap"
+- scrollUntilVisible:
+    element: "Remove video"
+- tapOn: "Remove video"
+- scrollUntilVisible:
+    element:
+      id: "edit-media-url"
+- tapOn:
+    id: "edit-media-url"
+- inputText: "instagram.com/maestro.test"
+- runFlow: ../subflows/hide-keyboard.yaml
+- scrollUntilVisible:
+    element: "✅ Instagram profile @maestro\\.test detected"
+- scrollUntilVisible:
+    element:
+      id: "media-add"
+- tapOn:
+    id: "media-add"
+- tapOn:
+    id: "edit-save"
+    label: "Save [watch]"
+- extendedWaitUntil:
+    visible: "Edit profile"
+    timeout: 20000
+- assertVisible: "Tester Maestro"
+- assertVisible: "Maestro ${RUN} bio"
+- assertVisible: "2nd year"
+# back on Home (switching tabs does not refresh it; still searching): my post shows the new name
+- tapOn: "Home"
+- extendedWaitUntil:
+    visible: "Maestro ${RUN} p5 own post"
+    timeout: 15000
+- assertVisible: "Tester Maestro"
+- assertNotVisible: "Test Student"
+# leave Home unfiltered for the next steps
+- tapOn: "Search posts, tags.*"
+- eraseText: 30
+- runFlow: ../subflows/hide-keyboard.yaml

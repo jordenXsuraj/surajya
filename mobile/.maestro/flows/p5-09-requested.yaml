@@ -1,0 +1,12 @@
+# Prompt 5 · (before the other side answers) Tanvi's profile shows the request the tester sent.
+appId: com.themeetnet.app.dev
+name: Request pending
+---
+- runFlow:
+    file: ../subflows/open-profile.yaml
+    env:
+      USER_ID: ${TANVI_ID}
+      NAME: "Tanvi Rao"
+- extendedWaitUntil:
+    visible: "Follow request sent to Tanvi Rao"
+    timeout: 15000

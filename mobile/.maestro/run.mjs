@@ -1,14 +1,14 @@
-// Runs the Maestro checks for Prompts 3 and 4 against the LOCAL stack on an Android emulator (never
+// Runs the Maestro checks for Prompts 3, 4 and 5 against the LOCAL stack on an Android emulator (never
 // on someone's phone) and checks every step in the local database and in server/uploads, not only
 // on screen.
 //
 //   node .maestro/run.mjs                        (from mobile/) all steps on emulator-5554
-//   node .maestro/run.mjs --only p4-05,p4-06     some steps; --only p3 / p4 for a group
+//   node .maestro/run.mjs --only p4-05,p4-06     some steps; --only p3 / p4 / p5 for a group
 //   ANDROID_SERIAL=emulator-5556 node .maestro/run.mjs   another emulator
 //
 // Needs: the device with MeetNet Dev installed, Metro on 8081, the local API on 5000 WITHOUT
 // Cloudinary (uploads go to server/uploads), Docker Mongo `meetnet-mongo` (db meetnet_local), the
-// seed accounts and the test files in the device's Download folder (README.md).
+// seed accounts (node .maestro/seed.mjs) and the test files in the device's Download folder (README.md).
 // Report: .maestro/reports/<run>/report.md (+ screenshots of failures).
 import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process';
 import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs';
@@ -17,12 +17,16 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { crc32, deflateSync } from 'node:zlib';
 
+import { BASE_PEOPLE, PROFILE_PEOPLE, SEED_COLLEGE, TESTER_PROFILE, relationsScript } from './seed-data.mjs';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER = resolve(HERE, '../../server');
 const UPLOAD_DIR = process.env.LOCAL_UPLOAD_DIR || join(SERVER, 'uploads');
 const API = 'http://127.0.0.1:5000/api';
 const TESTER = { email: 'tester@meetnet.local', password: 'MeetNet-Test-2026' };
 const SEED_PASSWORD = 'seedpass123';
+// p5-19 changes the tester's password to this and the runner changes it back
+const TESTER_NEW_PASSWORD = 'MeetNet-Test-2026-b';
 const YT_ID = 'dQw4w9WgXcQ';
 // Red pixels (quarter-size frames) the heart adds to the middle of the image: ~6000 at full size,
 // a few hundred while it pops in; nothing else there is red
@@ -344,11 +348,25 @@ const mongo = (js) => {
 const q = (v) => JSON.stringify(v);
 
 async function api(method, path, body, token) {
-  const res = await fetch(API + path, {
-    method,
-    headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      res = await fetch(API + path, {
+        method,
+        headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      break;
+    } catch (e) {
+      // The API keeps idle connections for 65 s and fetch reuses them until just before that: a
+      // request after a ~minute-long flow can meet a socket the server is closing (ECONNRESET,
+      // nothing was processed). Once more on a new connection.
+      const code = e.cause?.code;
+      if (attempt === 1 && (code === 'ECONNRESET' || code === 'UND_ERR_SOCKET')) continue;
+      // "fetch failed" alone says nothing: name the request and the network error
+      throw new Error(`${method} ${path}: ${code ?? e.cause?.message ?? e.message}`);
+    }
+  }
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status} ${data?.message ?? ''}`);
   return data;
@@ -415,6 +433,89 @@ const noPost = (text) => () => {
   expect(!postByText(`Maestro ${RUN} ${text}`), `a post "${text}" was created`);
   return 'no post created';
 };
+
+// ── Prompt 5: seed accounts, relations, profiles ──────────────────────────────────────────────
+// The tester, the Prompt 3 feed authors and the Prompt 5 profile people (seed-data.mjs), keyed
+// riya / arjun / … → ids (ctx.ids) and emails (ctx.emails)
+function seedAccounts() {
+  const rows = mongo(`print(JSON.stringify(db.users.find({ $or: [{ email: ${q(TESTER.email)} },
+    { college: ${q(SEED_COLLEGE)}, email: /^seed-([0-2]-|p-)/ }] }, { name: 1, email: 1 }).toArray()
+    .map(u => ({ id: String(u._id), name: u.name, email: u.email }))))`);
+  const ids = {}, emails = {};
+  for (const r of rows) {
+    const key = r.email === TESTER.email ? 'tester'
+      : r.email.startsWith('seed-p-') ? r.email.slice('seed-p-'.length).split('@')[0]
+        : BASE_PEOPLE.find((p) => p.name === r.name)?.key;
+    if (key) { ids[key] = r.id; emails[key] = r.email; }
+  }
+  const missing = ['tester', ...BASE_PEOPLE.map((p) => p.key), ...PROFILE_PEOPLE.map((p) => p.key)].filter((k) => !ids[k]);
+  expect(!missing.length, `seed accounts missing (${missing.join(', ')}): run node .maestro/seed.mjs`);
+  return { ids, emails };
+}
+
+/** Every follow / request / block between seed accounts and the tester's profile back to the seed. */
+function resetP5() {
+  mongo(relationsScript(ctx.ids));
+  const { name, year, branch, bio, skills, projects, roadmap, mediaItems } = TESTER_PROFILE;
+  mongo(`db.users.updateOne({ _id: ObjectId(${q(ctx.ids.tester)}) }, { $set: ${q({ name, year, branch, bio, skills, projects, roadmap, mediaItems, avatar: '', coverImage: '' })} }); print('true')`);
+}
+
+/** A token for a seed account (the other side of a request, fixture posts). */
+async function tokenOf(key) {
+  const password = key === 'tester' ? TESTER.password : SEED_PASSWORD;
+  return (await api('POST', '/auth/login', { email: ctx.emails[key], password })).token;
+}
+const postAs = async (key, text) => (await api('POST', '/posts', { type: 'social', text }, await tokenOf(key)))._id;
+
+const userDoc = (key) => mongo(`
+  const u = db.users.findOne({ _id: ObjectId(${q(ctx.ids[key])}) });
+  print(JSON.stringify({ name: u.name, username: u.username || '', bio: u.bio || '', year: u.year, branch: u.branch,
+    skills: u.skills || [], projects: (u.projects || []).map(p => ({ name: p.name, link: p.link || '' })),
+    roadmap: u.roadmap || '', mediaItems: (u.mediaItems || []).map(m => ({ type: m.type, url: m.url })),
+    avatar: u.avatar || '', coverImage: u.coverImage || '',
+    following: (u.following || []).map(String), followers: (u.followers || []).map(String),
+    sentRequests: (u.sentRequests || []).map(String), pendingRequests: (u.pendingRequests || []).map(String),
+    blockedUsers: (u.blockedUsers || []).map(String), tokenVersion: u.tokenVersion || 0 }));`);
+
+/** Checks both sides of a relation in the database: a follows b / a asked to follow b. */
+function expectRelation(a, b, { follows, requested }) {
+  const A = userDoc(a), B = userDoc(b);
+  const said = [];
+  if (follows !== undefined) {
+    const one = A.following.includes(ctx.ids[b]), other = B.followers.includes(ctx.ids[a]);
+    expect(one === follows && other === follows, `${a} → ${b}: following ${one}, in their followers ${other}, expected ${follows}`);
+    said.push(follows ? `${a} follows ${b}` : `${a} does not follow ${b}`);
+  }
+  if (requested !== undefined) {
+    const one = A.sentRequests.includes(ctx.ids[b]), other = B.pendingRequests.includes(ctx.ids[a]);
+    expect(one === requested && other === requested, `${a} → ${b}: sentRequests ${one}, their pendingRequests ${other}, expected ${requested}`);
+    said.push(requested ? 'request pending on both sides' : 'no request on either side');
+  }
+  return said.join('; ');
+}
+
+/** A profile photo / cover: a new local upload, a JPEG of exactly the crop's output size. */
+function expectProfilePhoto(url, width, height) {
+  const { file, name } = uploadedFile(url);
+  const buf = readFileSync(file);
+  const size = jpegSize(buf);
+  expect(size, 'stored file is not a JPEG (the app should send JPEG, HEIC included)');
+  expect(size.width === width && size.height === height, `stored ${size.width}×${size.height}, expected ${width}×${height}`);
+  expect(buf.length < 5 * 1024 * 1024, `stored ${buf.length} bytes, expected < 5 MB`);
+  return `${name}: JPEG ${size.width}×${size.height}, ${(buf.length / 1024).toFixed(0)} KB`;
+}
+
+/** p5-19 changes the password and changes it back; a run stopped in between is repaired here. */
+async function testerLogin() {
+  try {
+    return await api('POST', '/auth/login', TESTER);
+  } catch (first) {
+    const alt = await api('POST', '/auth/login', { email: TESTER.email, password: TESTER_NEW_PASSWORD }).catch(() => { throw first; });
+    await api('POST', '/auth/change-password', { currentPassword: TESTER_NEW_PASSWORD, newPassword: TESTER.password }, alt.token);
+    log('tester password was left changed by an earlier run: changed back');
+    return api('POST', '/auth/login', TESTER);
+  }
+}
 
 // ── steps ─────────────────────────────────────────────────────────────────────────────────────
 const TYPES = [
@@ -540,6 +641,115 @@ const STEPS = [
   { id: 'p4-18', title: 'Attachment chips all on screen; Link and Tags tappable (360 dp)', flow: 'p4-18-attachments-visible.yaml',
     before: () => { ctx.count = testerPostCount(); },
     verify: () => { expect(testerPostCount() === ctx.count, 'a post was created'); return 'Tags and Link fields opened; nothing posted'; } },
+
+  // Prompt 5: every step starts from the seed (relations, the tester's profile, no photos)
+  ...[
+    { id: 'p5-01', title: 'Me: header, counts, follow requests, sections, Posts / Media / Saved', flow: 'p5-01-me-profile.yaml' },
+    { id: 'p5-02', title: 'Profile photo: pick → crop 1:1 → upload with progress', flow: 'p5-02-avatar.yaml',
+      toasts: [{ type: 'success', text: 'Profile photo updated' }],
+      verify: (start) => {
+        const d = userDoc('tester');
+        expect(d.avatar, 'no avatar in the database');
+        const n = uploadsSince(start, 'images').length;
+        expect(n === 1, `${n} images uploaded, expected 1`);
+        return expectProfilePhoto(d.avatar, 600, 600);
+      } },
+    { id: 'p5-03', title: 'Cover from an iPhone HEIC photo: crop 3:1 → upload', flow: 'p5-03-cover-heic.yaml',
+      toasts: [{ type: 'success', text: 'Cover updated' }],
+      verify: () => {
+        const d = userDoc('tester');
+        expect(d.coverImage, 'no cover in the database');
+        return expectProfilePhoto(d.coverImage, 1500, 500);
+      } },
+    { id: 'p5-04', title: 'Edit profile: every kind of field saved; my post shows the new name', flow: 'p5-04-edit-save.yaml',
+      toasts: [{ type: 'success', text: 'Profile updated' }],
+      beforePrepare: async () => { await postAs('tester', `Maestro ${RUN} p5 own post`); },
+      verify: () => {
+        const d = userDoc('tester');
+        const media = [{ type: 'instagram', url: 'https://www.instagram.com/meetnet.tester/' }, { type: 'instagram', url: 'instagram.com/maestro.test' }];
+        const wrong = [
+          [d.name === 'Tester Maestro', `name "${d.name}"`],
+          [d.bio === `Maestro ${RUN} bio`, `bio "${d.bio}"`],
+          [d.year === '2nd', `year ${d.year}`],
+          [d.skills.includes('Python') && d.skills.includes('Maestro skill') && !d.skills.includes('DSA'), `skills ${d.skills.join(', ')}`],
+          [q(d.projects) === q([{ name: 'Maestro project', link: 'github.com/maestro/test' }]), `projects ${q(d.projects)}`],
+          [d.roadmap === 'Maestro roadmap', `roadmap "${d.roadmap}"`],
+          [q(d.mediaItems) === q(media), `media ${q(d.mediaItems)}`],
+        ].filter(([ok]) => !ok).map(([, m]) => m);
+        expect(!wrong.length, wrong.join('; '));
+        return 'name, bio, year, skills (+suggestion, +own, −one), projects (−1, +1), roadmap, media (−video, +Instagram) as typed';
+      } },
+    { id: 'p5-05', title: 'Edit profile: Save off until changed, username rules, taken username, bio 250, bad link, discard', flow: 'p5-05-edit-validation.yaml',
+      verify: () => {
+        const d = userDoc('tester');
+        expect(d.bio === TESTER_PROFILE.bio && d.username === ctx.testerUsername, `profile changed: bio "${d.bio}", username "${d.username}"`);
+        return 'nothing saved';
+      } },
+    { id: 'p5-06', title: 'My Following / Followers lists, search, "Follow back"', flow: 'p5-06-my-lists.yaml' },
+    { id: 'p5-07', title: "Arjun's profile: badges, sections, posts without the anonymous one, media", flow: 'p5-07-other-profile.yaml',
+      verify: () => {
+        const n = mongo(`print(db.posts.countDocuments({ postedBy: ObjectId(${q(ctx.ids.arjun)}), isAnonymous: true }))`);
+        expect(n >= 1, 'Arjun has no anonymous post in the database (the check would mean nothing)');
+        return `Arjun has ${n} anonymous post(s) in the database; not shown on his profile`;
+      } },
+    { id: 'p5-08', title: 'Follow → "Requested" (request sent)', flow: 'p5-08-follow-request.yaml',
+      toasts: [{ type: 'success', text: 'Request sent to Ishaan' }],
+      verify: () => expectRelation('tester', 'ishaan', { requested: true, follows: false }) },
+    { id: 'p5-09', title: 'Request accepted on the other side → "Following" and their post in Following, no pull-to-refresh', prepare: 'p5-09-requested.yaml', flow: 'p5-09-accepted.yaml',
+      beforePrepare: async () => { await postAs('tanvi', `Maestro ${RUN} tanvi post`); },
+      before: async () => { await api('POST', `/users/${ctx.ids.tester}/accept`, {}, await tokenOf('tanvi')); },
+      verify: () => expectRelation('tester', 'tanvi', { follows: true, requested: false }) },
+    { id: 'p5-10', title: 'Accept a request on their profile → "Follow back"', flow: 'p5-10-accept.yaml',
+      toasts: [{ type: 'success', text: 'Rohan now follows you' }],
+      verify: () => expectRelation('rohan', 'tester', { follows: true, requested: false }) },
+    { id: 'p5-11', title: 'Reject a request in Follow requests', flow: 'p5-11-reject.yaml',
+      toasts: [{ type: 'success', text: 'Request removed' }],
+      verify: () => expectRelation('kabir', 'tester', { requested: false, follows: false }) },
+    { id: 'p5-12', title: 'Unfollow (confirm) → their post leaves Following without refresh', flow: 'p5-12-unfollow.yaml',
+      toasts: [{ type: 'success', text: 'Unfollowed Meera' }],
+      beforePrepare: async () => { await postAs('meera', `Maestro ${RUN} meera post`); },
+      verify: () => expectRelation('tester', 'meera', { follows: false }) },
+    { id: 'p5-13', title: 'Report a user (harassment)', flow: 'p5-13-report-user.yaml',
+      toasts: [{ type: 'success', text: 'Report submitted' }],
+      verify: () => {
+        const n = mongo(`print(db.reports.countDocuments({ targetType: 'user', user: ObjectId(${q(ctx.ids.arjun)}), reportedBy: ObjectId(${q(ctx.ids.tester)}), reason: 'harassment' }))`);
+        expect(n === 1, `${n} matching user reports`);
+        return 'one harassment report about Arjun by the tester';
+      } },
+    { id: 'p5-14', title: 'Block from a profile → back, their posts gone from Home without refresh', flow: 'p5-14-block-profile.yaml',
+      toasts: [{ type: 'success', text: 'Nikhil blocked' }],
+      beforePrepare: async () => { await postAs('nikhil', `Maestro ${RUN} nikhil post`); },
+      verify: () => {
+        expect(userDoc('tester').blockedUsers.includes(ctx.ids.nikhil), 'Nikhil not in blockedUsers');
+        return `Nikhil blocked; ${expectRelation('nikhil', 'tester', { follows: false })}`;
+      } },
+    { id: 'p5-15', title: 'Settings → Blocked users → Unblock', flow: 'p5-15-unblock.yaml',
+      toasts: [{ type: 'success', text: 'Dev unblocked' }],
+      verify: () => { expect(!userDoc('tester').blockedUsers.includes(ctx.ids.dev), 'Dev still blocked'); return 'Dev no longer in blockedUsers'; } },
+    { id: 'p5-16', title: '"This profile isn\'t available" (blocked either way)', flow: 'p5-16-not-available.yaml' },
+    { id: 'p5-17', title: 'A link to my own profile opens Me', flow: 'p5-17-own-profile.yaml' },
+    { id: 'p5-18', title: 'Settings: email, version + build, Terms page, system settings, support without a mail app', flow: 'p5-18-settings.yaml',
+      toasts: [{ type: 'info', text: 'No email app found' }] },
+    { id: 'p5-20', title: 'Share profile: Android share sheet with the profile link', flow: 'p5-20-share-profile.yaml' },
+    // after the other steps: changing the password back (runner) ends the app's session
+    { id: 'p5-19', title: 'Change password (wrong current refused; still signed in)', flow: 'p5-19-change-password.yaml',
+      toasts: [{ type: 'success', text: 'Password changed' }],
+      beforePrepare: () => { ctx.pwChanged = false; ctx.tokenVersion = userDoc('tester').tokenVersion; },
+      after: async () => {
+        // The new password must work; then it is changed back for the next steps and runs
+        const t = await api('POST', '/auth/login', { email: TESTER.email, password: TESTER_NEW_PASSWORD }).catch(() => null);
+        if (!t) return;
+        ctx.pwChanged = true;
+        ctx.tokenVersionAfter = userDoc('tester').tokenVersion;
+        await api('POST', '/auth/change-password', { currentPassword: TESTER_NEW_PASSWORD, newPassword: TESTER.password }, t.token);
+      },
+      verify: () => {
+        expect(ctx.pwChanged, 'the new password does not work');
+        expect(ctx.tokenVersionAfter === ctx.tokenVersion + 1, `tokenVersion ${ctx.tokenVersion} → ${ctx.tokenVersionAfter}, expected +1`);
+        return 'new password works; tokenVersion +1 (other sessions ended); changed back';
+      } },
+    { id: 'p5-21', title: 'Log out from Settings', flow: 'p5-21-logout.yaml' },
+  ].map((step) => ({ ...step, beforePrepare: async () => { resetP5(); await step.beforePrepare?.(); } })),
 ];
 
 // ── setup ─────────────────────────────────────────────────────────────────────────────────────
@@ -566,10 +776,24 @@ function preflight() {
     : `Maestro cannot reach ${SERIAL}.`);
 }
 
-// App crashes and "not responding" the device recorded ("2026-10-06 19:31:42 data_app_native_crash"):
-// listed in the report, so a cold start that open-app.yaml retried is not hidden
-const appProblems = () => run('adb', ['-s', SERIAL, 'shell', 'dumpsys', 'dropbox'], { maxBuffer: 16 * 1024 * 1024 })
-  .split(/\r?\n/).map((l) => l.trim().match(/^(\S+ \S+) (data_app_(?:native_crash|crash|anr))\b/)).filter(Boolean).map((m) => `${m[1]} ${m[2]}`);
+// App crashes and "not responding" the device recorded ("2026-10-06 19:31:42 data_app_anr
+// com.themeetnet.app.dev"): listed in the report, so a cold start that open-app.yaml retried is
+// not hidden. Each entry names its app (other apps, e.g. the emulator's Gmail, are listed apart).
+const APP_ID = 'com.themeetnet.app.dev';
+function appProblems() {
+  const problems = [];
+  for (const tag of ['data_app_native_crash', 'data_app_crash', 'data_app_anr']) {
+    const out = run('adb', ['-s', SERIAL, 'shell', 'dumpsys', 'dropbox', '--print', tag], { maxBuffer: 64 * 1024 * 1024 });
+    let current = null;
+    for (const line of out.split(/\r?\n/)) {
+      const m = line.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) (data_app_\w+)/);
+      if (m) { current = { at: m[1], type: m[2], app: '?' }; problems.push(current); continue; }
+      const p = current?.app === '?' && line.match(/^Process: (\S+)/);
+      if (p) current.app = p[1];
+    }
+  }
+  return problems.map((x) => `${x.at} ${x.type} ${x.app}`);
+}
 let problemsBefore = [];
 
 async function setup() {
@@ -586,8 +810,14 @@ async function setup() {
   expect(riya && sneha, 'seed users Riya / Sneha missing');
   ctx.snehaId = sneha.id;
 
-  const me = await api('POST', '/auth/login', TESTER);
+  const me = await testerLogin();
   ctx.testerId = String(me.user?._id ?? me.user?.id);
+  Object.assign(ctx, seedAccounts());
+  ctx.idEnv = Object.fromEntries(Object.entries(ctx.ids).map(([k, id]) => [`${k.toUpperCase()}_ID`, id]));
+  // Every run starts from the seed: who follows / asked / blocked whom, the tester's profile
+  resetP5();
+  ctx.testerUsername = userDoc('tester').username;
+  mongo(`print(JSON.stringify(db.reports.deleteMany({ targetType: 'user', reportedBy: ObjectId(${q(ctx.testerId)}) }).deletedCount))`);
   // Uploads must go to local disk: a 1×1 probe through the API, removed again
   const fd = new FormData();
   fd.append('image', new Blob([Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c636060606000000005000157a0c5e10000000049454e44ae426082', 'hex')], { type: 'image/png' }), 'probe.png');
@@ -638,7 +868,7 @@ try {
     const flowEnv = {
       EMAIL: TESTER.email, PASSWORD: TESTER.password, RUN,
       POST_ID: ctx.fixtureId, BLOCK_POST_ID: ctx.blockPostId, OWN_POST_ID: ctx.ownPostId,
-      IMAGE_POST_ID: ctx.imagePostId, ...step.env,
+      IMAGE_POST_ID: ctx.imagePostId, ...ctx.idEnv, ...step.env,
     };
     try {
       await step.beforePrepare?.();
@@ -715,7 +945,8 @@ const lines = [
   '',
   `**${count('PASS')} passed · ${count('FAIL')} failed · ${count('SKIPPED')} skipped**`,
   '',
-  `App crashes / not responding during the run: ${problemsDuring.length ? problemsDuring.join(', ') : 'none'}`,
+  `App crashes / not responding during the run: ${problemsDuring.filter((p) => p.endsWith(APP_ID)).join(', ') || 'none'}`
+    + (problemsDuring.some((p) => !p.endsWith(APP_ID)) ? ` (other apps: ${problemsDuring.filter((p) => !p.endsWith(APP_ID)).join(', ')})` : ''),
   '',
   '| Step | Check | Result | Screen | Database / uploaded file | Time |',
   '|---|---|---|---|---|---|',

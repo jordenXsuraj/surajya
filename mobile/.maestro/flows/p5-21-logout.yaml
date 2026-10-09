@@ -1,0 +1,7 @@
+# Prompt 5 · Log out moved to Settings: Me → ⚙ → Log out → confirm → the welcome screen.
+appId: com.themeetnet.app.dev
+name: Log out
+---
+- runFlow: ../subflows/open-me.yaml
+- runFlow: ../subflows/sign-out.yaml
+- assertVisible: "Create account"

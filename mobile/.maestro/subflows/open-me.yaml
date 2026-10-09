@@ -1,0 +1,14 @@
+# Opens the Me tab (signed in) at the top of the profile. A second tap on Me scrolls back up when
+# the profile was left scrolled down.
+appId: com.themeetnet.app.dev
+---
+- runFlow: ensure-home.yaml
+- tapOn: "Me"
+- runFlow:
+    when:
+      notVisible: "Edit profile"
+    commands:
+      - tapOn: "Me"
+- extendedWaitUntil:
+    visible: "Edit profile"
+    timeout: 20000

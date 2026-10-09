@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { ContributorBadge } from '@/components/ContributorBadge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Text } from '@/components/ui/Text';
 import { postTypeInfo } from '@/lib/postTypes';
@@ -86,14 +87,6 @@ export const PostHeader = memo(function PostHeader({
   );
 });
 
-function ContributorBadge() {
-  return (
-    <View style={styles.badge} accessibilityLabel="Top Contributor">
-      <Text style={styles.badgeStar}>★</Text>
-    </View>
-  );
-}
-
 // One style per post type (no inline objects in render)
 const TYPES: PostType[] = ['social', 'placement', 'qa', 'project', 'study', 'confession'];
 const tagStyles = StyleSheet.create(
@@ -121,20 +114,6 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
   name: { flexShrink: 1, fontFamily: fonts.semibold, fontSize: 14.4, color: colors.text },
   sub: { fontFamily: fonts.regular, fontSize: 10.9, color: colors.dim, marginTop: 1 },
-  badge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    marginLeft: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.contributor,
-    experimental_backgroundImage: `linear-gradient(135deg, ${colors.contributor}, ${colors.contributorEnd})`,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    boxShadow: '0 2px 8px rgba(249,115,22,0.35)',
-  },
-  badgeStar: { color: colors.white, fontSize: 11, lineHeight: 13 },
   connect: {
     paddingVertical: 5,
     paddingHorizontal: 10,

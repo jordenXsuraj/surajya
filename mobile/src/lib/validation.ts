@@ -118,6 +118,85 @@ export const changeEmailSchema = z
 
 export type ChangeEmailValues = z.infer<typeof changeEmailSchema>;
 
+// ── Change password (web AccountSettings.jsx) ────────────────────
+export const changePasswordSchema = z
+  .object({ current: z.string(), next: z.string(), repeat: z.string() })
+  .superRefine((v, ctx) => {
+    const fail = first(ctx);
+    if (!v.current) return fail('Enter your current password', 'current');
+    if (v.next.length < MIN_PASSWORD)
+      return fail('New password must be at least 8 characters', 'next');
+    if (v.next !== v.repeat) return fail("New passwords don't match", 'repeat');
+  });
+
+export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;
+
+// ── Edit profile (Profile.jsx edit mode + PUT /users/me rules) ───
+export const MAX_BIO = 250;
+export const MAX_ROADMAP = 1000;
+export const MAX_PROJECTS = 10;
+/** PUT /users/me refuses usernames over 20 characters (the model would allow 25). */
+export const USERNAME_RE = /^[a-z0-9_.]{3,20}$/;
+export const USERNAME_HINT = '3-20 chars, only letters/numbers/._';
+
+/** Web: the username box lowercases and drops anything but a-z, 0-9, _ and . while typing. */
+export const normaliseUsername = (text: string): string =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9_.]/g, '')
+    .slice(0, 20);
+
+/**
+ * `hadUsername`: accounts from before usernames existed may keep it empty (the web then fails
+ * every save with "Username too short"); one that had a username cannot clear it.
+ */
+export const profileSchema = (hadUsername: boolean) =>
+  z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, 'Name cannot be empty')
+      .max(MAX_NAME, `Name can be at most ${MAX_NAME} characters`),
+    username: z
+      .string()
+      .refine((v) => (v === '' ? !hadUsername : USERNAME_RE.test(v)), USERNAME_HINT),
+    bio: z.string().max(MAX_BIO, `Bio can be at most ${MAX_BIO} characters`),
+    year: z.enum(YEARS),
+    branch: z.string().min(1),
+    skills: z.array(z.string()),
+    projects: z
+      .array(
+        z.object({
+          name: z
+            .string()
+            .trim()
+            .min(1, 'Project name required')
+            .max(MAX_PROJECT_NAME, `Project names can be at most ${MAX_PROJECT_NAME} characters`),
+          link: z.string().max(MAX_PROJECT_LINK),
+        }),
+      )
+      .max(MAX_PROJECTS, `At most ${MAX_PROJECTS} projects`),
+    roadmap: z.string().max(MAX_ROADMAP, `Roadmap can be at most ${MAX_ROADMAP} characters`),
+    mediaItems: z
+      .array(
+        z.object({
+          // Older profiles can still have the yt-* types (shown like 'youtube')
+          type: z.enum([
+            'youtube',
+            'yt-video',
+            'yt-short',
+            'yt-channel',
+            'yt-playlist',
+            'instagram',
+          ]),
+          url: z.string(),
+        }),
+      )
+      .max(30, 'At most 30 media items'),
+  });
+
+export type ProfileValues = z.infer<ReturnType<typeof profileSchema>>;
+
 /** The first error message of a react-hook-form errors object, in field order. */
 export function firstError(
   errors: Partial<Record<string, { message?: string } | undefined>>,

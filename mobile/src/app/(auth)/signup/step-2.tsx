@@ -7,10 +7,11 @@ import { signup } from '@/api/endpoints/auth';
 import { errorMessage } from '@/api/errors';
 import { BackButton } from '@/components/BackButton';
 import { Logo } from '@/components/Logo';
+import { SkillPicker } from '@/components/SkillPicker';
 import { TermsCheckbox } from '@/components/TermsCheckbox';
-import { Badge, Button, Chip, Input, Message, Screen, Text } from '@/components/ui';
+import { Badge, Button, Input, Message, Screen, Text } from '@/components/ui';
 import { toSessionUser } from '@/lib/sessionUser';
-import { BRANCH_SKILLS, MAX_SKILLS, roadmapPlaceholder, type Branch } from '@/lib/skills';
+import { roadmapPlaceholder } from '@/lib/skills';
 import {
   MAX_PROJECT_NAME,
   buildSignupRequest,
@@ -28,7 +29,6 @@ export default function SignupStep2Screen() {
   const step1 = useSignupDraft((s) => s.step1);
 
   const [skills, setSkills] = useState<string[]>([]);
-  const [customSkill, setCustomSkill] = useState('');
   const [projectName, setProjectName] = useState('');
   const [projectLink, setProjectLink] = useState('');
   const [roadmap, setRoadmap] = useState('');
@@ -49,27 +49,6 @@ export default function SignupStep2Screen() {
 
   // Opened without step 1 (e.g. after a reload): start over.
   if (!step1) return <Redirect href="/signup/step-1" />;
-
-  const branch = step1.branch as Branch;
-  const branchSkills = BRANCH_SKILLS[branch] ?? BRANCH_SKILLS.CS;
-  const customSkills = skills.filter((s) => !branchSkills.includes(s));
-
-  // Like the web: branch chips toggle freely; your own skills can be added while fewer than
-  // MAX_SKILLS are selected in total.
-  function toggleSkill(skill: string) {
-    setSkills((current) =>
-      current.includes(skill) ? current.filter((s) => s !== skill) : [...current, skill],
-    );
-  }
-
-  function addCustom() {
-    const skill = customSkill.trim();
-    if (!skill) return;
-    if (skills.includes(skill)) return setCustomSkill('');
-    if (skills.length >= MAX_SKILLS) return;
-    setSkills((current) => [...current, skill]);
-    setCustomSkill('');
-  }
 
   function finish() {
     if (mutation.isPending || !step1) return;
@@ -117,53 +96,7 @@ export default function SignupStep2Screen() {
       <Text variant="caption" style={styles.sub}>
         Others find you by these. Select all that apply.
       </Text>
-      <View style={styles.chips}>
-        {branchSkills.map((skill) => (
-          <Chip
-            key={skill}
-            label={skills.includes(skill) ? `✓ ${skill}` : skill}
-            accessibilityLabel={skill}
-            selected={skills.includes(skill)}
-            onPress={() => toggleSkill(skill)}
-          />
-        ))}
-        {customSkills.map((skill) => (
-          <Chip
-            key={skill}
-            label={`✓ ${skill} ✕`}
-            accessibilityLabel={`${skill}, remove`}
-            selected
-            dashed
-            onPress={() => toggleSkill(skill)}
-          />
-        ))}
-      </View>
-
-      <View style={styles.customRow}>
-        <View style={styles.flex}>
-          <Input
-            placeholder="+ Add your own skill"
-            value={customSkill}
-            onChangeText={setCustomSkill}
-            returnKeyType="done"
-            submitBehavior="submit"
-            onSubmitEditing={addCustom}
-            maxLength={40}
-          />
-        </View>
-        <Button
-          title="Add"
-          onPress={addCustom}
-          disabled={!customSkill.trim() || skills.length >= MAX_SKILLS}
-          style={styles.addButton}
-          haptic={false}
-        />
-      </View>
-      {skills.length >= MAX_SKILLS && (
-        <Text variant="note" style={styles.counter}>
-          You can add your own skills while fewer than {MAX_SKILLS} are selected.
-        </Text>
-      )}
+      <SkillPicker branch={step1.branch} skills={skills} onChange={setSkills} />
 
       <Text variant="title" style={styles.section}>
         Add a project 🚀
@@ -234,16 +167,6 @@ const styles = StyleSheet.create({
   branchText: { fontFamily: fonts.regular, fontSize: 12.5, color: colors.muted },
   branchHint: { fontSize: 11.2, color: colors.dim },
   sub: { marginTop: 4, marginBottom: 14 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 6 },
-  customRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginTop: 10 },
-  addButton: {
-    width: 'auto',
-    height: 48,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    boxShadow: 'none',
-  },
-  counter: { marginTop: -4, marginLeft: 2 },
   section: { marginTop: 22 },
   footer: {
     paddingTop: 14,

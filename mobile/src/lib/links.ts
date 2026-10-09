@@ -9,7 +9,12 @@ export const webPages = {
   privacy: `${WEB_URL}/privacy`,
   communityGuidelines: `${WEB_URL}/community-guidelines`,
   forgotPassword: `${WEB_URL}/forgot-password`,
+  /** Until the app has its own screen (Prompt 7). */
+  deleteAccount: `${WEB_URL}/delete-account`,
 } as const;
+
+/** Same address as the web (nexusnetwork/src/config/legal.js). */
+export const SUPPORT_EMAIL = 'support@themeetnet.com';
 
 /** Opens a web page in the in-app browser, styled like the app. */
 export function openWebPage(url: string): Promise<unknown> {
