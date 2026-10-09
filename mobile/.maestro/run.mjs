@@ -457,7 +457,9 @@ function seedAccounts() {
 function resetP5() {
   mongo(relationsScript(ctx.ids));
   const { name, year, branch, bio, skills, projects, roadmap, mediaItems } = TESTER_PROFILE;
-  mongo(`db.users.updateOne({ _id: ObjectId(${q(ctx.ids.tester)}) }, { $set: ${q({ name, year, branch, bio, skills, projects, roadmap, mediaItems, avatar: '', coverImage: '' })} }); print('true')`);
+  // one saved post (the run's fixture), whatever the Prompt 3 save step left
+  mongo(`db.users.updateOne({ _id: ObjectId(${q(ctx.ids.tester)}) }, { $set: { ...${q({ name, year, branch, bio, skills, projects, roadmap, mediaItems, avatar: '', coverImage: '' })},
+    savedPosts: ${ctx.fixtureId ? `[ObjectId(${q(ctx.fixtureId)})]` : '[]'} } }); print('true')`);
 }
 
 /** A token for a seed account (the other side of a request, fixture posts). */
@@ -731,7 +733,9 @@ const STEPS = [
     { id: 'p5-18', title: 'Settings: email, version + build, Terms page, system settings, support without a mail app', flow: 'p5-18-settings.yaml',
       toasts: [{ type: 'info', text: 'No email app found' }] },
     { id: 'p5-20', title: 'Share profile: Android share sheet with the profile link', flow: 'p5-20-share-profile.yaml' },
-    // after the other steps: changing the password back (runner) ends the app's session
+    { id: 'p5-21', title: 'Log out from Settings', flow: 'p5-21-logout.yaml' },
+    // last: changing the password back (runner) ends the app's session, so nothing may follow it
+    // (p5-19 itself signs in when the app is signed out)
     { id: 'p5-19', title: 'Change password (wrong current refused; still signed in)', flow: 'p5-19-change-password.yaml',
       toasts: [{ type: 'success', text: 'Password changed' }],
       beforePrepare: () => { ctx.pwChanged = false; ctx.tokenVersion = userDoc('tester').tokenVersion; },
@@ -748,7 +752,6 @@ const STEPS = [
         expect(ctx.tokenVersionAfter === ctx.tokenVersion + 1, `tokenVersion ${ctx.tokenVersion} → ${ctx.tokenVersionAfter}, expected +1`);
         return 'new password works; tokenVersion +1 (other sessions ended); changed back';
       } },
-    { id: 'p5-21', title: 'Log out from Settings', flow: 'p5-21-logout.yaml' },
   ].map((step) => ({ ...step, beforePrepare: async () => { resetP5(); await step.beforePrepare?.(); } })),
 ];
 

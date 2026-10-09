@@ -6,6 +6,12 @@ name: Block from profile
 - runFlow: ../subflows/ensure-home.yaml
 # Home again refreshes it: Nikhil's post was created just before this step
 - tapOn: "Home"
+# start from an empty search box
+- runFlow:
+    when:
+      visible: "Clear search"
+    commands:
+      - tapOn: "Clear search"
 - tapOn: "Search posts, tags.*"
 - inputText: "${RUN} nikhil"
 - runFlow: ../subflows/hide-keyboard.yaml
@@ -28,7 +34,5 @@ name: Block from profile
     visible: "Search posts, tags.*|.*${RUN} nikhil.*"
     timeout: 15000
 - assertNotVisible: "Maestro ${RUN} nikhil post"
-# leave Home unfiltered for the next steps
-- tapOn: "Search posts, tags.*"
-- eraseText: 30
-- runFlow: ../subflows/hide-keyboard.yaml
+# leave Home unfiltered for the next steps (the search box's ✕; erasing would stop at the cursor)
+- tapOn: "Clear search"

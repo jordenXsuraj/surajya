@@ -46,7 +46,8 @@ to the local stack.
   Riya, Arjun and Meera (Arjun and Meera follow back), Nikhil follows the tester, Kabir and Rohan
   asked to follow the tester, the tester asked Tanvi, the tester blocked Dev, Pooja blocked the
   tester; Ishaan has an empty profile. Every run (and every Prompt 5 step) puts these relations and
-  the tester's profile back first.
+  the tester's profile back first; Prompt 5 steps also give the tester exactly one saved post (the
+  run's fixture post), whatever the Prompt 3 save step left.
 - The local API on port 5000 **without** `CLOUDINARY_*` (uploads then go to `server/uploads`; the
   runner refuses Cloudinary URLs) and Metro on 8081 (`npm run start`).
 
