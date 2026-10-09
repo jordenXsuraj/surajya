@@ -5,8 +5,15 @@ name: Unfollow
 ---
 - runFlow: ../subflows/ensure-home.yaml
 - tapOn: "Following"
-# a second tap on the tab refreshes it: Meera's post was created just before this step
-- tapOn: "Following"
+# Meera's post was created just before this step: pull to refresh (a second tap on "Following"
+# can hit the screen's own "Following" heading instead of the tab)
+- scrollUntilVisible:
+    element: "Search by name, tag, or post.*"
+    direction: UP
+- swipe:
+    start: "50%, 35%"
+    end: "50%, 80%"
+    duration: 600
 - extendedWaitUntil:
     visible: "Maestro ${RUN} meera post"
     timeout: 30000

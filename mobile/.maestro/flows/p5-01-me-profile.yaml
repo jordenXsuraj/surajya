@@ -1,5 +1,5 @@
 # Prompt 5 · Me tab shows the tester's seeded profile: header, counts, follow requests, sections,
-# and the Posts / Media / Saved tabs.
+# and the Posts / Media / Saved tabs (Saved: the post the runner saved for the tester).
 appId: com.themeetnet.app.dev
 name: Me profile
 ---
@@ -31,8 +31,9 @@ name: Me profile
     element: "🔖 Saved.*"
     direction: UP
 - tapOn: "🔖 Saved.*"
+# the runner gives the tester one saved post: the run's fixture post
 - scrollUntilVisible:
-    element: "No saved posts yet\\."
+    element: "Maestro ${RUN} fixture post"
 - scrollUntilVisible:
     element: "Posts \\(\\d+\\+?\\)"
     direction: UP
