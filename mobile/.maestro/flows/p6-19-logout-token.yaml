@@ -1,0 +1,8 @@
+# Prompt 6 · Logging out stops pushes to this device first (DELETE /users/me/push-token; the runner
+# checks the token is gone).
+appId: com.themeetnet.app.dev
+name: Logout removes the push token
+---
+- runFlow: ../subflows/open-me.yaml
+- runFlow: ../subflows/sign-out.yaml
+- assertVisible: "Create account"

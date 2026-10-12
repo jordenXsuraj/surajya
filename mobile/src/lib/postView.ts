@@ -1,3 +1,4 @@
+import { WEB_URL } from '@/lib/links';
 import type { Post, PostAuthor, Reply } from '@/types/post';
 
 // Ported from nexusnetwork/src/utils/postView.js. On anonymous posts the API hides the author:
@@ -89,7 +90,8 @@ export function normaliseLink(link: string): string | null {
 export const pdfSizeLabel = (bytes: number): string =>
   `PDF${bytes > 0 ? ` · ${(bytes / 1024).toFixed(0)} KB` : ''}`;
 
-export const postUrl = (id: string): string => `https://themeetnet.com/post/${id}`;
+/** Same link the web uses (and the App Links / deep links open). */
+export const postUrl = (id: string): string => `${WEB_URL}/post/${id}`;
 
 /** Google's document viewer, as the web's "👁 View" button uses. */
 export const pdfViewerUrl = (pdfUrl: string): string =>

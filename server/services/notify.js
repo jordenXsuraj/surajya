@@ -6,6 +6,7 @@ const { Expo } = require('expo-server-sdk')
 const Notification = require('../models/Notification')
 const User = require('../models/User')
 const Post = require('../models/Post')
+const { redactPushTokens } = require('../utils/redact')
 
 // new_post is in-app only (see notifyFollowers)
 const PUSH_TYPES = new Set(['connection_request', 'connection_accepted', 'post_replied', 'post_liked', 'interested'])
@@ -23,7 +24,7 @@ function removeTokens(tokens) {
   return User.updateMany(
     { 'pushTokens.token': { $in: tokens } },
     { $pull: { pushTokens: { token: { $in: tokens } } } }
-  ).catch(err => console.error('push: failed to remove tokens:', err.message))
+  ).catch(err => console.error('push: failed to remove tokens:', redactPushTokens(err.message)))
 }
 
 async function checkReceipts(ticketToToken) {
@@ -35,10 +36,10 @@ async function checkReceipts(ticketToToken) {
       for (const [id, receipt] of Object.entries(receipts)) {
         if (receipt.status === 'error') {
           if (receipt.details?.error === 'DeviceNotRegistered') dead.push(ticketToToken[id])
-          else console.error(`push receipt error: ${receipt.details?.error || receipt.message}`)
+          else console.error(`push receipt error: ${redactPushTokens(receipt.details?.error || receipt.message)}`)
         }
       }
-    } catch (err) { console.error('push: receipt check failed:', err.message) }
+    } catch (err) { console.error('push: receipt check failed:', redactPushTokens(err.message)) }
   }
   await removeTokens(dead)
   return dead
@@ -58,9 +59,9 @@ async function sendPush(recipient, { type, postId, senderId, message }) {
       tickets.forEach((ticket, i) => {
         if (ticket.status === 'ok' && ticket.id) pending[ticket.id] = chunk[i].to
         else if (ticket.details?.error === 'DeviceNotRegistered') dead.push(chunk[i].to)
-        else if (ticket.status === 'error') console.error(`push ticket error: ${ticket.details?.error || ticket.message}`)
+        else if (ticket.status === 'error') console.error(`push ticket error: ${redactPushTokens(ticket.details?.error || ticket.message)}`)
       })
-    } catch (err) { console.error('push: send failed:', err.message) }
+    } catch (err) { console.error('push: send failed:', redactPushTokens(err.message)) }
   }
   await removeTokens(dead)
   if (Object.keys(pending).length) {
@@ -90,7 +91,7 @@ async function notify({ recipient, sender, type, post, message }) {
     if (PUSH_TYPES.has(type)) await sendPush(to, { type, postId, senderId: str(sender), message })
     return doc
   } catch (err) {
-    console.error(`notify(${type}) failed:`, err.message)
+    console.error(`notify(${type}) failed:`, redactPushTokens(err.message))
     return null
   }
 }

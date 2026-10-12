@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
 import type { AuthUser, Me, SessionUser } from '@/types/user';
 
-type Reply = { status: number; data?: unknown } | 'network' | 'timeout';
+export type Reply = { status: number; data?: unknown } | 'network' | 'timeout';
 
 /** Replaces the HTTP layer of the real API client; every request goes to `handler`. */
 export function mockApi(handler: (config: InternalAxiosRequestConfig) => Reply | Promise<Reply>) {
@@ -55,6 +55,7 @@ export function resetAll() {
     token: null,
     user: null,
     pendingVerify: false,
+    pendingPath: null,
     resendAvailableAt: 0,
   });
   useUiStore.getState().reset();

@@ -1,0 +1,15 @@
+# Prompt 6 · A real push while the app is open (the runner had Ishaan ask to follow the tester →
+# local API → Expo → FCM → the emulator, saw the app show its banner, and tapped the banner): the
+# banner opened Ishaan's profile, and the Connect badge went up.
+# The runner taps (adb) because the banner is on screen for 6 s, and on a busy emulator one Maestro
+# screen read can take longer than that.
+appId: com.themeetnet.app.dev
+name: Push in the foreground
+---
+- extendedWaitUntil:
+    visible: "Accept Ishaan Verma's follow request"
+    timeout: 20000
+- back
+- extendedWaitUntil:
+    visible: "Connect, (9|10) new"
+    timeout: 15000

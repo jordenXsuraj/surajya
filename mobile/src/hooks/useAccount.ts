@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 
 import { changePassword, logoutAllDevices } from '@/api/endpoints/auth';
@@ -7,6 +8,7 @@ import { errorMessage } from '@/api/errors';
 import { updateAuthor } from '@/api/postCache';
 import { queryKeys } from '@/api/queryKeys';
 import { applyMe } from '@/api/session';
+import { forgetPushRegistration, PUSH_DEVICE_KEY, settlePushLogout } from '@/lib/push';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
 import type { Me } from '@/types/user';
@@ -14,8 +16,6 @@ import type { Me } from '@/types/user';
 const toast = (message: string, type: 'info' | 'success' | 'error' = 'info') =>
   useUiStore.getState().showToast(message, type);
 
-/** SecureStore key of this install's push device id (created by push registration, Prompt 6). */
-export const PUSH_DEVICE_KEY = 'push.deviceId';
 
 /**
  * PUT /users/me with the changed fields. Errors go back to the form (username messages are shown
@@ -71,9 +71,13 @@ export function useLogoutAllDevices() {
   });
 }
 
+/** Longest the logout waits for the server to forget this device's push token. */
+export const SIGN_OUT_PUSH_TIMEOUT_MS = 3000;
+
 /**
- * Log out: first tell the server to stop pushes to this device (if it was registered; any
- * failure is ignored and never holds the user up for more than 3 s), then clear everything.
+ * Log out: first tell the server to stop pushes to this device (if it was registered), then clear
+ * everything. Signing out never depends on that call: offline, 401, 5xx or no answer at all, the
+ * user is signed out locally after at most SIGN_OUT_PUSH_TIMEOUT_MS.
  */
 export async function signOut(): Promise<void> {
   let deviceId: string | null = null;
@@ -82,11 +86,25 @@ export async function signOut(): Promise<void> {
   } catch {
     deviceId = null;
   }
+  let removed = false;
   if (deviceId) {
-    await Promise.race([
-      deletePushToken(deviceId).catch(() => undefined),
-      new Promise((resolve) => setTimeout(resolve, 3000)),
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    removed = await Promise.race([
+      deletePushToken(deviceId).then(
+        () => true,
+        () => false,
+      ),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), SIGN_OUT_PUSH_TIMEOUT_MS);
+      }),
     ]);
+    clearTimeout(timer);
   }
+  // Not removed (offline, 401, 5xx, no answer): kept as a pending removal, sent once possible
+  settlePushLogout(removed);
+  forgetPushRegistration();
+  void Notifications.setBadgeCountAsync(0).catch(() => undefined);
+  // The account's notifications already in the shade / on the lock screen go too
+  void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
   useAuthStore.getState().logout();
 }

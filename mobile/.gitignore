@@ -50,3 +50,7 @@ coverage/
 
 # Maestro run reports (screenshots can show the test phone)
 .maestro/reports/
+
+# Firebase client config (public repo: kept out of git; EAS gets it from the GOOGLE_SERVICES_JSON file variable)
+google-services.json
+GoogleService-Info.plist

@@ -1,0 +1,24 @@
+# Prompt 6 · A real push with the app's process ended (the runner killed it in the background, had
+# Meera reply to the tester's project post, waited for the notification and opened the shade):
+# tapping the notification cold-starts the app.
+# In a development build the dev launcher then reloads the bundle with its own intent, which drops
+# the notification's tap data: the app opens on Home, not on the post. Landing on the post from a
+# killed app is checked on a release build (phone eye-check, preview APK) and in pushTap.test.tsx.
+appId: com.themeetnet.app.dev
+name: Push with the app killed
+---
+- runFlow:
+    when:
+      notVisible: "Meera Joshi replied to your post"
+    commands:
+      - swipe:
+          start: "50%, 2%"
+          end: "50%, 70%"
+          duration: 600
+- extendedWaitUntil:
+    visible: "Meera Joshi replied to your post"
+    timeout: 15000
+- tapOn: "Meera Joshi replied to your post"
+- extendedWaitUntil:
+    visible: "Create a post|Write a reply"
+    timeout: 120000

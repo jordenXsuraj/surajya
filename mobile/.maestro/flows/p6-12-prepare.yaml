@@ -1,0 +1,9 @@
+# Prompt 6 · Before p6-12: a fresh start on Home, the Connect badge at the seed's 8 (3 requests + 5
+# unread), so the push's effect on it can be seen.
+appId: com.themeetnet.app.dev
+name: Push in the foreground (prepare)
+---
+- runFlow: ../subflows/fresh-home.yaml
+- extendedWaitUntil:
+    visible: "Connect, 8 new"
+    timeout: 30000

@@ -1,0 +1,14 @@
+# Run once by the runner's setup, before any step: the app open and signed in again (the run's API
+# has its own JWT secret, so the stored session is refused and the app signs out), and the
+# notifications pre-prompt answered "Not now" if it shows (first start of a new build, or 14 days
+# after the last "Not now"), so it never opens in the middle of a step.
+appId: com.themeetnet.app.dev
+name: Settle
+---
+- runFlow: ../subflows/open-app.yaml
+- extendedWaitUntil:
+    visible: "Create account"
+    timeout: 15000
+    optional: true
+- runFlow: ../subflows/sign-in.yaml
+- runFlow: ../subflows/dismiss-push-prompt.yaml

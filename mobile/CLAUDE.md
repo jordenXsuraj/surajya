@@ -147,8 +147,11 @@ src/test/           test helpers (mockApi, fixtures)
 - No `autoFocus` on a text box inside a `KeyboardAwareScrollView` of a screen that slides in:
   focused mid-transition, it can end up under the keyboard. Focus it on the screen's
   `transitionEnd` event instead (compose does).
-- Remote switches from `GET /app/config` live in `useAppConfig` (loaded once at start; all on if
-  the request fails).
+- Remote switches from `GET /app/config` live in `useAppConfig` (loaded at start and again when the
+  app returns to the front, at most every 30 s; all on, nothing blocking, if the request fails).
+  `updateRequired` (installed `nativeApplicationVersion` < `minVersion[platform]`, `src/lib/version.ts`)
+  and `maintenance.enabled` cover the app with `src/components/AppGate.tsx`, an overlay above the
+  navigator (the navigation state underneath stays). A missing or broken version never blocks.
 
 ## Profiles and the follow system
 
@@ -188,6 +191,63 @@ src/test/           test helpers (mockApi, fixtures)
   module: development clients built before 7 Oct 2026 lack it and show a red screen in Settings.
 - Local test data: `node .maestro/seed.mjs` (profile people, relations; see `.maestro/README.md`).
 
+## Connect, notifications, push, links
+
+- **Connect** (`app/(tabs)/connect.tsx`, `src/components/connect/`): Find (`/users` or `/users/all`,
+  20 per page, `usePeopleSearch` infinite, search debounced 300 ms), Suggested (`/users/suggestions`)
+  and Activity (requests from `useRequests` + the shared `NotificationList`). Rows are
+  `PersonRowItem` (also used by the Prompt 5 lists). The server matches `search` and `skill`
+  **literally** and uses only their first 50 characters (`server/utils/searchText.js`): send them
+  as typed, never pre-escaped (escaping twice would make "C++" match nothing).
+- **Badges** (web `totalBadge`): Connect tab and Activity = `incomingRequestIds.length` (session) +
+  unread count (`useActivityCounts`); the Home bell = unread only. One unread-count query
+  (`queryKeys.unreadCount`) feeds all of them.
+- **Notifications** (`NotificationList`, `src/lib/notifications.ts`): grouped Today / This week /
+  Earlier on the client (the server sorts unread first). Opening the list marks all read once the
+  fetch has loaded (`useMarkAllReadWhileOpen`); rows keep their unread look for that visit. Tap:
+  post types → `/post/<id>`, follow types → `/profile/<sender>` (`notificationTarget`).
+- **Push** (`expo-notifications`, `src/lib/push.ts`, `src/hooks/usePushNotifications.ts`): Android
+  channel `default` (the server sends no channelId), monochrome `assets/notification-icon.png`
+  tinted with the accent. The token is registered on every signed-in start, on return to the front
+  and on token change (`POST /users/me/push-token`, device id in SecureStore `push.deviceId`).
+  **Every device-token fetch fires `addPushTokenListener`**: `registerForPush` fetches it once and
+  passes it to `getExpoPushTokenAsync({ devicePushToken })`, joins a registration already running,
+  and the listener re-registers only for a token that really changed (`isNewDevicePushToken`).
+  Without that, registering triggered itself (4159 POSTs in minutes, then 429s from the API).
+  The server allows 10 registrations per user per hour: after a **429** the app stops registering
+  for the rest of the session and tries again on the next app start. A failure that can pass
+  (offline, timeout, 5xx, no FCM token yet) is **retried by itself** after 5 s, 30 s, 2 min and
+  5 min (`REGISTER_RETRY_MS`), dropped on success or sign-out; no retry after a 4xx. Without it, an
+  Allow on the pre-prompt while the API was unreachable left the token unsent until the app came
+  back to the front. Dev builds log `[push] registration failed: …` / `[push] trying again in 5 s`.
+  **Logout never waits on the
+  server**: `signOut()` gives the push-token DELETE at most `SIGN_OUT_PUSH_TIMEOUT_MS` (3 s) and
+  signs out locally whatever happens (offline, 401, 5xx, no answer). When that DELETE didn't
+  arrive, `settlePushLogout` keeps a **pending removal** in SecureStore (`push.pendingUnregister`:
+  userId, deviceId, Expo token; no JWT) and `flushPendingUnregister` sends it as the session-less
+  `POST /users/push-token/revoke` on the next start, on reconnect (`onlineManager`) and before
+  `login`/`signup`; never against the account signed in now (its registration replaces the entry).
+  Only the server's answer changes the record: 2xx clears it; offline, timeouts, 429 and 5xx leave
+  it untouched; a refusal (4xx except 408/429) waits 6 h before the next try and drops the record
+  after the third (`REVOKE_MAX_REFUSALS`), so a dead route isn't retried on every start.
+  Background/killed pushes are drawn by Android without JS, so only the server can stop them.
+  Foreground pushes show the app's own banner (`PushBannerHost`, logs `[toast] push …`) and refresh
+  the affected queries (`invalidateForPush`); the system alert is off in the foreground. Taps in
+  the background or killed state go through `useLastNotificationResponse` → `pushPath(data)`.
+- **Pre-prompt** (`app/push-prompt.tsx`): Home opens it ~1 s after coming into view when the system
+  can still ask, at most once per session and not again for 14 days after "Not now"
+  (`push.promptAt` in MMKV, wiped by logout). Maestro flows answer "Not now"
+  (`subflows/dismiss-push-prompt.yaml`).
+- **Links** (`src/app/+native-intent.tsx`, `src/lib/deepLinks.ts`): https (apex and www),
+  `meetnet://` and `meetnet-dev://` become app paths; the dev client's launcher links go to `/`;
+  unknown paths reach `+not-found.tsx`. Signed out, a link (or a tapped push) is kept as
+  `pendingPath` in the auth store and opened by `(tabs)/_layout.tsx` after sign-in. Share links are
+  always built from `WEB_URL` (`postUrl`, `profileUrl`).
+- **Firebase**: `google-services.json` is not in git (public repo). EAS builds get it from the
+  `GOOGLE_SERVICES_JSON` file environment variable; a local copy in `mobile/` is ignored by git and
+  by `../.easignore`. The FCM V1 service-account key lives only on EAS (credentials), never in the
+  repo.
+
 ## App identities (APP_VARIANT)
 
 | | development | preview / production |
@@ -195,7 +255,7 @@ src/test/           test helpers (mockApi, fixtures)
 | Name | MeetNet Dev | MeetNet |
 | Android package / iOS bundle id | `com.themeetnet.app.dev` | `com.themeetnet.app` |
 | Scheme | `meetnet-dev` | `meetnet` |
-| App Links / associated domains | none | `https://themeetnet.com/post`, `/profile`, `/reset-password` |
+| App Links / associated domains | none | `https://themeetnet.com` and `www.` — `/post`, `/profile` |
 | Launcher icon background | accent red | `#0d0d0d` |
 
 Both can be installed side by side. `app.config.ts` decides from `APP_VARIANT` (unset = production;

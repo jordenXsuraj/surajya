@@ -174,20 +174,34 @@ Only bounces after the webhook is set up are recorded. Earlier ones, such as the
 
 ## Mobile deep links
 
-`nexusnetwork/public/.well-known/` holds the files Android and iOS fetch from `https://themeetnet.com` to let the app open `/post/*`, `/profile/*` and `/reset-password` links. `vercel.json` (and `nginx.conf`) serve both as `application/json` and keep them out of the SPA rewrite. Both contain placeholders to replace before release:
+`nexusnetwork/public/.well-known/` holds the files Android and iOS fetch from `https://themeetnet.com` and `https://www.themeetnet.com` to let the app open `/post/*` and `/profile/*` links (`/reset-password` stays in the browser until the app has that screen). `vercel.json` (and `nginx.conf`) serve both as `application/json` and keep them out of the SPA rewrite. `vercel.json` also redirects every `www` path to the apex **except `/.well-known/`**: both platforms reject verification files behind a redirect, so `www` must answer them directly (the `www.themeetnet.com` domain in Vercel must not redirect on its own).
 
-- **`assetlinks.json` → `sha256_cert_fingerprints`**: Play Console → your app → **Test and release → Setup → App integrity → App signing** → *App signing key certificate* → **SHA-256 certificate fingerprint**. Google re-signs Play builds with this key, so the upload key's fingerprint isn't enough. To test App Links on EAS builds before Play (internal/dev builds), also add that keystore's SHA-256 from `eas credentials` (the list accepts several).
-- **`apple-app-site-association` → `TEAMID`**: your Apple Developer Team ID (developer.apple.com → Membership). Replace it in all three places.
-
-Declare **only `themeetnet.com`** (not `www`) in the app's intent filters and associated domains: `www` answers with a redirect, and both platforms reject verification files behind a redirect.
+- **`assetlinks.json` → `sha256_cert_fingerprints`** (`com.themeetnet.app`):
+  - now: the EAS keystore of `com.themeetnet.app` (`3F:0E:B2:…:7D:98:01:74`, created by the first preview build; `eas credentials -p android` shows it). It signs preview builds and is the **upload key** for Play.
+  - at the Play launch, **add** (don't replace) the Play signing key: Play Console → your app → **Test and release → Setup → App integrity → App signing** → *App signing key certificate* → **SHA-256 certificate fingerprint**. Google re-signs Play builds with that key, so without it App Links fail for Play installs.
+- **`apple-app-site-association` → `TEAMID`**: still a placeholder until there is an Apple Developer account (developer.apple.com → Membership → Team ID). Replace it in all three places; until then iOS universal links don't work.
 
 Verify after deploying:
 ```bash
-curl -sI https://themeetnet.com/.well-known/assetlinks.json              # 200, content-type: application/json
-curl -sI https://themeetnet.com/.well-known/apple-app-site-association   # 200, content-type: application/json
+for h in themeetnet.com www.themeetnet.com; do
+  curl -sI https://$h/.well-known/assetlinks.json | head -1                # 200 (no redirect), application/json
+  curl -sI https://$h/.well-known/apple-app-site-association | head -1     # 200 (no redirect), application/json
+done
+curl -sI https://www.themeetnet.com/ | head -3                             # 308 → https://themeetnet.com/
+# on an Android device / emulator with a preview build (com.themeetnet.app):
+adb shell pm verify-app-links --re-verify com.themeetnet.app
+adb shell pm get-app-links com.themeetnet.app                              # themeetnet.com: verified, www.themeetnet.com: verified
+adb shell am start -W -a android.intent.action.VIEW -d "https://themeetnet.com/post/<id>" com.themeetnet.app
 # Google's checker:
 curl -s "https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://themeetnet.com&relation=delegate_permission/common.handle_all_urls"
 ```
+
+## Push notifications (Expo → FCM)
+
+- **Firebase project `themeetnet`** (Spark, free; Google Cloud project of the same id). Android apps `com.themeetnet.app` and `com.themeetnet.app.dev`; both are in one `google-services.json`.
+- **`google-services.json` is not in git** (public repo; it holds an Android API key). EAS builds get it from the **file environment variable `GOOGLE_SERVICES_JSON`** (secret visibility, development / preview / production): `eas env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret …`. A local copy in `mobile/` is ignored by git and `.easignore`. Get it again with `firebase apps:sdkconfig ANDROID <app id> --project themeetnet`.
+- **FCM V1 sender**: service account `meetnet-fcm-sender@themeetnet.iam.gserviceaccount.com` with **only** `roles/firebasecloudmessaging.admin`. Its single key is stored **only on EAS** (Credentials → Android → FCM V1 service account key, attached to both package names); no copy is kept anywhere else. To rotate: create a new key for the account, upload it in `eas credentials -p android` (or the EAS API), then delete the old key in Google Cloud → IAM → Service accounts → Keys.
+- The server sends through Expo's push service (`expo-server-sdk`, no channelId → the app's `default` channel). Test one user's devices: `cd server && MONGO_URI=… node scripts/sendTestPush.js <email> [--url=/post/<id>]` (prints ticket and receipt status only).
 
 ## Verify a deploy
 
@@ -196,7 +210,7 @@ curl -s https://surajya.onrender.com/healthz                 # OK
 curl -s https://surajya.onrender.com/api/posts/not-an-id     # 400 {"message":"Invalid post id"}
 curl -s https://surajya.onrender.com/api/app/config          # 200 JSON config
 curl -s -H "Origin: https://evil.example" https://surajya.onrender.com/api/app/config   # 403 {"message":"Origin not allowed"}
-curl -sI https://www.themeetnet.com | head -3                # 308 → https://themeetnet.com/
+curl -sI https://www.themeetnet.com | head -3                # 308 → https://themeetnet.com/ (but /.well-known/* answers 200)
 ```
 
 A free-plan instance sleeps after about 15 minutes idle, so the first request can take up to about a minute.
@@ -205,7 +219,7 @@ A free-plan instance sleeps after about 15 minutes idle, so the first request ca
 ## Domains and HTTPS
 
 DNS for `themeetnet.com` is hosted at **Hostinger** (nameservers `nova.dns-parking.com` / `cosmos.dns-parking.com`), so every DNS change is made in Hostinger's DNS zone editor. The site itself is on Vercel: the apex `A` record points to `76.76.21.21`, and `www` is a `CNAME` to `cname.vercel-dns.com`. Vercel issues and renews the Let's Encrypt certificates for both names. Both must keep valid HTTPS for the mobile app's Universal Links / App Links.
-The root domain has **no MX record**, so `@themeetnet.com` addresses can't receive email (Resend only sends).
+Inbound mail: the apex has **ImprovMX** MX records (`mx1.improvmx.com` 10, `mx2.improvmx.com` 20) and the SPF `v=spf1 include:spf.improvmx.com ~all`; ImprovMX (free plan) forwards `support@themeetnet.com` to the owner's Gmail: one alias, `support` (the default catch-all `*` was removed, so mail to any other address bounces). Verified 2026-10-10: a test mail from Resend to support@ was accepted by ImprovMX (Resend: delivered) and arrived in the owner's Gmail inbox. Test again any time by sending a mail to support@themeetnet.com and looking in Gmail (and Spam). Resend's records (`send` MX/TXT, `rsend` CNAME, `resend._domainkey`, `_dmarc`) are separate names and stay as they are; Resend sends with `send.themeetnet.com` as return path, so the apex SPF doesn't affect it.
 `surajya.in` is also attached to the Vercel project, but its DNS does not point at Vercel ("misconfigured").
 
 ## Backups

@@ -1,5 +1,6 @@
 import { request } from '@/api/client';
 import { PAGE_SIZE } from '@/api/endpoints/posts';
+import { peopleParams, type PeopleQuery, type PeopleScope } from '@/lib/people';
 import { uploadFile, type UploadFile } from '@/lib/upload';
 import type { MessageResponse } from '@/types/api';
 import type { Post } from '@/types/post';
@@ -12,6 +13,7 @@ import type {
   PersonRow,
   Project,
   PublicUser,
+  UserCard,
   Year,
 } from '@/types/user';
 
@@ -123,3 +125,34 @@ export const reportUser = (id: string, reason: ReportReason, note?: string) =>
 /** Stops push notifications to this device (call before logging out). */
 export const deletePushToken = (deviceId: string) =>
   request<{ ok: true }>({ method: 'DELETE', url: '/users/me/push-token', data: { deviceId } });
+
+/** One page (20) of GET /users (my college) or /users/all; newest seniors first. */
+export const searchPeople = (scope: PeopleScope, query: PeopleQuery, page: number) =>
+  request<UserCard[]>({
+    method: 'GET',
+    url: scope === 'all' ? '/users/all' : '/users',
+    params: peopleParams(query, page),
+  });
+
+/** Up to 20 students from my college, scored by branch, year and shared skills. */
+export const getSuggestions = () => request<UserCard[]>({ method: 'GET', url: '/users/suggestions' });
+
+export type PushTokenBody = { token: string; platform: 'ios' | 'android'; deviceId: string };
+
+/** Upserts by deviceId (the server keeps the last 10 and takes the token from other accounts). */
+export const registerPushToken = (body: PushTokenBody) =>
+  request<{ ok: true }>({ method: 'POST', url: '/users/me/push-token', data: body });
+
+export type PushRegistration = { userId: string; deviceId: string; token: string };
+
+/**
+ * After a logout whose DELETE didn't arrive: removes that one entry. Sent without any session
+ * (`Authorization: null`): the Expo token is the proof.
+ */
+export const revokePushToken = (body: PushRegistration) =>
+  request<{ ok: true }>({
+    method: 'POST',
+    url: '/users/push-token/revoke',
+    data: body,
+    headers: { Authorization: null },
+  });

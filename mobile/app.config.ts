@@ -12,9 +12,22 @@ export type AppVariant = 'development' | 'preview' | 'production';
 const VARIANTS: readonly AppVariant[] = ['development', 'preview', 'production'];
 
 const BG = '#0d0d0d';
-const DEV_ICON_BG = '#a73333'; // accent — tells the dev build apart on the launcher
+const ACCENT = '#a73333';
+const DEV_ICON_BG = ACCENT; // tells the dev build apart on the launcher
 
-const APP_LINK_PATHS = ['/post', '/profile', '/reset-password'];
+// App Links / universal links: the web pages the app has screens for. www serves the same
+// .well-known files (nexusnetwork/vercel.json), so it verifies too. /reset-password stays in the
+// browser until the app has that screen.
+export const APP_LINK_HOSTS = ['themeetnet.com', 'www.themeetnet.com'];
+export const APP_LINK_PATHS = ['/post', '/profile'];
+
+/**
+ * Firebase config for FCM (Android push). It is not in git (public repo): EAS builds get it from
+ * the GOOGLE_SERVICES_JSON file variable, local prebuilds from an ignored ./google-services.json.
+ */
+export const googleServicesFile = (
+  env: Record<string, string | undefined> = process.env,
+): string => env.GOOGLE_SERVICES_JSON || './google-services.json';
 
 export function resolveVariant(value: string | undefined): AppVariant {
   if (!value) return 'production';
@@ -40,11 +53,12 @@ export function buildConfig(config: ExpoConfig, variant: AppVariant): ExpoConfig
       ...config.ios,
       bundleIdentifier: id,
       supportsTablet: false,
-      ...(isDev ? {} : { associatedDomains: ['applinks:themeetnet.com'] }),
+      ...(isDev ? {} : { associatedDomains: APP_LINK_HOSTS.map((host) => `applinks:${host}`) }),
     },
     android: {
       ...config.android,
       package: id,
+      googleServicesFile: googleServicesFile(),
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: isDev ? DEV_ICON_BG : BG,
@@ -57,11 +71,9 @@ export function buildConfig(config: ExpoConfig, variant: AppVariant): ExpoConfig
               {
                 action: 'VIEW',
                 autoVerify: true,
-                data: APP_LINK_PATHS.map((pathPrefix) => ({
-                  scheme: 'https',
-                  host: 'themeetnet.com',
-                  pathPrefix,
-                })),
+                data: APP_LINK_HOSTS.flatMap((host) =>
+                  APP_LINK_PATHS.map((pathPrefix) => ({ scheme: 'https', host, pathPrefix })),
+                ),
                 category: ['BROWSABLE', 'DEFAULT'],
               },
             ],
@@ -77,6 +89,15 @@ export function buildConfig(config: ExpoConfig, variant: AppVariant): ExpoConfig
           cameraPermission:
             'MeetNet uses the camera only when you take a photo for a post or your profile.',
           microphonePermission: false,
+        },
+      ],
+      [
+        'expo-notifications',
+        {
+          // white-on-transparent logo silhouette (Android status bar), tinted with the accent
+          icon: './assets/notification-icon.png',
+          color: ACCENT,
+          defaultChannel: 'default',
         },
       ],
       [

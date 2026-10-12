@@ -1,0 +1,22 @@
+# Prompt 6 · Tapping a reply notification opens the post it is about.
+appId: com.themeetnet.app.dev
+name: Notification → post
+---
+- runFlow: ../subflows/open-notifications.yaml
+# the runner recreated the notifications for this step (new ids): pull to refresh, so the row that
+# is tapped is the one in the database (it checks the PUT /notifications/<id>/read)
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 85%"
+- extendedWaitUntil:
+    visible: "Meera Joshi replied to your post.*"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn: "Meera Joshi replied to your post.*"
+- extendedWaitUntil:
+    visible: "Write a reply"
+    timeout: 20000
+- assertVisible: "Finished my DSA sheet today.*"
+- back
+- back

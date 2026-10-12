@@ -1,0 +1,6 @@
+# Prompt 6 · Before a push or link step: the app open and signed in on Home (the runner then sends the
+# app to the background, ends its process or opens a link with adb).
+appId: com.themeetnet.app.dev
+name: Home first
+---
+- runFlow: ../subflows/ensure-home.yaml

@@ -1,0 +1,13 @@
+# Prompt 6 · After p6-17 the API is back to minVersion 0.0.0: "Check again" lifts the block and the
+# app is where it was.
+appId: com.themeetnet.app.dev
+name: Update cleared
+---
+- assertVisible: "Update required"
+- tapOn: "Check again"
+- extendedWaitUntil:
+    notVisible: "Update required"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Create a post|Create account"
+    timeout: 15000

@@ -4,13 +4,14 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { useEffect, type ReactNode } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { FullWindowOverlay } from 'react-native-screens';
 
 import { refreshSession } from '@/api/session';
+import { MaintenanceScreen, UpdateRequiredScreen, useAppGate } from '@/components/AppGate';
 import { EmailNotVerifiedSheet } from '@/components/EmailNotVerifiedSheet';
 import { ImageViewer } from '@/components/post/ImageViewer';
 import { PostMenuSheet } from '@/components/post/PostMenuSheet';
@@ -19,6 +20,8 @@ import { RepliesSheet } from '@/components/post/RepliesSheet';
 import { ReportSheet } from '@/components/post/ReportSheet';
 import { YouTubeModal } from '@/components/post/YouTubeModal';
 import { ToastHost } from '@/components/ui';
+import { PushBannerHost } from '@/components/ui/PushBanner';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { persistOptions, queryClient } from '@/lib/queryClient';
 import { setupReactQueryNative } from '@/lib/reactQueryNative';
 import { loadAppConfig } from '@/stores/appConfig.store';
@@ -47,15 +50,39 @@ const navigationTheme = {
   },
 };
 
-// Toasts are mounted once, after the navigator. iOS native modals (compose) cover that root view,
-// so there the toast goes into a FullWindowOverlay (sheets use the same via containerComponent).
+// Overlays are mounted once, after the navigator. iOS native modals (compose) cover that root
+// view, so there they go into a FullWindowOverlay (sheets use the same via containerComponent).
+function Overlay({ children }: { children: ReactNode }) {
+  if (Platform.OS !== 'ios') return children;
+  return <FullWindowOverlay>{children}</FullWindowOverlay>;
+}
+
 function Toasts() {
-  if (Platform.OS !== 'ios') return <ToastHost />;
   return (
-    <FullWindowOverlay>
+    <Overlay>
       <ToastHost />
-    </FullWindowOverlay>
+      <PushBannerHost />
+    </Overlay>
   );
+}
+
+// Forced update / maintenance (GET /api/app/config) cover the whole app; the navigation state
+// underneath stays, so the app continues where it was once the gate lifts.
+function Gate() {
+  const gate = useAppGate();
+  if (!gate) return null;
+  return (
+    <Overlay>
+      <View style={StyleSheet.absoluteFill}>
+        {gate === 'update' ? <UpdateRequiredScreen /> : <MaintenanceScreen />}
+      </View>
+    </Overlay>
+  );
+}
+
+function PushNotifications() {
+  usePushNotifications();
+  return null;
 }
 
 export default function RootLayout() {
@@ -116,6 +143,10 @@ export default function RootLayout() {
                   />
                   <Stack.Screen name="verify-email" />
                   <Stack.Screen name="notifications" />
+                  <Stack.Screen
+                    name="push-prompt"
+                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                  />
                 </Stack.Protected>
                 <Stack.Protected guard={!signedIn}>
                   <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
@@ -132,6 +163,8 @@ export default function RootLayout() {
                 </>
               ) : null}
               <EmailNotVerifiedSheet />
+              <PushNotifications />
+              <Gate />
               <Toasts />
             </BottomSheetModalProvider>
           </ThemeProvider>

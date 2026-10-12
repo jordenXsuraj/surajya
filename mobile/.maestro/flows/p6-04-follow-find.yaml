@@ -1,0 +1,19 @@
+# Prompt 6 · Follow from Find people (the Prompt 5 state machine): "+ Follow" → "⏳ Requested".
+appId: com.themeetnet.app.dev
+name: Follow from Find
+---
+- runFlow: ../subflows/open-connect.yaml
+- tapOn: "Search students"
+- inputText: "varun"
+- extendedWaitUntil:
+    visible: "Varun Mehta"
+    timeout: 15000
+- runFlow: ../subflows/hide-keyboard.yaml
+- tapOn:
+    text: "Follow Varun Mehta"
+    label: "Follow [watch]"
+- extendedWaitUntil:
+    visible: "Follow request sent to Varun Mehta"
+    timeout: 10000
+- tapOn: "Clear search"
+- runFlow: ../subflows/hide-keyboard.yaml

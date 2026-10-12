@@ -1,0 +1,44 @@
+# Prompt 6 · Connect badges (web totalBadge: 3 requests + 5 unread = 8) → Activity → Requests: Accept
+# Sana, Reject Kabir right in the list (rows leave at once) → the badges follow; opening
+# Notifications marks them read.
+appId: com.themeetnet.app.dev
+name: Activity requests
+---
+- runFlow: ../subflows/fresh-home.yaml
+- extendedWaitUntil:
+    visible: "Connect, 8 new"
+    timeout: 30000
+- tapOn: "Connect, 8 new"
+- tapOn: "Activity, 8 new"
+- extendedWaitUntil:
+    visible: "Activity 🔔"
+    timeout: 10000
+- assertVisible: "🔔 Notifications, 5 new"
+- extendedWaitUntil:
+    visible: "Sana Shaikh"
+    timeout: 20000
+- assertVisible: "Rohan Kale"
+- assertVisible: "Kabir Shah"
+- tapOn:
+    text: "Accept Sana Shaikh's follow request"
+    label: "Accept [watch]"
+- extendedWaitUntil:
+    notVisible: "Sana Shaikh"
+    timeout: 10000
+- tapOn: "Reject Kabir Shah's follow request"
+- extendedWaitUntil:
+    notVisible: "Kabir Shah"
+    timeout: 10000
+- assertVisible: "Rohan Kale"
+- extendedWaitUntil:
+    visible: "Connect, 6 new"
+    timeout: 10000
+- tapOn: "🔔 Notifications, 5 new"
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 20000
+- extendedWaitUntil:
+    visible: "Connect, 1 new"
+    timeout: 15000
+- tapOn: "🤝 Requests, 1 new"
+- tapOn: "Find"

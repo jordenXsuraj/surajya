@@ -61,6 +61,9 @@ export const colors = {
   igTintFrom: 'rgba(240,148,51,0.12)',
   igTintTo: 'rgba(204,39,102,0.12)',
   igBorder: 'rgba(204,39,102,0.2)',
+  // Notifications (web Connect.jsx unread row)
+  unreadBg: 'rgba(255,59,92,0.04)',
+  unreadBorder: 'rgba(255,59,92,0.15)',
 } as const;
 
 export type ColorName = keyof typeof colors;

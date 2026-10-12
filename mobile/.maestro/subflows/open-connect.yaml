@@ -1,0 +1,36 @@
+# Opens the Connect tab (signed in) on Find people, with My college and no skill selected. The tab's
+# name carries the Activity badge ("Connect, 8 new").
+appId: com.themeetnet.app.dev
+---
+- runFlow: ensure-home.yaml
+- tapOn: "Connect(, \\d+ new)?"
+- extendedWaitUntil:
+    visible: "Find People 🔍|Suggested 💡|Activity 🔔"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible: "Find People 🔍"
+    commands:
+      - tapOn: "Find"
+- extendedWaitUntil:
+    visible: "Search students"
+    timeout: 10000
+- runFlow:
+    when:
+      visible: "Clear search"
+    commands:
+      - tapOn: "Clear search"
+- runFlow: hide-keyboard.yaml
+# the filter row scrolls sideways: back to its start (scope + "All"); swipes start inside the row,
+# away from the screen edges (a swipe from the edge is Android's Back gesture)
+- repeat:
+    while:
+      notVisible: "My college only"
+    times: 4
+    commands:
+      - swipe:
+          start: "25%, 29%"
+          end: "75%, 29%"
+          duration: 400
+- tapOn: "My college only"
+- tapOn: "Any skill"

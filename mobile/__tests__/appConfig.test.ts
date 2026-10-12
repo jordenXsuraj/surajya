@@ -1,7 +1,7 @@
 import type { ExpoConfig } from 'expo/config';
 
 import appJson from '../app.json';
-import { buildConfig, resolveVariant } from '../app.config';
+import { buildConfig, googleServicesFile, resolveVariant } from '../app.config';
 import easJson from '../eas.json';
 
 const base = appJson.expo as ExpoConfig;
@@ -23,13 +23,36 @@ describe('app identities', () => {
     expect(config.scheme).toBe('meetnet');
     expect(config.android?.package).toBe('com.themeetnet.app');
     expect(config.ios?.bundleIdentifier).toBe('com.themeetnet.app');
-    expect(config.ios?.associatedDomains).toEqual(['applinks:themeetnet.com']);
+    expect(config.ios?.associatedDomains).toEqual([
+      'applinks:themeetnet.com',
+      'applinks:www.themeetnet.com',
+    ]);
 
     const filter = config.android?.intentFilters?.[0];
     expect(filter?.autoVerify).toBe(true);
     const data = Array.isArray(filter?.data) ? filter.data : [];
-    expect(data.map((d) => d.pathPrefix)).toEqual(['/post', '/profile', '/reset-password']);
-    expect(data.every((d) => d.scheme === 'https' && d.host === 'themeetnet.com')).toBe(true);
+    expect(data.map((d) => `${d.scheme}://${d.host}${d.pathPrefix}`)).toEqual([
+      'https://themeetnet.com/post',
+      'https://themeetnet.com/profile',
+      'https://www.themeetnet.com/post',
+      'https://www.themeetnet.com/profile',
+    ]);
+  });
+
+  it('push: expo-notifications with the monochrome icon, accent colour and "default" channel', () => {
+    const config = buildConfig(base, 'production');
+    const plugin = config.plugins?.find((p) => Array.isArray(p) && p[0] === 'expo-notifications');
+    expect(plugin).toEqual([
+      'expo-notifications',
+      { icon: './assets/notification-icon.png', color: '#a73333', defaultChannel: 'default' },
+    ]);
+  });
+
+  it('google-services.json: the EAS file variable, else the ignored local copy', () => {
+    expect(googleServicesFile({ GOOGLE_SERVICES_JSON: '/eas/tmp/google-services.json' })).toBe(
+      '/eas/tmp/google-services.json',
+    );
+    expect(googleServicesFile({})).toBe('./google-services.json');
   });
 
   it('keeps what eas init wrote (owner, project id) and the shared settings', () => {

@@ -1,4 +1,10 @@
-import { useMutation, useQueryClient, type Query, type QueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  type InfiniteData,
+  type Query,
+  type QueryClient,
+} from '@tanstack/react-query';
 
 import {
   acceptRequest,
@@ -27,7 +33,7 @@ import { usePostUi } from '@/stores/postUi.store';
 import { useUiStore } from '@/stores/ui.store';
 import type { Post } from '@/types/post';
 import type { ReportReason } from '@/types/report';
-import type { PersonRow, PublicUser } from '@/types/user';
+import type { PersonRow, PublicUser, UserCard } from '@/types/user';
 
 const toast = (message: string, type: 'info' | 'success' | 'error' = 'info') =>
   useUiStore.getState().showToast(message, type);
@@ -60,7 +66,9 @@ function invalidateRelations(qc: QueryClient, id: string): void {
     void qc.invalidateQueries({ queryKey: key, exact: true });
   }
   void qc.invalidateQueries({ queryKey: queryKeys.userAll(id) });
-  void qc.invalidateQueries({ queryKey: queryKeys.suggestions });
+  // Stale, not refetched now: on Suggested the card stays (showing "Requested", like the web's
+  // "⏳ Sent"); the server leaves it out the next time the list loads
+  void qc.invalidateQueries({ queryKey: queryKeys.suggestions, refetchType: 'none' });
 }
 
 type FollowAction = 'follow' | 'accept' | 'reject' | 'unfollow';
@@ -184,6 +192,17 @@ export function useBlockUser() {
       removePosts(qc, byAuthor(id));
       qc.setQueriesData<PersonRow[]>({ predicate: isPeopleList }, (rows) =>
         rows?.some((r) => String(r._id) === id) ? rows.filter((r) => String(r._id) !== id) : rows,
+      );
+      qc.setQueryData<UserCard[]>(queryKeys.suggestions, (rows) =>
+        rows?.filter((r) => String(r._id) !== id),
+      );
+      qc.setQueriesData<InfiniteData<UserCard[], number>>(
+        { queryKey: queryKeys.peopleSearches },
+        (data) =>
+          data && {
+            ...data,
+            pages: data.pages.map((page) => page.filter((r) => String(r._id) !== id)),
+          },
       );
       const me = useAuthStore.getState().user;
       if (me) {

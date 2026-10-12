@@ -1,0 +1,7 @@
+# A cold start, signed in, on Home: badges and counts come from the server again, not from what an
+# earlier flow left in the app's cache.
+appId: com.themeetnet.app.dev
+---
+- runFlow: open-app.yaml
+- runFlow: sign-in.yaml
+- runFlow: dismiss-push-prompt.yaml

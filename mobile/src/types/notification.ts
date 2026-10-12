@@ -1,5 +1,5 @@
 import type { IsoDate, ObjectId } from './api';
-import type { PostAuthor } from './post';
+import type { PostAuthor, PostType } from './post';
 
 export type NotificationType =
   | 'connection_request'
@@ -9,13 +9,16 @@ export type NotificationType =
   | 'new_post'
   | 'interested';
 
+export type NotificationPost = { _id: ObjectId; type: PostType; text: string };
+
 export type Notification = {
   _id: ObjectId;
   recipient: ObjectId;
   /** null when the action was anonymous. */
   sender: PostAuthor | ObjectId | null;
   type: NotificationType;
-  post: ObjectId | null;
+  /** Populated as `{ _id, type, text }` by GET /notifications; null when the post is gone. */
+  post: NotificationPost | ObjectId | null;
   message: string;
   read: boolean;
   createdAt: IsoDate;

@@ -10,6 +10,7 @@
       "android": {
         "buildType": "apk"
       },
+      "environment": "development",
       "env": {
         "APP_VARIANT": "development"
       }
@@ -19,6 +20,7 @@
       "android": {
         "buildType": "apk"
       },
+      "environment": "preview",
       "env": {
         "APP_VARIANT": "preview",
         "EXPO_PUBLIC_API_URL": "https://surajya.onrender.com/api"
@@ -26,6 +28,7 @@
     },
     "production": {
       "autoIncrement": true,
+      "environment": "production",
       "env": {
         "APP_VARIANT": "production",
         "EXPO_PUBLIC_API_URL": "https://surajya.onrender.com/api"

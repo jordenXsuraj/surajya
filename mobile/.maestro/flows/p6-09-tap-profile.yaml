@@ -1,0 +1,15 @@
+# Prompt 6 · Tapping a follow-request notification opens that person, with Accept / Reject.
+appId: com.themeetnet.app.dev
+name: Notification → profile
+---
+- runFlow: ../subflows/open-notifications.yaml
+- extendedWaitUntil:
+    visible: "Sana Shaikh wants to follow you.*"
+    timeout: 20000
+- tapOn: "Sana Shaikh wants to follow you.*"
+- extendedWaitUntil:
+    visible: "Accept Sana Shaikh's follow request"
+    timeout: 20000
+- assertVisible: "Reject Sana Shaikh's follow request"
+- back
+- back

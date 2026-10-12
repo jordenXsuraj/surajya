@@ -1,0 +1,29 @@
+# Prompt 6 · A fresh install (the runner clears the app's data): after signing in, Home shows the
+# notifications pre-prompt; "Not now" closes it without the system dialog. Settings then offers
+# "Turn on notifications".
+appId: com.themeetnet.app.dev
+name: Pre-prompt, not now
+---
+- runFlow: ../subflows/open-app.yaml
+- tapOn: "Log In"
+- tapOn: "Enter your Email"
+- inputText: ${EMAIL}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: "Turn on notifications\\?"
+    timeout: 30000
+- assertVisible: "Someone replies to or likes your post"
+- tapOn: "Not now"
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 10000
+- assertNotVisible:
+    id: "com.android.permissioncontroller:id/permission_allow_button"
+- tapOn: "Me"
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: "🔕 Turn on notifications"
+- back
+- tapOn: "Home"

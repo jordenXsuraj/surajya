@@ -3,7 +3,7 @@
 Open items that are known but not scheduled yet. Each line: what, why it matters, where it lives.
 Remove an item in the same change that fixes it.
 
-_Last updated: 2026-10-05._
+_Last updated: 2026-10-12._
 
 ## Web
 
@@ -37,18 +37,18 @@ _Last updated: 2026-10-05._
 
 ## Email
 
-- **`support@themeetnet.com` has no MX record — it cannot receive mail.**
-  Why: app stores require a working support contact before submission, and the legal pages list this address.
-  Where: Hostinger DNS zone for `themeetnet.com` (MX records), plus a mailbox or forwarder.
 - **Resend bounce webhook not configured (`RESEND_WEBHOOK_SECRET` unset).**
   Why: without it `emailBounced` is never set, so users with a dead address are never asked to change it.
   Where: `server/routes/webhooks.js`; Resend dashboard (webhook to `https://surajya.onrender.com/api/webhooks/resend`); Render env `RESEND_WEBHOOK_SECRET`.
 
 ## Mobile
 
-- **App Links / Universal Links need the real signing identities (Prompt 6).**
-  Why: Android verifies links only with the Play App Signing SHA-256 certificate fingerprint, iOS only with the Apple Team ID; until then links open the browser instead of the app.
-  Where: `nexusnetwork/public/.well-known/assetlinks.json`, `nexusnetwork/public/.well-known/apple-app-site-association`; app side in `mobile/app.config.ts`.
+- **App Links / Universal Links need the store signing identities.**
+  Why: `assetlinks.json` has the EAS keystore's SHA-256 (Prompt 6), which covers EAS-signed APKs only; Play-installed builds are re-signed by Play App Signing, so its SHA-256 must be added at the Play launch, and iOS needs the Apple Team ID. Until then those links open the browser instead of the app.
+  Where: `nexusnetwork/public/.well-known/assetlinks.json` (add the Play Console → App integrity fingerprint), `nexusnetwork/public/.well-known/apple-app-site-association` (`TEAMID`); app side in `mobile/app.config.ts`.
+- **Jest leaves React Query cache timers running in three Prompt 4/5 test files.**
+  Why: `npm test` ends with "A worker process has failed to exit gracefully"; that warning hides real leaks (e.g. a new timer in app code) and can slow or hang `--detectOpenHandles` runs.
+  Where: `mobile/src/api/__tests__/postLists.test.ts`, `mobile/src/hooks/__tests__/likeMutation.test.tsx`, `mobile/src/api/__tests__/upload.test.ts` (`new QueryClient()` with the default 5-min `gcTime`: use `gcTime: Infinity` as `pushTap.test.tsx` does, or `qc.clear()` after each test).
 
 ## Ops
 

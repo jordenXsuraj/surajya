@@ -357,19 +357,22 @@ describe('push tokens', () => {
     await add(b, { token: PUSH('a2'), platform: 'android', deviceId: 'phone-b' })
     expect((await fresh(a._id)).pushTokens).toEqual([])
 
-    for (let i = 0; i < 12; i++) await add(a, { token: PUSH(`m${i}`), platform: 'ios', deviceId: `dev${i}` })
-    expect((await fresh(a._id)).pushTokens).toHaveLength(10)
+    // At most 5 devices per user, the most recent ones (a fresh user: 10 registrations per hour)
+    const c = await makeUser()
+    for (let i = 0; i < 7; i++) expect((await add(c, { token: PUSH(`m${i}`), platform: 'ios', deviceId: `dev${i}` })).status).toBe(200)
+    expect((await fresh(c._id)).pushTokens.map(t => t.deviceId)).toEqual(['dev2', 'dev3', 'dev4', 'dev5', 'dev6'])
 
-    const me = await as(a, 'get', '/api/users/me')
-    const pub = await as(b, 'get', `/api/users/${a._id}`)
+    // c has tokens: they must still never be exposed
+    const me = await as(c, 'get', '/api/users/me')
+    const pub = await as(b, 'get', `/api/users/${c._id}`)
     for (const body of [me.body, pub.body]) {
       expect(body).not.toHaveProperty('pushTokens')
       expect(body).not.toHaveProperty('tokenVersion')
     }
     expect(pub.body).not.toHaveProperty('blockedUsers')
 
-    expect((await as(a, 'delete', '/api/users/me/push-token').send({ deviceId: 'dev11' })).status).toBe(200)
-    expect((await fresh(a._id)).pushTokens.map(t => t.deviceId)).not.toContain('dev11')
+    expect((await as(c, 'delete', '/api/users/me/push-token').send({ deviceId: 'dev6' })).status).toBe(200)
+    expect((await fresh(c._id)).pushTokens.map(t => t.deviceId)).toEqual(['dev2', 'dev3', 'dev4', 'dev5'])
   })
 })
 

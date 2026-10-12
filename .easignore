@@ -69,3 +69,7 @@ yarn-error.*
 /mobile/ios/
 /mobile/android/
 coverage/
+
+# Firebase client config: EAS builds use the GOOGLE_SERVICES_JSON file variable, never a local copy
+/mobile/google-services.json
+/mobile/GoogleService-Info.plist

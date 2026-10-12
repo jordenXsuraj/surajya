@@ -21,6 +21,17 @@ appId: com.themeetnet.app.dev
       visible: "Continue"
     commands:
       - tapOn: "Continue"
-- extendedWaitUntil:
-    visible: "Create a post|Create account"
-    timeout: 60000
+# The dev client's own menu (Reload / Go home / Toggle performance monitor…) opens by itself over the
+# app on the first start after an install or `pm clear` (newer dev clients, instead of "Continue"):
+# Back closes it. Tried twice, in case it opens a moment after the app.
+- retry:
+    maxRetries: 1
+    commands:
+      - runFlow:
+          when:
+            visible: "Toggle performance monitor"
+          commands:
+            - pressKey: Back
+      - extendedWaitUntil:
+          visible: "Create a post|Create account"
+          timeout: 45000

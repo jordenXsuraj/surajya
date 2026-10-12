@@ -128,6 +128,65 @@ export const PROFILE_PEOPLE = [
     key: 'ishaan', name: 'Ishaan Verma', year: '2nd', branch: 'CS', username: 'ishaan.v',
     bio: '', skills: [], projects: [], roadmap: '', mediaItems: [], posts: [],
   },
+  // Prompt 6 (Connect): one more follow request for the tester, people the Suggested tab ranks
+  // high for the tester (3rd yr CS; shared skills), and two students at other colleges for the
+  // all-colleges search
+  {
+    key: 'sana', name: 'Sana Shaikh', year: '4th', branch: 'IT', username: 'sana.shaikh', avatar: 1076,
+    bio: 'Placement cell volunteer. Ask me about aptitude rounds.',
+    skills: ['Java', 'Spring Boot', 'SQL'], projects: [], roadmap: '', mediaItems: [],
+    posts: [{ type: 'placement', text: 'Aptitude practice group every Tuesday 6 pm in the seminar hall.' }],
+  },
+  {
+    key: 'aditi', name: 'Aditi Kulkarni', year: '3rd', branch: 'CS', username: 'aditi.k', avatar: 1082,
+    bio: 'Frontend + DSA. Building a study planner app.',
+    skills: ['React', 'DSA', 'JavaScript', 'Figma'], projects: [{ name: 'Study Planner', link: '' }],
+    roadmap: '', mediaItems: [],
+    posts: [{ type: 'study', text: 'My React hooks cheat sheet, happy to share with anyone preparing.' }],
+  },
+  {
+    key: 'varun', name: 'Varun Mehta', year: '3rd', branch: 'CS', username: 'varun.codes',
+    bio: 'ML enthusiast.', skills: ['C++', 'Python', 'Machine Learning'], projects: [], roadmap: '',
+    mediaItems: [], posts: [],
+  },
+  {
+    key: 'kunal', name: 'Kunal Rao', year: '2nd', branch: 'ENTC', username: 'kunal.rao', avatar: 1036,
+    college: 'Pune Institute of Computer Technology (PICT)',
+    bio: 'Robotics club, PICT.', skills: ['Embedded C', 'IoT', 'Python'], projects: [], roadmap: '',
+    mediaItems: [],
+    posts: [{ type: 'social', text: 'PICT robotics expo this weekend, everyone is welcome!' }],
+  },
+  {
+    key: 'neha', name: 'Neha Iyer', year: '4th', branch: 'CS', username: 'neha.iyer', avatar: 1060,
+    college: 'College of Engineering Pune (COEP)',
+    bio: 'SDE intern, COEP.', skills: ['React', 'Node.js', 'DSA'], projects: [], roadmap: '',
+    mediaItems: [],
+    posts: [{ type: 'placement', text: 'COEP mock interview drive next week, DM for the form.' }],
+  },
+];
+
+/** The tester's own posts (created once): they receive the likes / replies / interest below. */
+export const TESTER_POSTS = [
+  { key: 'tester-dsa', type: 'social', daysAgo: 1,
+    text: 'Finished my DSA sheet today 🎉 Who wants to start the next one together?' },
+  { key: 'tester-project', type: 'project', daysAgo: 3,
+    text: 'Looking for one teammate for Campus Notes v2 (React Native + Node).' },
+];
+/** Arjun's placement post (from PROFILE_PEOPLE) for the new_post notification. */
+export const ARJUN_POST_TEXT = PROFILE_PEOPLE[0].posts[0].text;
+
+// The tester's notifications: every type, read and unread, Today / This week / Earlier.
+// Messages are the server's (server/routes/users.js, posts.js, routes calling notifyFollowers).
+export const NOTIFICATIONS = [
+  { type: 'connection_request', from: 'sana', hoursAgo: 1, read: false },
+  { type: 'post_liked', from: 'arjun', post: 'tester-dsa', hoursAgo: 2, read: false },
+  { type: 'connection_request', from: 'rohan', hoursAgo: 3, read: false },
+  { type: 'post_replied', from: 'meera', post: 'tester-dsa', hoursAgo: 6, read: false },
+  { type: 'interested', from: 'riya', post: 'tester-project', hoursAgo: 48, read: false },
+  { type: 'connection_accepted', from: 'arjun', hoursAgo: 96, read: true },
+  { type: 'connection_request', from: 'kabir', hoursAgo: 120, read: true },
+  { type: 'new_post', from: 'arjun', post: 'arjun-placement', hoursAgo: 12 * 24, read: true },
+  { type: 'post_liked', from: 'nikhil', post: 'tester-project', hoursAgo: 20 * 24, read: true },
 ];
 
 // The tester's own profile before the Prompt 5 steps (photos are added by the steps themselves)
@@ -152,7 +211,9 @@ export const FOLLOWS = [
   ['rohan', 'arjun'], ['arjun', 'riya'], ['ishaan', 'meera'], ['tanvi', 'meera'], ['arjun', 'nikhil'],
 ];
 // [from, to]: `from` asked to follow `to`, still pending
-export const REQUESTS = [['kabir', 'tester'], ['rohan', 'tester'], ['tester', 'tanvi'], ['ishaan', 'arjun']];
+export const REQUESTS = [
+  ['kabir', 'tester'], ['rohan', 'tester'], ['sana', 'tester'], ['tester', 'tanvi'], ['ishaan', 'arjun'],
+];
 // [blocker, blocked]
 export const BLOCKS = [['tester', 'dev'], ['pooja', 'tester']];
 
@@ -181,3 +242,61 @@ export function relationsScript(ids) {
     print(JSON.stringify(true));
   `;
 }
+
+const PEOPLE_BY_KEY = Object.fromEntries([...BASE_PEOPLE, ...PROFILE_PEOPLE].map((p) => [p.key, p]));
+const POST_TYPE = { 'tester-dsa': 'social', 'tester-project': 'project', 'arjun-placement': 'placement' };
+
+/** The text the server writes for each notification type (same templates). */
+function notificationMessage({ type, from, post }) {
+  const p = PEOPLE_BY_KEY[from];
+  switch (type) {
+    case 'connection_request': return `${p.name} wants to follow you`;
+    case 'connection_accepted': return `${p.name} accepted your follow request`;
+    case 'post_replied': return `${p.name} replied to your post`;
+    case 'post_liked': return `${p.name} liked your post`;
+    case 'interested': return `${p.name} (${p.year} yr ${p.branch}) is interested in your ${POST_TYPE[post]} post`;
+    case 'new_post': return `${p.name} shared a new ${POST_TYPE[post]} post`;
+    default: throw new Error(`unknown notification type ${type}`);
+  }
+}
+
+/**
+ * mongosh script that replaces the tester's notifications with NOTIFICATIONS. `ids` maps key → user
+ * id; `postIds` maps tester-dsa / tester-project / arjun-placement → post id.
+ */
+export function notificationsScript(ids, postIds, now = Date.now()) {
+  // The app groups by the phone's calendar day: the "today" ones stay today even shortly after
+  // midnight (in their order), everything else keeps its age
+  const midnight = new Date(now);
+  midnight.setHours(0, 0, 0, 0);
+  const docs = NOTIFICATIONS.map((n) => ({
+    sender: ids[n.from],
+    type: n.type,
+    post: n.post ? postIds[n.post] : null,
+    message: notificationMessage(n),
+    read: n.read,
+    at: n.hoursAgo < 24
+      ? Math.max(now - n.hoursAgo * 3600000, midnight.getTime() + (24 - n.hoursAgo) * 60000)
+      : now - n.hoursAgo * 3600000,
+  }));
+  return `
+    const tester = ObjectId(${JSON.stringify(ids.tester)});
+    db.notifications.deleteMany({ recipient: tester });
+    const docs = ${JSON.stringify(docs)};
+    db.notifications.insertMany(docs.map(d => ({ recipient: tester, sender: ObjectId(d.sender), type: d.type,
+      post: d.post ? ObjectId(d.post) : null, message: d.message, read: d.read, createdAt: new Date(d.at) })));
+    print(JSON.stringify(docs.length));
+  `;
+}
+
+/**
+ * Connect → Find people loads 20 students at a time: these first-year fillers (no photo, no
+ * posts, oldest accounts) put the campus list on two pages, "Batch Student 01" last of all.
+ */
+export const FILLER_PEOPLE = Array.from({ length: 12 }, (_, i) => {
+  const n = String(i + 1).padStart(2, '0');
+  return { key: `batch${n}`, name: `Batch Student ${n}`, year: '1st', branch: 'Other' };
+});
+
+/** Unread notifications in the seed (the bell and the Activity badge start from these). */
+export const SEED_UNREAD = NOTIFICATIONS.filter((n) => !n.read).length;

@@ -1,18 +1,16 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
-import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/BackButton';
-import { FollowButton } from '@/components/profile/FollowButton';
-import { ProfileButton } from '@/components/profile/ProfileButton';
-import { Avatar, EmptyState, ErrorState, Input, Skeleton, Text } from '@/components/ui';
+import { PersonRowItem } from '@/components/profile/PersonRowItem';
+import { EmptyState, ErrorState, Input, Skeleton, Text } from '@/components/ui';
 import { useFollowActions, useUnblockUser } from '@/hooks/useFollow';
 import { decodeEntities } from '@/lib/text';
 import { useAuthStore } from '@/stores/auth.store';
-import { colors, fonts, layout, touch } from '@/theme/tokens';
+import { colors, fonts, layout } from '@/theme/tokens';
 import type { PersonRow } from '@/types/user';
 
 type PeopleListProps = {
@@ -37,7 +35,7 @@ export function matchesPerson(person: PersonRow, query: string): boolean {
 
 // Followers / following (mine or someone's), follow requests, blocked users. Web PeopleSheet rows
 // (avatar, name, "3rd yr CS · College", up to 3 skills) plus what the web lacks: the follow button
-// on every row, a search box over the list, pull-to-refresh.
+// on every row, a search box over the list, pull-to-refresh. Rows: PersonRowItem.
 export function PeopleList({ title, query, mode = 'follow', empty }: PeopleListProps) {
   const [search, setSearch] = useState('');
   const insets = useSafeAreaInsets();
@@ -58,73 +56,16 @@ export function PeopleList({ title, query, mode = 'follow', empty }: PeopleListP
   }, [query]);
 
   const renderItem = useCallback(
-    ({ item, index }: { item: PersonRow; index: number }) => {
-      const id = String(item._id);
-      const name = decodeEntities(item.name);
-      const open =
-        mode === 'blocked'
-          ? undefined
-          : () => (id === myId ? router.navigate('/me') : router.push(`/profile/${id}`));
-      return (
-        <View style={styles.row}>
-          <Pressable
-            onPress={open}
-            disabled={!open}
-            accessibilityRole={open ? 'button' : undefined}
-            accessibilityLabel={open ? `Open ${name}'s profile` : name}
-            style={styles.person}
-          >
-            <Avatar name={name} uri={item.avatar || null} size={44} colorIndex={index} />
-            <View style={styles.info}>
-              <Text style={styles.name} numberOfLines={1}>
-                {name}
-              </Text>
-              {item.year || item.branch || item.college ? (
-                <Text style={styles.role} numberOfLines={1}>
-                  {[
-                    [item.year && `${item.year} yr`, item.branch].filter(Boolean).join(' '),
-                    item.college && decodeEntities(item.college),
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Text>
-              ) : item.username ? (
-                <Text style={styles.role}>@{item.username}</Text>
-              ) : null}
-              {item.skills?.length ? (
-                <View style={styles.skills}>
-                  {item.skills.slice(0, 3).map((s) => (
-                    <View key={s} style={styles.skill}>
-                      <Text style={styles.skillText}>{decodeEntities(s)}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-            </View>
-          </Pressable>
-          {mode === 'blocked' ? (
-            <ProfileButton
-              label="Unblock"
-              a11y={`Unblock ${name}`}
-              kind="secondary"
-              compact
-              onPress={() =>
-                Alert.alert(
-                  `Unblock ${name.split(' ')[0]}?`,
-                  "You'll see each other's posts and profiles again. Follows that were removed don't come back.",
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Unblock', onPress: () => unblock({ id, name }) },
-                  ],
-                )
-              }
-            />
-          ) : (
-            <FollowButton id={id} name={name} actions={actions} compact />
-          )}
-        </View>
-      );
-    },
+    ({ item, index }: { item: PersonRow; index: number }) => (
+      <PersonRowItem
+        person={item}
+        index={index}
+        myId={myId}
+        mode={mode}
+        actions={actions}
+        onUnblock={unblock}
+      />
+    ),
     [mode, myId, actions, unblock],
   );
 
@@ -202,31 +143,4 @@ const styles = StyleSheet.create({
   topBarEnd: { width: 52 },
   search: { paddingHorizontal: layout.gutter, paddingBottom: 8 },
   skeletons: { paddingHorizontal: layout.gutter, gap: 10, paddingTop: 8 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginHorizontal: layout.gutter,
-    marginBottom: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.card,
-  },
-  person: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: touch.min },
-  info: { flex: 1, minWidth: 0 },
-  name: { fontFamily: fonts.extrabold, fontSize: 14, color: colors.text },
-  role: { fontFamily: fonts.regular, fontSize: 11.4, color: colors.dim, marginTop: 2 },
-  skills: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 6 },
-  skill: {
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 7,
-    borderWidth: 1,
-    borderColor: colors.br2,
-    backgroundColor: colors.br,
-  },
-  skillText: { fontFamily: fonts.semibold, fontSize: 10.2, color: colors.muted },
 });

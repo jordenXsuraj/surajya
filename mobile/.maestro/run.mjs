@@ -1,23 +1,28 @@
-// Runs the Maestro checks for Prompts 3, 4 and 5 against the LOCAL stack on an Android emulator (never
-// on someone's phone) and checks every step in the local database and in server/uploads, not only
-// on screen.
+// Runs the Maestro checks for Prompts 3, 4, 5 and 6 against the LOCAL stack on an Android emulator
+// (never on someone's phone) and checks every step in the local database and in server/uploads, not
+// only on screen. Prompt 6 receives real pushes (local API → Expo → FCM → the emulator).
 //
 //   node .maestro/run.mjs                        (from mobile/) all steps on emulator-5554
 //   node .maestro/run.mjs --only p4-05,p4-06     some steps; --only p3 / p4 / p5 for a group
 //   ANDROID_SERIAL=emulator-5556 node .maestro/run.mjs   another emulator
 //
-// Needs: the device with MeetNet Dev installed, Metro on 8081, the local API on 5000 WITHOUT
-// Cloudinary (uploads go to server/uploads), Docker Mongo `meetnet-mongo` (db meetnet_local), the
-// seed accounts (node .maestro/seed.mjs) and the test files in the device's Download folder (README.md).
+// Needs: the device with MeetNet Dev installed, Metro on 8081, Docker Mongo `meetnet-mongo` (db
+// meetnet_local), the seed accounts (node .maestro/seed.mjs) and the test files in the device's
+// Download folder (README.md). The run starts the local API itself (port 5000, uploads on disk, see
+// startLocalApi) and leaves it running afterwards.
 // Report: .maestro/reports/<run>/report.md (+ screenshots of failures).
 import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { crc32, deflateSync } from 'node:zlib';
 
-import { BASE_PEOPLE, PROFILE_PEOPLE, SEED_COLLEGE, TESTER_PROFILE, relationsScript } from './seed-data.mjs';
+import {
+  ARJUN_POST_TEXT, BASE_PEOPLE, PROFILE_PEOPLE, SEED_COLLEGE, SEED_UNREAD, TESTER_POSTS, TESTER_PROFILE,
+  notificationsScript, relationsScript,
+} from './seed-data.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER = resolve(HERE, '../../server');
@@ -54,7 +59,9 @@ const listDevices = () => run('adb', ['devices']).split(/\r?\n/).slice(1).map((l
 // (screen locked). Every adb call still names the emulator (-s), every Maestro call --device.
 let adbLimited = false;
 function adbServer(emulatorsOnly) {
-  spawnSync('adb', ['kill-server']);
+  // a wedged adb server (e.g. left by a run that was killed) also hangs kill-server: then end it hard
+  const killed = spawnSync('adb', ['kill-server'], { timeout: 15_000 });
+  if (killed.status === null) spawnSync('taskkill', ['/IM', 'adb.exe', '/F']);
   // --one-device with a serial no USB device has: the server connects to no USB device (needs the
   // libusb backend on Windows)
   if (emulatorsOnly) spawnSync('adb', ['--one-device', 'emulators-only', 'start-server'], { env: { ...process.env, ADB_LIBUSB: '1' } });
@@ -125,12 +132,26 @@ function maestro(flow, env, debugDir) {
 }
 
 // First line Maestro marks as failed (and the reason it printed), on one line for the report
-function maestroError(output) {
+function maestroError(output, debugDir) {
   const lines = output.split(/\r?\n/);
   const failed = lines.find((l) => /\.\.\. FAILED\s*$/.test(l));
   const reason = lines.find((l) => /Assertion is false|Element not found|Parsing Failed|DeviceServerDied|Device server died|Exception/.test(l));
-  return [failed, reason].filter(Boolean).map((l) => l.trim()).join(' — ').replace(/\|/g, '/')
-    || output.trim().split(/\r?\n/).slice(-2).join(' ');
+  const said = [failed, reason].filter(Boolean).map((l) => l.trim()).join(' — ').replace(/\|/g, '/');
+  if (said) return said;
+  // Maestro ended without a failed command (it died, timed out, lost the device): the command it
+  // was running, Maestro's last error lines and the last lines it printed
+  const parts = [];
+  const logFile = debugDir && join(debugDir, 'maestro.log');
+  if (logFile && existsSync(logFile)) {
+    const log = readFileSync(logFile, 'utf8').split(/\r?\n/).filter((l) => !/heartbeat|^\s+at /.test(l));
+    const running = log.filter((l) => / RUNNING$/.test(l)).pop();
+    if (running) parts.push(`died during: ${running.replace(/^.*?: /, '').replace(/ RUNNING$/, '').slice(0, 80)}`);
+    const errors = log.filter((l) => /\[(ERROR|WARN)\]|Exception|timed out|died|refused/i.test(l)).slice(-2);
+    parts.push(...errors.map((l) => l.replace(/^[\d:.]+ \[\w+\s*\] [\w.$]+: /, '').slice(0, 200)));
+  }
+  const tail = lines.map((l) => l.trim()).filter((l) => l && !/^[A-Z]:\\|debug output/i.test(l)).slice(-3);
+  parts.push(...tail);
+  return parts.join(' — ').replace(/\|/g, '/') || 'Maestro ended without output';
 }
 
 // Same as maestro(), without blocking: lets the runner watch the screen while a flow runs
@@ -340,6 +361,66 @@ async function fling(times) {
   }
 }
 
+// ── local API (owned by the run) ──────────────────────────────────────────────────────────────
+// The run starts the local API itself, with the settings of a hand-started one (local Mongo,
+// uploads on disk, no real emails) and one JWT secret for the whole run (kept in memory only):
+// p6-17 / p6-18 restart it with other app-config settings without signing the app out. Whatever
+// held port 5000 before (e.g. a start-api window with nodemon) is stopped. The API keeps running
+// after the run; its log is the run's api.log.
+const API_LOG = join(REPORT_DIR, 'api.log');
+const RUN_JWT_SECRET = randomBytes(48).toString('hex');
+const RUN_STARTED = new Date().toISOString();
+const API_ENV_DROP = ['RESEND_API_KEY', 'RENDER_API_KEY', 'VERCEL_TOKEN', 'EXPO_TOKEN', 'CLOUDINARY_URL',
+  'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
+
+// The process tree serving port 5000 (node, its npm / nodemon parents, a start-api PowerShell window),
+// never this runner: the API it starts is its own child, so the walk up stops at the runner.
+const STOP_API_PS = `
+$self = ${process.pid}
+$listener = Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $listener) { 'free'; exit }
+$root = Get-CimInstance Win32_Process -Filter "ProcessId=$($listener.OwningProcess)"
+if ($root.Name -ne 'node.exe') { "not-node $($root.Name)"; exit }
+while ($true) {
+  if ($root.ParentProcessId -eq $self) { break }
+  $parent = Get-CimInstance Win32_Process -Filter "ProcessId=$($root.ParentProcessId)" -ErrorAction SilentlyContinue
+  if (-not $parent -or $parent.ProcessId -eq $self) { break }
+  $ours = $parent.Name -in @('node.exe', 'cmd.exe') -or ($parent.Name -eq 'powershell.exe' -and $parent.CommandLine -like '*start-api*')
+  if (-not $ours) { break }
+  $root = $parent
+}
+taskkill /PID $root.ProcessId /T /F | Out-Null
+"stopped $($root.Name)"`;
+
+const apiUp = async () => (await fetch('http://127.0.0.1:5000/healthz').catch(() => null))?.ok === true;
+
+async function stopLocalApi() {
+  const said = run('powershell', ['-NoProfile', '-NonInteractive', '-Command', STOP_API_PS]);
+  expect(!said.startsWith('not-node'), `port 5000 is used by something else (${said.slice(9)}): stop it first`);
+  for (let i = 0; i < 40 && await apiUp(); i++) await sleep(250);
+  return said;
+}
+
+/** (Re)starts the local API; `overrides` are extra env vars (APP_MIN_VERSION_ANDROID, APP_MAINTENANCE…). */
+async function startLocalApi(overrides = {}) {
+  const was = await stopLocalApi();
+  const port = run('docker', ['port', 'meetnet-mongo', '27017']).split(/\r?\n/)[0].split(':').pop();
+  const env = { ...process.env, NODE_ENV: 'development', PORT: '5000', MONGO_URI: `mongodb://127.0.0.1:${port}/meetnet_local`,
+    PUBLIC_APP_URL: 'http://localhost:5173', VERIFICATION_REQUIRED_FROM: RUN_STARTED, JWT_SECRET: RUN_JWT_SECRET, ...overrides };
+  for (const k of API_ENV_DROP) delete env[k];
+  writeFileSync(API_LOG, `\n── ${new Date().toISOString()} start${Object.keys(overrides).length ? ` with ${Object.keys(overrides).join(', ')}` : ''} (${was})\n`, { flag: 'a' });
+  const out = openSync(API_LOG, 'a');
+  const child = spawn(process.execPath, ['index.js'], { cwd: SERVER, env, stdio: ['ignore', out, out], detached: true, windowsHide: true });
+  child.unref();
+  closeSync(out);
+  // up to 60 s: on a PC short of memory, node took more than 20 s to start
+  for (let i = 0; i < 240; i++) {
+    if (await apiUp()) return;
+    await sleep(250);
+  }
+  throw new Error(`the local API did not start within 60 s (${API_LOG})`);
+}
+
 // ── database and uploaded files ───────────────────────────────────────────────────────────────
 const mongo = (js) => {
   const out = run('docker', ['exec', 'meetnet-mongo', 'mongosh', 'meetnet_local', '--quiet', '--eval', js]);
@@ -439,7 +520,7 @@ const noPost = (text) => () => {
 // riya / arjun / … → ids (ctx.ids) and emails (ctx.emails)
 function seedAccounts() {
   const rows = mongo(`print(JSON.stringify(db.users.find({ $or: [{ email: ${q(TESTER.email)} },
-    { college: ${q(SEED_COLLEGE)}, email: /^seed-([0-2]-|p-)/ }] }, { name: 1, email: 1 }).toArray()
+    { college: ${q(SEED_COLLEGE)}, email: /^seed-[0-2]-/ }, { email: /^seed-p-/ }] }, { name: 1, email: 1 }).toArray()
     .map(u => ({ id: String(u._id), name: u.name, email: u.email }))))`);
   const ids = {}, emails = {};
   for (const r of rows) {
@@ -462,10 +543,17 @@ function resetP5() {
     savedPosts: ${ctx.fixtureId ? `[ObjectId(${q(ctx.fixtureId)})]` : '[]'} } }); print('true')`);
 }
 
-/** A token for a seed account (the other side of a request, fixture posts). */
+/**
+ * A token for a seed account (the other side of a request, fixture posts). Seed accounts' tokens are
+ * kept for the run (login allows 10 tries per 15 minutes); the tester's password changes in p5-19.
+ */
+const seedTokens = {};
 async function tokenOf(key) {
+  if (key !== 'tester' && seedTokens[key]) return seedTokens[key];
   const password = key === 'tester' ? TESTER.password : SEED_PASSWORD;
-  return (await api('POST', '/auth/login', { email: ctx.emails[key], password })).token;
+  const { token } = await api('POST', '/auth/login', { email: ctx.emails[key], password });
+  if (key !== 'tester') seedTokens[key] = token;
+  return token;
 }
 const postAs = async (key, text) => (await api('POST', '/posts', { type: 'social', text }, await tokenOf(key)))._id;
 
@@ -519,6 +607,126 @@ async function testerLogin() {
   }
 }
 
+// ── Prompt 6: notifications, push ─────────────────────────────────────────────────────────────
+/** Ids of the tester's two seed posts and Arjun's placement post (the notifications point at them). */
+function seedPostIds() {
+  const ids = {};
+  for (const p of TESTER_POSTS) {
+    ids[p.key] = mongo(`print(JSON.stringify(String(db.posts.findOne({ postedBy: ObjectId(${q(ctx.ids.tester)}), text: ${q(p.text)} })._id)))`);
+  }
+  ids['arjun-placement'] = mongo(`print(JSON.stringify(String(db.posts.findOne({ postedBy: ObjectId(${q(ctx.ids.arjun)}), text: ${q(ARJUN_POST_TEXT)} })._id)))`);
+  return ids;
+}
+
+/** Prompt 5's reset + the tester's notifications back to the seed; likes and replies off their posts. */
+function resetP6() {
+  resetP5();
+  const posts = [ctx.postIds['tester-dsa'], ctx.postIds['tester-project']];
+  mongo(`db.posts.updateMany({ _id: { $in: ${q(posts)}.map(id => ObjectId(id)) } }, { $set: { likes: [], replies: [] } }); print('true')`);
+  mongo(notificationsScript(ctx.ids, ctx.postIds));
+}
+
+const unreadCount = () => mongo(`print(db.notifications.countDocuments({ recipient: ObjectId(${q(ctx.ids.tester)}), read: false }))`);
+
+/** The tester's registered devices, without the tokens themselves (never logged). */
+const testerDevices = () => mongo(`print(JSON.stringify((db.users.findOne({ _id: ObjectId(${q(ctx.ids.tester)}) }, { pushTokens: 1 }).pushTokens || [])
+  .map(t => ({ platform: t.platform, deviceId: t.deviceId, expo: /^ExponentPushToken\\[.+\\]$/.test(t.token) }))))`);
+const clearTesterDevices = () => mongo(`db.users.updateOne({ _id: ObjectId(${q(ctx.ids.tester)}) }, { $set: { pushTokens: [] } }); print('true')`);
+
+/** System notifications MeetNet Dev has posted (title, text, channel, colour, small icon). */
+function postedNotifications() {
+  const out = run('adb', ['-s', SERIAL, 'shell', 'dumpsys', 'notification', '--noredact'], { maxBuffer: 64 * 1024 * 1024 });
+  const records = [];
+  let current = null;
+  for (const line of out.split(/\r?\n/)) {
+    // "NotificationRecord(0x…: pkg=… …: Notification(channel=default … color=0xffa73333 …))": the
+    // channel and colour are on this line itself, the extras (title, text) follow below it
+    if (/^\s*NotificationRecord\(/.test(line)) {
+      current = line.includes(`pkg=${APP_ID} `) ? { channel: null, color: null, icon: null, title: null, text: null } : null;
+      if (current) records.push(current);
+    }
+    if (!current) continue;
+    const channel = line.match(/channel=(\S+)/);
+    if (channel && current.channel === null) current.channel = channel[1];
+    const color = line.match(/\bcolor=0x([0-9a-f]+)/i);
+    if (color && current.color === null) current.color = color[1].toLowerCase();
+    const icon = line.match(/^\s*icon=(.+)$/);
+    if (icon && current.icon === null) current.icon = icon[1].trim();
+    const title = line.match(/android\.title=\w+ \((.*)\)$/);
+    if (title) current.title = title[1];
+    const text = line.match(/android\.text=\w+ \((.*)\)$/);
+    if (text) current.text = text[1];
+  }
+  return records;
+}
+
+/** Waits until the system shows a MeetNet notification with this text (a real push takes a few s). */
+async function waitForNotification(text, timeoutMs = 60_000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    const found = postedNotifications().find((n) => n.text?.includes(text));
+    if (found) return { ...found, seconds: Math.round((Date.now() - t0) / 1000) };
+    await sleep(1000);
+  }
+  throw new Error(`no system notification "${text}" within ${timeoutMs / 1000} s`);
+}
+
+/** Waits for a line the app logs (development builds, tag ReactNativeJS). */
+async function waitForLog(text, timeoutMs = 60_000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    const log = run('adb', ['-s', SERIAL, 'logcat', '-d', '-s', 'ReactNativeJS:I'], { maxBuffer: 64 * 1024 * 1024 });
+    if (log.includes(text)) return { seconds: Math.round((Date.now() - t0) / 1000) };
+    await sleep(500);
+  }
+  throw new Error(`the app did not log "${text}" within ${timeoutMs / 1000} s`);
+}
+// The push banner's middle on the 1080×2400, 480 dpi emulator: status bar + 6 dp + half the banner
+const BANNER_TAP_Y = 246; // measured: the banner spans y 149–343
+
+const appPid = () => spawnSync('adb', ['-s', SERIAL, 'shell', 'pidof', APP_ID], { encoding: 'utf8' }).stdout.trim();
+
+/**
+ * Ends the app's process the way Android does for a background app: a kill signal, not force-stop
+ * (a force-stopped app gets no FCM messages until it is opened again). `am kill` refuses a
+ * process that was in front a moment ago, so the (debug) app kills itself through run-as.
+ */
+async function killInBackground() {
+  adb('shell', 'input', 'keyevent', 'KEYCODE_HOME');
+  await sleep(2000);
+  const pid = appPid();
+  if (pid) spawnSync('adb', ['-s', SERIAL, 'shell', `run-as ${APP_ID} kill -9 ${pid}`]);
+  for (let i = 0; i < 20 && appPid() === pid && pid; i++) await sleep(500);
+  expect(!pid || appPid() !== pid, 'the app process is still running after the kill');
+}
+
+// The development client's floating tools button sits over the Home bell and the ⚙ on Me, and its
+// menu opens by itself on the first start after an install or `pm clear`: both off (and the intro
+// done) in its preferences, written through run-as (debug builds only). The app is stopped first so
+// it reads them on its next start.
+const DEV_MENU_PREFS = `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <boolean name="showFab" value="false" />
+    <boolean name="showsAtLaunch" value="false" />
+    <boolean name="isOnboardingFinished" value="true" />
+</map>
+`;
+function quietDevClient() {
+  adb('shell', 'am', 'force-stop', APP_ID);
+  const b64 = Buffer.from(DEV_MENU_PREFS).toString('base64');
+  adb('shell', `run-as ${APP_ID} sh -c 'mkdir -p shared_prefs && echo ${b64} | base64 -d > shared_prefs/expo.modules.devmenu.sharedpreferences.xml'`);
+  const back = adb('shell', `run-as ${APP_ID} cat shared_prefs/expo.modules.devmenu.sharedpreferences.xml`);
+  expect(back.includes('name="showFab" value="false"'), 'could not write the dev menu preferences');
+}
+
+const NOTIFICATION_PERMISSION = 'android.permission.POST_NOTIFICATIONS';
+const revokeNotifications = () => spawnSync('adb', ['-s', SERIAL, 'shell', 'pm', 'revoke', APP_ID, NOTIFICATION_PERMISSION]);
+const notificationsGranted = () =>
+  // the runtime-permissions line ("…POST_NOTIFICATIONS: granted=true, flags=[…]"), not the
+  // requested-permissions list above it, which has the name alone
+  /granted=true/.test(run('adb', ['-s', SERIAL, 'shell', 'dumpsys', 'package', APP_ID]).split(/\r?\n/)
+    .find((l) => l.includes(`${NOTIFICATION_PERMISSION}: granted=`)) ?? '');
+
 // ── steps ─────────────────────────────────────────────────────────────────────────────────────
 const TYPES = [
   { id: 'placement', re: 'Placement. .*', ph: 'Share placement experience.*' },
@@ -529,6 +737,160 @@ const TYPES = [
 ];
 
 const POSTED = [{ type: 'success', text: 'Posted!' }];
+
+// Prompt 6: every step starts from the seed (relations, the tester's profile, notifications, no
+// likes or replies on the tester's posts). Pushes reach the emulator only from p6-11b on: setup
+// revokes the notification permission and forgets the tester's devices.
+const apiLogSize = () => (existsSync(API_LOG) ? statSync(API_LOG).size : 0);
+/** Lines the local API logged since `offset` (morgan: "PUT /api/notifications/…/read 200 …"). */
+function apiLogSince(offset) {
+  const buf = readFileSync(API_LOG);
+  // morgan's dev format colours the status ("…/read \x1b[32m200\x1b[0m"): compare plain text
+  // eslint-disable-next-line no-control-regex
+  return buf.subarray(offset).toString('utf8').replace(/\x1b\[[0-9;]*m/g, '').split(/\r?\n/);
+}
+const notificationId = (from, type) => mongo(`print(JSON.stringify(String(db.notifications.findOne({ recipient: ObjectId(${q(ctx.ids.tester)}),
+  sender: ObjectId(${q(ctx.ids[from])}), type: ${q(type)} })._id)))`);
+const pushDetails = (n) => `system notification "${n.title}: ${n.text}" after ${n.seconds} s, channel ${n.channel}, colour #${(n.color ?? '').slice(-6)}`;
+function expectStyledPush(n) {
+  expect(n.title === 'MeetNet', `title "${n.title}"`);
+  expect(n.channel === 'default', `channel ${n.channel}, expected default`);
+  expect((n.color ?? '').endsWith('a73333'), `colour ${n.color}, expected the accent #a73333`);
+  return pushDetails(n);
+}
+const DEVICE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const CONFIG_WAIT_MS = 31_000; // the app re-reads /app/config on return at most every 30 s
+
+const P6_STEPS = [
+  { id: 'p6-01', title: 'Connect → Find: debounced search, My college / All colleges, Senior / contributor badges', flow: 'p6-01-find.yaml',
+    beforePrepare: () => { ctx.apiLogAt = apiLogSize(); },
+    verify: () => {
+      const searches = apiLogSince(ctx.apiLogAt).map((l) => l.match(/GET \/api\/users\?page=1&search=(\w+)/)?.[1]).filter(Boolean);
+      expect(searches.includes('adi'), `no search for "adi" (${searches.join(', ') || 'none'})`);
+      const partial = searches.filter((q) => q === 'a' || q === 'ad' || q === 'k' || q === 'ku');
+      expect(!partial.length, `searched while still typing: ${partial.join(', ')}`);
+      return `one request per typed name (${[...new Set(searches)].join(', ')}), none for partial input`;
+    } },
+  { id: 'p6-02', title: 'Find: skill pills (React; C++ only matches C++)', flow: 'p6-02-skills.yaml' },
+  { id: 'p6-03', title: 'Find: the next 20 students load at the end of the list', flow: 'p6-03-infinite.yaml',
+    beforePrepare: () => { ctx.apiLogAt = apiLogSize(); },
+    verify: () => {
+      const pages = apiLogSince(ctx.apiLogAt).filter((l) => /GET \/api\/users\?page=2\b/.test(l)).length;
+      expect(pages >= 1, 'no request for page 2 in the API log');
+      return 'GET /api/users?page=2 requested by scrolling (no button)';
+    } },
+  { id: 'p6-04', title: 'Find: Follow → "Requested"', flow: 'p6-04-follow-find.yaml',
+    toasts: [{ type: 'success', text: 'Request sent to Varun' }],
+    verify: () => expectRelation('tester', 'varun', { requested: true, follows: false }) },
+  { id: 'p6-05', title: 'Suggested: cards; Follow → "Requested"', flow: 'p6-05-suggested.yaml',
+    toasts: [{ type: 'success', text: 'Request sent to Ishaan' }],
+    verify: () => expectRelation('tester', 'ishaan', { requested: true, follows: false }) },
+  { id: 'p6-06', title: 'Activity: badges (requests + unread), Accept and Reject in the row', flow: 'p6-06-activity-requests.yaml',
+    toasts: [{ type: 'success', text: 'Sana now follows you' }, { type: 'success', text: 'Request removed' }],
+    verify: () => `${expectRelation('sana', 'tester', { follows: true, requested: false })}; ${expectRelation('kabir', 'tester', { follows: false, requested: false })}` },
+  { id: 'p6-07', title: 'Bell → Notifications: Today / This week / Earlier, every type, all marked read', flow: 'p6-07-notifications.yaml',
+    beforePrepare: () => { expect(unreadCount() === SEED_UNREAD, `${unreadCount()} unread before, expected ${SEED_UNREAD}`); },
+    verify: () => {
+      const n = unreadCount();
+      expect(n === 0, `${n} still unread`);
+      return `all ${SEED_UNREAD} unread notifications marked read`;
+    } },
+  { id: 'p6-08', title: 'Tap a reply notification → the post (PUT /notifications/:id/read)', flow: 'p6-08-tap-post.yaml',
+    beforePrepare: () => { ctx.apiLogAt = apiLogSize(); ctx.notificationId = notificationId('meera', 'post_replied'); },
+    verify: () => {
+      const hit = apiLogSince(ctx.apiLogAt).some((l) => l.includes(`PUT /api/notifications/${ctx.notificationId}/read 200`));
+      expect(hit, 'no PUT /notifications/:id/read for the tapped notification');
+      return 'PUT /api/notifications/<id>/read 200 for the tapped one';
+    } },
+  { id: 'p6-09', title: 'Tap a follow-request notification → their profile with Accept / Reject', flow: 'p6-09-tap-profile.yaml' },
+  { id: 'p6-10', title: 'Pull to refresh shows a new notification (Ishaan likes a post meanwhile)', flow: 'p6-10-refresh.yaml',
+    env: () => ({ ISHAAN_TOKEN: seedTokens.ishaan, TESTER_DSA_ID: ctx.postIds['tester-dsa'] }),
+    beforePrepare: async () => { await tokenOf('ishaan'); },
+    verify: () => {
+      const n = mongo(`print(db.notifications.countDocuments({ recipient: ObjectId(${q(ctx.ids.tester)}), sender: ObjectId(${q(ctx.ids.ishaan)}), type: 'post_liked' }))`);
+      expect(n === 1, `${n} like notifications from Ishaan`);
+      return 'the new like notification is in the database and on screen after the pull';
+    } },
+  { id: 'p6-11', title: 'Fresh install: notifications pre-prompt → "Not now" (no system dialog, no token)', flow: 'p6-11-prompt-not-now.yaml',
+    before: () => { adb('shell', 'pm', 'clear', APP_ID); quietDevClient(); clearTesterDevices(); },
+    verify: () => {
+      expect(!notificationsGranted(), 'the notification permission was granted');
+      const d = testerDevices();
+      expect(d.length === 0, `${d.length} push tokens registered`);
+      return 'permission still not granted; no push token on the server';
+    } },
+  { id: 'p6-11b', title: 'Pre-prompt → "Turn on" → Android 13 dialog → Allow → token registered', flow: 'p6-11b-prompt-allow.yaml',
+    before: () => { adb('shell', 'pm', 'clear', APP_ID); quietDevClient(); clearTesterDevices(); },
+    verify: async () => {
+      expect(notificationsGranted(), 'POST_NOTIFICATIONS not granted');
+      // the app registers in the background after "Allow" (FCM token, Expo, our API)
+      let d = testerDevices();
+      for (let i = 0; i < 30 && !d.length; i++) { await sleep(1000); d = testerDevices(); }
+      expect(d.length === 1, `${d.length} push tokens, expected 1`);
+      expect(d[0].platform === 'android' && d[0].expo && DEVICE_ID.test(d[0].deviceId ?? ''), `token ${q({ ...d[0], deviceId: d[0].deviceId ? 'uuid?' : null })}`);
+      return 'POST_NOTIFICATIONS granted; one Expo push token (android, random UUID device id) on the server';
+    } },
+  // The runner sends the push and taps the banner itself (adb): the banner is on screen for 6 s
+  // and on a busy emulator one Maestro screen read can take longer. The app's own log line says
+  // when the banner is up; the flow then checks the profile it opened and the badge.
+  { id: 'p6-12', title: 'Push while the app is open: in-app banner (no system alert), tap → their profile', prepare: 'p6-12-prepare.yaml', flow: 'p6-12-push-foreground.yaml', needs: 'p6-11b',
+    before: async () => {
+      spawnSync('adb', ['-s', SERIAL, 'logcat', '-c']);
+      await api('POST', `/users/${ctx.ids.tester}/connect`, {}, await tokenOf('ishaan'));
+      ctx.banner = await waitForLog('[toast] push Ishaan Verma wants to follow you');
+      await sleep(400); // slide-in
+      adb('shell', 'input', 'tap', '540', String(BANNER_TAP_Y));
+    },
+    verify: () => {
+      const shown = postedNotifications().filter((n) => n.text?.includes('Ishaan Verma wants to follow you'));
+      expect(!shown.length, 'the system also showed the push (foreground pushes should only show the banner)');
+      return `${expectRelation('ishaan', 'tester', { requested: true })}; banner "Ishaan Verma wants to follow you" ${ctx.banner.seconds} s after the request, tapped → profile; no system notification`;
+    } },
+  { id: 'p6-13', title: 'Push in the background: system notification (channel, colour) → tap → the post', prepare: 'p6-prep-home.yaml', flow: 'p6-13-push-background.yaml', needs: 'p6-11b',
+    before: async () => {
+      adb('shell', 'input', 'keyevent', 'KEYCODE_HOME');
+      await sleep(1500);
+      await api('PUT', `/posts/${ctx.postIds['tester-dsa']}/like`, {}, await tokenOf('arjun'));
+      ctx.push = await waitForNotification('Arjun Patil liked your post');
+      adb('shell', 'cmd', 'statusbar', 'expand-notifications');
+    },
+    verify: () => expectStyledPush(ctx.push) },
+  // Development builds: the dev launcher reloads the bundle with its own intent after a cold start
+  // and drops the notification's tap data, so "lands on the post" can only be seen in a release
+  // build (phone eye-check with the preview APK; the JS side is covered by pushTap.test.tsx).
+  { id: 'p6-14', title: 'Push with the app killed: delivered, tap cold-starts the app (landing on the post: release build only)', prepare: 'p6-prep-home.yaml', flow: 'p6-14-push-killed.yaml', needs: 'p6-11b',
+    before: async () => {
+      await killInBackground();
+      await api('POST', `/posts/${ctx.postIds['tester-project']}/replies`, { text: `Maestro ${RUN} reply` }, await tokenOf('meera'));
+      ctx.push = await waitForNotification('Meera Joshi replied to your post');
+      adb('shell', 'cmd', 'statusbar', 'expand-notifications');
+    },
+    verify: () => `${expectStyledPush(ctx.push)}; the app process was not running` },
+  { id: 'p6-15', title: 'Deep links (adb am start): post, profile, home, unknown → not found', prepare: 'p6-prep-home.yaml', flow: 'p6-15-deep-links.yaml',
+    before: () => {
+      adb('shell', 'am', 'start', '-W', '-a', 'android.intent.action.VIEW', '-d', `meetnet-dev://post/${ctx.fixtureId}`, APP_ID);
+    } },
+  { id: 'p6-16', title: 'Link while signed out → sign in → lands on the linked post', flow: 'p6-16-pending-link.yaml' },
+  { id: 'p6-17', title: 'Forced update: blocking "Update required" when below minVersion', flow: 'p6-17-update-required.yaml',
+    before: () => startLocalApi({ APP_MIN_VERSION_ANDROID: '9.9.9' }),
+    after: () => startLocalApi() },
+  { id: 'p6-17b', title: '"Check again" after the minimum went back down → the app', flow: 'p6-17b-update-cleared.yaml', needs: 'p6-17' },
+  { id: 'p6-18', title: 'Maintenance message when the app returns to the front', prepare: 'p6-prep-home.yaml', flow: 'p6-18-maintenance.yaml',
+    before: async () => {
+      await startLocalApi({ APP_MAINTENANCE: '1', APP_MAINTENANCE_MESSAGE: 'Maestro maintenance check' });
+      await sleep(CONFIG_WAIT_MS);
+    },
+    after: () => startLocalApi() },
+  { id: 'p6-18b', title: 'Maintenance over → "Try again" → the app', flow: 'p6-18b-maintenance-over.yaml', needs: 'p6-18' },
+  { id: 'p6-19', title: 'Log out removes this device\'s push token', flow: 'p6-19-logout-token.yaml', needs: 'p6-11b',
+    before: () => { ctx.devicesBefore = testerDevices().length; },
+    verify: () => {
+      const d = testerDevices();
+      expect(ctx.devicesBefore >= 1, 'no token was registered before the logout (nothing to check)');
+      expect(d.length === 0, `${d.length} tokens left after logout`);
+      return `${ctx.devicesBefore} token before, none after (DELETE /users/me/push-token)`;
+    } },
+].map((step) => ({ ...step, beforePrepare: async () => { resetP6(); await step.beforePrepare?.(); } }));
 
 const STEPS = [
   { id: 'p3-01', title: 'Login (signed out → Home)', flow: 'p3-01-login.yaml' },
@@ -754,6 +1116,8 @@ const STEPS = [
       } },
   ].map((step) => ({ ...step, beforePrepare: async () => { resetP5(); await step.beforePrepare?.(); } })),
 ];
+// Prompt 6 runs before p5-19, which has to stay last
+STEPS.splice(STEPS.findIndex((s) => s.id === 'p5-19'), 0, ...P6_STEPS);
 
 // ── setup ─────────────────────────────────────────────────────────────────────────────────────
 // Can Maestro reach the emulator? ("Device … was requested, but it is not connected" when adb lists
@@ -805,6 +1169,11 @@ async function setup() {
   adb('reverse', 'tcp:5000', 'tcp:5000');
   adb('reverse', 'tcp:8081', 'tcp:8081');
   network(true);
+  await startLocalApi();
+  log(`local API started by the run (log: ${API_LOG})`);
+  // No pushes to the emulator until p6-11b turns them on (the app asks again after p6-11's reset)
+  revokeNotifications();
+  quietDevClient();
   expect((await fetch('http://127.0.0.1:5000/healthz')).ok, 'local API not running on 5000');
   expect((await (await fetch('http://127.0.0.1:8081/status')).text()).includes('running'), 'Metro not running on 8081');
 
@@ -817,8 +1186,11 @@ async function setup() {
   ctx.testerId = String(me.user?._id ?? me.user?.id);
   Object.assign(ctx, seedAccounts());
   ctx.idEnv = Object.fromEntries(Object.entries(ctx.ids).map(([k, id]) => [`${k.toUpperCase()}_ID`, id]));
-  // Every run starts from the seed: who follows / asked / blocked whom, the tester's profile
-  resetP5();
+  ctx.postIds = seedPostIds();
+  clearTesterDevices();
+  // Every run starts from the seed: who follows / asked / blocked whom, the tester's profile,
+  // the tester's notifications
+  resetP6();
   ctx.testerUsername = userDoc('tester').username;
   mongo(`print(JSON.stringify(db.reports.deleteMany({ targetType: 'user', reportedBy: ObjectId(${q(ctx.testerId)}) }).deletedCount))`);
   // Uploads must go to local disk: a 1×1 probe through the API, removed again
@@ -851,6 +1223,10 @@ async function setup() {
   ctx.fixtureImageFile = uploadedFile(imageUrl).name.split('/').pop();
   ctx.imageText = `Maestro ${RUN} image fixture`;
   ctx.imagePostId = (await api('POST', '/posts', { type: 'social', text: ctx.imageText, imageUrl }, riyaToken))._id;
+
+  // The app signed in again on this run's API, and the notifications pre-prompt out of the way
+  const settle = maestro('setup-settle.yaml', { EMAIL: TESTER.email, PASSWORD: TESTER.password, RUN }, join(REPORT_DIR, 'debug', 'setup'));
+  if (!settle.ok) throw new Error(`setup-settle.yaml: ${maestroError(settle.output, join(REPORT_DIR, 'debug', 'setup'))}`);
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────────────────────
@@ -868,16 +1244,18 @@ try {
     const expectedToasts = step.toasts ?? [];
     const start = new Date(Date.now() - 2000);
     const t0 = Date.now();
-    const flowEnv = {
-      EMAIL: TESTER.email, PASSWORD: TESTER.password, RUN,
-      POST_ID: ctx.fixtureId, BLOCK_POST_ID: ctx.blockPostId, OWN_POST_ID: ctx.ownPostId,
-      IMAGE_POST_ID: ctx.imagePostId, ...ctx.idEnv, ...step.env,
-    };
+    let flowEnv = {};
     try {
       await step.beforePrepare?.();
+      flowEnv = {
+        EMAIL: TESTER.email, PASSWORD: TESTER.password, RUN,
+        POST_ID: ctx.fixtureId, BLOCK_POST_ID: ctx.blockPostId, OWN_POST_ID: ctx.ownPostId,
+        IMAGE_POST_ID: ctx.imagePostId, ...ctx.idEnv,
+        ...(typeof step.env === 'function' ? step.env() : step.env),
+      };
       if (step.prepare) {
         const p = maestro(step.prepare, flowEnv, join(debugDir, 'prepare'));
-        if (!p.ok) throw new Error(`prepare: ${maestroError(p.output)}`);
+        if (!p.ok) throw new Error(`prepare: ${maestroError(p.output, join(debugDir, 'prepare'))}`);
       }
       await step.before?.();
       let m;
@@ -893,7 +1271,7 @@ try {
         m = maestro(step.flow, flowEnv, debugDir);
       }
       r.screen = m.ok ? 'pass' : 'fail';
-      if (!m.ok) r.screenError = maestroError(m.output);
+      if (!m.ok) r.screenError = maestroError(m.output, debugDir);
       else if (expectedToasts.length) {
         // each expected toast: the first logged one of that type whose text matches
         const found = expectedToasts.map((e) => m.messages.find((msg, i) => m.toasts[i] === e.type && (!e.text || msg.includes(e.text))));

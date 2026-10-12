@@ -1,4 +1,5 @@
-# Signs in as ${EMAIL} / ${PASSWORD} unless the app is already signed in.
+# Signs in as ${EMAIL} / ${PASSWORD} unless the app is already signed in. After signing in, Home
+# offers the notifications pre-prompt: answered "Not now" (dismiss-push-prompt.yaml).
 appId: com.themeetnet.app.dev
 ---
 - runFlow:
@@ -12,6 +13,11 @@ appId: com.themeetnet.app.dev
       - inputText: ${PASSWORD}
       # the password field submits the form ("done" key)
       - pressKey: Enter
+      # Home, or already the pre-prompt on top of it (it opens ~1 s after Home appears)
+      - extendedWaitUntil:
+          visible: "Create a post|Turn on notifications\\?"
+          timeout: 30000
+      - runFlow: dismiss-push-prompt.yaml
 - extendedWaitUntil:
     visible: "Create a post"
     timeout: 30000

@@ -1,0 +1,28 @@
+# Prompt 6 · Deep links: the runner opened meetnet-dev://post/<fixture> with `adb shell am start`;
+# then a profile link, the bare scheme (home) and an unknown path (+not-found).
+appId: com.themeetnet.app.dev
+name: Deep links
+---
+- extendedWaitUntil:
+    visible: ".*${RUN} fixture post.*"
+    timeout: 20000
+- assertVisible: "Write a reply"
+- back
+- openLink: meetnet-dev://profile/${ARJUN_ID}
+- extendedWaitUntil:
+    visible: "Arjun Patil"
+    timeout: 20000
+- assertVisible: "@arjun\\.patil.*"
+- back
+- openLink: meetnet-dev://
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 15000
+- openLink: meetnet-dev://nope/123
+- extendedWaitUntil:
+    visible: "This link isn't available"
+    timeout: 15000
+- tapOn: "Go home"
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 15000

@@ -19,7 +19,8 @@ api.interceptors.request.use((config) => {
     throw new ApiError(0, 'EXPO_PUBLIC_API_URL is not set. Copy .env.example to .env.local.');
   }
   const token = useAuthStore.getState().token;
-  if (token && !config.headers.Authorization) {
+  // null: a request that must go without the session (POST /users/push-token/revoke)
+  if (token && config.headers.Authorization === undefined) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;

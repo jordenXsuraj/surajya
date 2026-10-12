@@ -1,11 +1,13 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.themeetnet.app",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_PLAY_APP_SIGNING_SHA256_FINGERPRINT"
+        "3F:0E:B2:BB:9B:AA:CA:3B:90:98:78:A3:F1:4D:5A:AA:B5:3F:50:0C:46:22:C8:AD:DD:99:F3:ED:7D:98:01:74"
       ]
     }
   }

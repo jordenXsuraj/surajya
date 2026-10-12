@@ -1,0 +1,17 @@
+# The notifications pre-prompt (Prompt 6) opens on Home about a second after a sign-in, a first
+# start, or 14 days after "Not now". Every flow but p6-11 / p6-11b answers "Not now", so it never
+# covers a later tap.
+appId: com.themeetnet.app.dev
+---
+- extendedWaitUntil:
+    visible: "Turn on notifications\\?"
+    timeout: 4000
+    optional: true
+- runFlow:
+    when:
+      visible: "Turn on notifications\\?"
+    commands:
+      - tapOn: "Not now"
+      - extendedWaitUntil:
+          visible: "Create a post"
+          timeout: 10000
