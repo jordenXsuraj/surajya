@@ -12,12 +12,16 @@
 //   --body="…"          the text (default "Test notification from MeetNet 👋")
 //   --dry               look the user up and count devices, send nothing
 //
-// Uses EXPO_ACCESS_TOKEN when set (only needed with Expo's enhanced push security).
+// EXPO_ACCESS_TOKEN (Expo enhanced push security, docs/DEPLOYMENT.md "Push security"): required
+// for any database but a local one and with NODE_ENV=production, checked before connecting;
+// against a local database it is used when set (without it Expo answers UNAUTHORIZED once the
+// setting is on).
 
 const mongoose = require('mongoose')
 const { Expo } = require('expo-server-sdk')
 const User = require('../models/User')
 const { redactPushTokens } = require('../utils/redact')
+const { createExpoClient } = require('../services/expoClient')
 
 const RECEIPT_WAIT_MS = 10_000
 
@@ -47,6 +51,10 @@ const count = (items, key) => items.reduce((acc, item) => {
 async function main() {
   const opts = parseArgs(process.argv.slice(2))
   if (!process.env.MONGO_URI) throw new Error('MONGO_URI is not set')
+  // Real users' devices (any database but a local one, or NODE_ENV=production): the access token
+  // is required, checked before connecting. A local database may go without (to see Expo refuse)
+  const local = /^mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(process.env.MONGO_URI)
+  const expo = createExpoClient({ required: process.env.NODE_ENV === 'production' || !local })
 
   await mongoose.connect(process.env.MONGO_URI)
   const user = await User.findOne({ email: opts.email }).select('+pushTokens').lean()
@@ -66,7 +74,6 @@ async function main() {
   const postId = opts.url.startsWith('/post/') ? opts.url.slice(6) : null
   const senderId = opts.url.startsWith('/profile/') ? opts.url.slice(9) : null
   const data = { type: opts.type, postId, senderId, url: opts.url }
-  const expo = new Expo(process.env.EXPO_ACCESS_TOKEN ? { accessToken: process.env.EXPO_ACCESS_TOKEN } : {})
   const messages = devices.map(d => ({ to: d.token, sound: 'default', title: 'MeetNet', body: opts.body, data }))
 
   const tickets = []

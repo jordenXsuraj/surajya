@@ -3,6 +3,7 @@
 // HTTP request can't fail because a notification or push failed.
 
 const { Expo } = require('expo-server-sdk')
+const { createExpoClient } = require('./expoClient')
 const Notification = require('../models/Notification')
 const User = require('../models/User')
 const Post = require('../models/Post')
@@ -12,7 +13,8 @@ const { redactPushTokens } = require('../utils/redact')
 const PUSH_TYPES = new Set(['connection_request', 'connection_accepted', 'post_replied', 'post_liked', 'interested'])
 const RECEIPT_DELAY_MS = 15 * 60 * 1000   // Expo recommends checking receipts ~15 min later
 
-let expo = new Expo(process.env.EXPO_ACCESS_TOKEN ? { accessToken: process.env.EXPO_ACCESS_TOKEN } : {})
+// Throws in production without EXPO_ACCESS_TOKEN (services/expoClient.js)
+let expo = createExpoClient()
 
 const str = id => (id?._id ?? id)?.toString()
 const blockedBetween = (a, b) =>

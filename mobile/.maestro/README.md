@@ -25,6 +25,9 @@ to the local stack.
    (without `-dns-server` the emulator sometimes boots with working IP but no name resolution: Google
    Play services then gets no FCM token, the app logs `[push] registration failed: E_REGISTRATION_FAILED …
    SERVICE_NOT_AVAILABLE` and every push step fails)
+   Once Expo's enhanced push security is on (docs/DEPLOYMENT.md, "Push security"), the push steps
+   also need `EXPO_ACCESS_TOKEN` in the runner's environment (it passes it to the local API it
+   starts); without it Expo answers `UNAUTHORIZED` and p6-10/12/13/14 fail.
    (`-gpu auto` picks software rendering when headless: the app then runs so slowly that animations
    and toasts are missed and it can stop responding),
    install the MeetNet Dev APK (`adb -s emulator-5554 install -r meetnet-dev.apk`; the development

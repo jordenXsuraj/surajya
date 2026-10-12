@@ -14,6 +14,8 @@ No secret values belong in this file. Secrets live only in the Render and Vercel
 
 Both apps deploy from GitHub `jordenXsuraj/surajya`.
 
+**Render account:** the `surajya` service is in the Render workspace **"My Workspace"**, which is under a different Render login from the one whose workspace is called "AniKeT's workspace". If the service isn't listed after signing in, you are in the other login: sign out and use the one that owns "My Workspace".
+
 ## How to deploy
 
 Push (or merge) to `main`. Both hosts deploy automatically:
@@ -55,7 +57,7 @@ If a Render deploy fails (build error, or the app exits at startup), Render keep
 | `PUBLIC_APP_URL` | `https://themeetnet.com`. Base of emailed links (`/reset-password?token=…`). Defaults to that value. |
 | `RESEND_API_KEY` | **Required for password-reset emails.** Without it in production, reset requests still answer 200 but no email is sent (an error is logged). See [Email](#email-resend). |
 | `EMAIL_FROM` | `MeetNet <no-reply@themeetnet.com>` (the domain must be verified in Resend) |
-| `EXPO_ACCESS_TOKEN` | Optional. Only if "Enhanced push security" is turned on in the Expo project. |
+| `EXPO_ACCESS_TOKEN` | **Required.** The robot user's access token for Expo's push service (see [Push security](#push-security-expo-access-token)). In production the server refuses to start without it (`❌ EXPO_ACCESS_TOKEN is not set … Refusing to start in production.`), so the deploy fails and Render keeps the old version. |
 | `CLIENT_IP_HEADER`, `CLIENT_IP_XFF_INDEX` | Which header carries the real client IP for rate limits. **Production: `CLIENT_IP_HEADER=cf-connecting-ip`**, no index. Empty = `req.ip`. See [Client IP](#client-ip-rate-limiting). |
 | `DEBUG_IP_ROUTE` | `1` only **temporarily**, while choosing `CLIENT_IP_HEADER`. Remove afterwards. |
 | `VERIFICATION_REQUIRED_FROM` | ISO date-time. Accounts created **at or after** it must verify their email before posting, replying, following, "interested" or reporting. Unset = the default in `server/middleware/requireVerifiedEmail.js` (the release time, see [Email verification](#email-verification)). An invalid value blocks nobody. |
@@ -201,7 +203,30 @@ curl -s "https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.
 - **Firebase project `themeetnet`** (Spark, free; Google Cloud project of the same id). Android apps `com.themeetnet.app` and `com.themeetnet.app.dev`; both are in one `google-services.json`.
 - **`google-services.json` is not in git** (public repo; it holds an Android API key). EAS builds get it from the **file environment variable `GOOGLE_SERVICES_JSON`** (secret visibility, development / preview / production): `eas env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret …`. A local copy in `mobile/` is ignored by git and `.easignore`. Get it again with `firebase apps:sdkconfig ANDROID <app id> --project themeetnet`.
 - **FCM V1 sender**: service account `meetnet-fcm-sender@themeetnet.iam.gserviceaccount.com` with **only** `roles/firebasecloudmessaging.admin`. Its single key is stored **only on EAS** (Credentials → Android → FCM V1 service account key, attached to both package names); no copy is kept anywhere else. To rotate: create a new key for the account, upload it in `eas credentials -p android` (or the EAS API), then delete the old key in Google Cloud → IAM → Service accounts → Keys.
-- The server sends through Expo's push service (`expo-server-sdk`, no channelId → the app's `default` channel). Test one user's devices: `cd server && MONGO_URI=… node scripts/sendTestPush.js <email> [--url=/post/<id>]` (prints ticket and receipt status only).
+- The server sends through Expo's push service (`expo-server-sdk`, no channelId → the app's `default` channel). Test one user's devices: `cd server && MONGO_URI=… node scripts/sendTestPush.js <email> [--url=/post/<id>]` (prints ticket and receipt status only; needs `EXPO_ACCESS_TOKEN` for any database but a local one).
+
+### Push security (Expo access token)
+
+Without Expo's **enhanced push security**, anyone who has a device's Expo push token can send it pushes through Expo. With it on, Expo accepts pushes for the projects of the account **`aniket078s-team`** only with an access token (`UNAUTHORIZED` otherwise). The setting covers **every project of that account**. The token is a dedicated **robot user** with the smallest role that works, never a personal token and never the Admin robot EAS builds use (`EXPO_TOKEN`). Its value never goes into chat, git or logs.
+
+**Order** (each step only after the previous one worked):
+
+1. **Robot + token** (Expo dashboard): expo.dev → account switcher (top left) → **aniket078s-team** → **Settings → Access tokens** (`https://expo.dev/accounts/aniket078s-team/settings/access-tokens`) → **Robot users → Add robot** → name `meetnet-push-sender`, role **Viewer** (the smallest; step 7 shows whether it is enough) → create. On that robot: **Create token** → name `push-api` → copy it (it is shown once).
+2. **Windows (local tests)**: Win+R → `rundll32 sysdm.cpl,EditEnvironmentVariables` → *User variables* → **New** → `EXPO_ACCESS_TOKEN` = the token → OK. New terminals get it; Claude reads it into the test process only, never prints it.
+3. **Render**: Dashboard → `surajya` → **Environment** → **Add Environment Variable** → key `EXPO_ACCESS_TOKEN`, value = the token → save with **Save only** (the merge deploys it; *Save and deploy* is harmless too: the running version already uses the variable when set).
+4. **Merge → deploy.** Render's log must show `✅ Server running`. Without the variable the deploy fails with `EXPO_ACCESS_TOKEN is not set … Refusing to start in production.` and the old version keeps running.
+5. **Test with the token, setting still off**: a push from the production API reaches a phone (preview build signed in with a disposable account; another disposable account sends it a follow request), and the Render log has no `push ticket error` / `push: send failed`. Locally: `sendTestPush.js` to the emulator → `Tickets: { ok: 1 }`.
+6. **Turn it on**: same Access tokens page → **Enhanced security for push notifications** → enable.
+7. **Test again**:
+   - without the token (local database, `EXPO_ACCESS_TOKEN` empty in that one command): `sendTestPush.js` → ticket / send error **`UNAUTHORIZED`** (rejected);
+   - with the token: `sendTestPush.js` → `ok`, and a push from the production API arrives.
+   - If *with the token* is refused too, the robot's role is too small: on the robot's page raise it one step (**Viewer → Developer**), same token, test again. Record the role that works here.
+
+**Role in use:** _(filled in after step 7)_. **Current token:** `push-api-2` on `meetnet-push-sender` (2026-10-12; the first one, `push-api`, was deleted). It is on Render and in the owner's Windows user variables.
+
+- **Undo**: turn enhanced security off: Expo accepts pushes without a token again at once (the server keeps sending its token, which is fine).
+- **Rotate**: create a new token on the robot → update Render (deploy) and the Windows variable → delete the old token on the robot's page.
+- **Local development once it is on**: real pushes from the local API (Maestro p6-12/13/14, p6-10's like, `sendTestPush.js`) need `EXPO_ACCESS_TOKEN` in its environment; the Maestro runner passes its own environment on to the API it starts.
 
 ## Verify a deploy
 

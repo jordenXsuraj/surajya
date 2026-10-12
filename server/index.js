@@ -22,6 +22,14 @@ if (process.env.NODE_ENV === 'production' &&
   process.exit(1)
 }
 
+// ── …and without the Expo access token (enhanced push security: pushes fail without it) ──
+try {
+  require('./services/expoClient').expoAccessToken()
+} catch (err) {
+  console.error(`❌ ${err.message} Refusing to start in production.`)
+  process.exit(1)
+}
+
 // ── Uploads: Cloudinary, or local disk outside production only (config/uploadMode.js) ──
 const { uploadMode, warnIfProductionCloud, LOCAL_UPLOAD_DIR } = require('./config/uploadMode')
 let UPLOADS
