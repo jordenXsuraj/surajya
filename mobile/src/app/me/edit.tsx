@@ -109,7 +109,8 @@ export default function EditProfileScreen() {
     </View>
   );
 
-  const username = values.username ?? '';
+  // what will be saved: the typed text as normaliseUsername leaves it (applied on blur / save)
+  const username = normaliseUsername(values.username ?? '');
   const branchChoices = (BRANCHES as readonly string[]).includes(values.branch)
     ? BRANCHES
     : [...BRANCHES, values.branch];
@@ -183,8 +184,13 @@ export default function EditProfileScreen() {
                   placeholder="yourname.123"
                   accessibilityLabel="Username"
                   value={field.value}
-                  onChangeText={(text) => field.onChange(normaliseUsername(text))}
-                  onBlur={field.onBlur}
+                  // the typed text as it is: rewriting it under the keyboard's composing word
+                  // doubles letters (SwiftKey); the hint below shows what will be saved
+                  onChangeText={field.onChange}
+                  onBlur={() => {
+                    field.onChange(normaliseUsername(field.value ?? ''));
+                    field.onBlur();
+                  }}
                   autoCapitalize="none"
                   autoCorrect={false}
                   maxLength={20}

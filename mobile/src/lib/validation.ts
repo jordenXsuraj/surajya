@@ -139,7 +139,12 @@ export const MAX_PROJECTS = 10;
 export const USERNAME_RE = /^[a-z0-9_.]{3,20}$/;
 export const USERNAME_HINT = '3-20 chars, only letters/numbers/._';
 
-/** Web: the username box lowercases and drops anything but a-z, 0-9, _ and . while typing. */
+/**
+ * Lowercase, only a-z, 0-9, _ and . (the web does this while typing). The app applies it when the
+ * field loses focus and before validating / saving, never while typing: rewriting the text under a
+ * predictive keyboard's "composing" word made Android insert letters twice (SwiftKey: "Ab C"
+ * became "aabaabc").
+ */
 export const normaliseUsername = (text: string): string =>
   text
     .toLowerCase()
@@ -159,6 +164,7 @@ export const profileSchema = (hadUsername: boolean) =>
       .max(MAX_NAME, `Name can be at most ${MAX_NAME} characters`),
     username: z
       .string()
+      .transform(normaliseUsername)
       .refine((v) => (v === '' ? !hadUsername : USERNAME_RE.test(v)), USERNAME_HINT),
     bio: z.string().max(MAX_BIO, `Bio can be at most ${MAX_BIO} characters`),
     year: z.enum(YEARS),

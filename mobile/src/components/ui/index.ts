@@ -6,6 +6,7 @@ export { Chip } from './Chip';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
 export { Input } from './Input';
+export { FOOTER_GAP, KeyboardFooter } from './KeyboardFooter';
 export { Message } from './Message';
 export { Screen } from './Screen';
 export { Skeleton } from './Skeleton';

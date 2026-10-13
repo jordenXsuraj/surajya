@@ -273,3 +273,25 @@ describe('logs never hold a whole push token', () => {
     expect(redactPushTokens(undefined)).toBe('')
   })
 })
+
+describe('password change and push tokens', () => {
+  test('every device loses its token; only the phone that changed it registers again (the other session is dead)', async () => {
+    const u = await makeUser()
+    const stolen = { ...u } // the same account, logged in on another device with the same (old) session
+    await register(u, { token: expoToken('my-phone'), platform: 'android', deviceId: 'my-phone' })
+    await register(stolen, { token: expoToken('stolen-phone'), platform: 'android', deviceId: 'stolen-phone' })
+    expect((await tokensOf(u)).map((t) => t.deviceId).sort()).toEqual(['my-phone', 'stolen-phone'])
+
+    const changed = await request(app).post('/api/auth/change-password').set('Authorization', u.auth)
+      .send({ currentPassword: 'secret123', newPassword: 'brand-new-pass-1' })
+    expect(changed.status).toBe(200)
+    expect(await tokensOf(u)).toEqual([]) // nobody gets this account's pushes now
+
+    // the phone registers again with its new session (what the app does right after the change)
+    const mine = { ...u, auth: `Bearer ${changed.body.token}` }
+    expect((await register(mine, { token: expoToken('my-phone'), platform: 'android', deviceId: 'my-phone' })).status).toBe(200)
+    // the other device's session ended with the change: it can't register itself back
+    expect((await register(stolen, { token: expoToken('stolen-phone'), platform: 'android', deviceId: 'stolen-phone' })).status).toBe(401)
+    expect((await tokensOf(u)).map((t) => t.deviceId)).toEqual(['my-phone'])
+  })
+})

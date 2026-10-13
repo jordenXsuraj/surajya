@@ -8,7 +8,13 @@ import { errorMessage } from '@/api/errors';
 import { updateAuthor } from '@/api/postCache';
 import { queryKeys } from '@/api/queryKeys';
 import { applyMe } from '@/api/session';
-import { forgetPushRegistration, PUSH_DEVICE_KEY, settlePushLogout } from '@/lib/push';
+import {
+  forgetPushRegistration,
+  logPushFailure,
+  PUSH_DEVICE_KEY,
+  registerForPush,
+  settlePushLogout,
+} from '@/lib/push';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
 import type { Me } from '@/types/user';
@@ -49,12 +55,20 @@ export function useUpdateProfile() {
 }
 
 /** Other devices are logged out; this one carries on with the new token. */
+/**
+ * After a password change or "log out all devices" the server drops every device's push token
+ * (a stolen phone stops getting this account's pushes) and hands this phone a new session: this
+ * phone registers again right away, with that new session, so only it keeps getting pushes.
+ */
+const registerThisDeviceAgain = () => void registerForPush({ force: true }).catch(logPushFailure);
+
 export function useChangePassword() {
   return useMutation({
     mutationFn: ({ current, next }: { current: string; next: string }) =>
       changePassword(current, next),
     onSuccess: ({ token }) => {
       useAuthStore.getState().setToken(token);
+      registerThisDeviceAgain();
       toast('✅ Password changed. Other devices were logged out.', 'success');
     },
   });
@@ -65,6 +79,7 @@ export function useLogoutAllDevices() {
     mutationFn: logoutAllDevices,
     onSuccess: ({ token }) => {
       useAuthStore.getState().setToken(token);
+      registerThisDeviceAgain();
       toast('✅ Logged out of all other devices', 'success');
     },
     onError: (error) => toast(`❌ ${errorMessage(error, 'Something went wrong')}`, 'error'),
