@@ -49,6 +49,14 @@ const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const expect = (cond, message) => { if (!cond) throw new Error(message); };
 
+// Mongo: the Docker container meetnet-mongo, or, with MAESTRO_MONGO_URI set, any mongod reached
+// through the mongosh CLI script at MAESTRO_MONGOSH (e.g. a native mongod when Docker doesn't fit
+// in memory; README "Without Docker")
+const MONGO_URI = process.env.MAESTRO_MONGO_URI;
+const mongoshCall = (js) => (MONGO_URI
+  ? [process.execPath, [process.env.MAESTRO_MONGOSH, MONGO_URI, '--quiet', '--eval', js]]
+  : ['docker', ['exec', 'meetnet-mongo', 'mongosh', 'meetnet_local', '--quiet', '--eval', js]]);
+
 // ── device ────────────────────────────────────────────────────────────────────────────────────
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { encoding: 'utf8', ...opts }).trim();
 const listDevices = () => run('adb', ['devices']).split(/\r?\n/).slice(1).map((l) => l.trim().split(/\s+/)).filter((d) => d[0]);
@@ -58,6 +66,11 @@ const listDevices = () => run('adb', ['devices']).split(/\r?\n/).slice(1).map((l
 // device is unauthorized, even with --device, and a phone on USB can turn unauthorized mid-run
 // (screen locked). Every adb call still names the emulator (-s), every Maestro call --device.
 let adbLimited = false;
+// Phone mode, only with the owner's OK for that run (README "On a phone"): MAESTRO_PHONE=<serial of
+// the USB phone>. adb keeps its normal server (the phone is a USB device), the network is never
+// switched off (no airplane mode: those steps fail instead), and app problems are read for
+// MeetNet Dev only. Stay-awake and the phone's reverse ports are the caller's to set and restore.
+const PHONE = process.env.MAESTRO_PHONE ?? '';
 function adbServer(emulatorsOnly) {
   // a wedged adb server (e.g. left by a run that was killed) also hangs kill-server: then end it hard
   const killed = spawnSync('adb', ['kill-server'], { timeout: 15_000 });
@@ -71,6 +84,10 @@ function adbServer(emulatorsOnly) {
 // Normal adb server again; a server restart drops the emulator's reverse ports (Metro, local API),
 // so they are set up again for using the emulator by hand afterwards
 function restoreAdb() {
+  if (PHONE) {
+    for (const port of ['tcp:8081', 'tcp:5000']) spawnSync('adb', ['-s', PHONE, 'reverse', port, port]);
+    return;
+  }
   if (!adbLimited) return;
   adbServer(false);
   if (!SERIAL) return;
@@ -86,8 +103,13 @@ if (wanted && !wanted.startsWith('emulator-')) {
   console.error(`ANDROID_SERIAL=${wanted} is not an emulator: these checks only run on an emulator.`);
   process.exit(2);
 }
-adbServer(true);
-let SERIAL = '';
+if (PHONE) {
+  if (!attached.some((d) => d[0] === PHONE && d[1] === 'device')) {
+    console.error(`MAESTRO_PHONE=${PHONE} is not attached and authorized (adb devices).`);
+    process.exit(2);
+  }
+} else adbServer(true);
+let SERIAL = PHONE;
 for (let i = 0; i < 60 && !SERIAL; i++) { // the emulator reconnects to the new server within seconds
   const ready = listDevices().filter((d) => d[1] === 'device').map((d) => d[0]);
   SERIAL = wanted ? (ready.includes(wanted) ? wanted : '') : ready.includes('emulator-5554') ? 'emulator-5554' : ready.find((s) => s.startsWith('emulator-')) ?? '';
@@ -99,7 +121,7 @@ if (!SERIAL) {
 }
 const others = attached.filter((d) => d[0] !== SERIAL);
 if (others.length) {
-  console.warn(`⚠️  Other devices attached, ignored: ${others.map((d) => `${d[0]} (${d[1]})`).join(', ')}. adb sees only emulators during the run (restored afterwards); running on ${SERIAL}.`);
+  console.warn(`⚠️  Other devices attached, ignored: ${others.map((d) => `${d[0]} (${d[1]})`).join(', ')}.${PHONE ? '' : ' adb sees only emulators during the run (restored afterwards);'} running on ${SERIAL}.`);
 }
 const adb = (...args) => run('adb', ['-s', SERIAL, ...args]);
 
@@ -233,6 +255,7 @@ function watchStarted(logFile, state) {
 // size: no video decoder needed, and unlike screencap it misses no frame) and hands each one to
 // onFrame as it streams in. Returns stop(), which ends the recording and resolves to the frame count.
 function recordFrames(full, onFrame, seconds = 60) {
+  if (PHONE) return pollFrames(onFrame, seconds);
   const w = full.width / 4, h = full.height / 4, size = w * h * 3;
   const child = spawn('adb', ['-s', SERIAL, 'exec-out', `screenrecord --output-format=raw-frames --size ${w}x${h} --time-limit ${seconds} -`]);
   let pending = Buffer.alloc(0), frames = 0;
@@ -246,6 +269,43 @@ function recordFrames(full, onFrame, seconds = 60) {
   });
   const closed = new Promise((r) => child.on('close', r));
   return async () => { child.kill(); await closed; return frames; };
+}
+// The OPPO's screenrecord sends no raw frames: on a phone, screenshots in a loop instead (a few a
+// second there), enough for a 2.6 s toast; a 0.7 s heart can fall between two of them
+function pollFrames(onFrame, seconds) {
+  let stopped = false, frames = 0;
+  const until = Date.now() + seconds * 1000;
+  const loop = (async () => {
+    while (!stopped && Date.now() < until) {
+      try { onFrame(quarterOf(await rawFrame())); frames++; } catch { await sleep(200); }
+    }
+  })();
+  return async () => { stopped = true; await loop; return frames; };
+}
+// A quarter-size RGB frame (what recordFrames hands on) from a full RGBA screencap frame
+function quarterOf({ width, height, data }) {
+  const w = Math.floor(width / 4), h = Math.floor(height / 4), out = Buffer.alloc(w * h * 3);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * 4 * width + x * 4) * 4, o = (y * w + x) * 3;
+      out[o] = data[i]; out[o + 1] = data[i + 1]; out[o + 2] = data[i + 2];
+    }
+  }
+  return { width: w, height: h, data: out };
+}
+// The app's JS log while a flow runs, streamed: read back afterwards, a phone's small log buffer
+// (256 KiB on the OPPO, full within seconds) has already dropped the lines
+function streamAppLog() {
+  const lines = [];
+  let rest = '';
+  const child = spawn('adb', ['-s', SERIAL, 'logcat', '-s', 'ReactNativeJS:I']);
+  child.stdout.on('data', (d) => {
+    const parts = (rest + d).split(/\r?\n/);
+    rest = parts.pop() ?? '';
+    lines.push(...parts);
+  });
+  const closed = new Promise((res) => child.on('close', res));
+  return async () => { await sleep(300); child.kill(); await closed; return lines; };
 }
 // The most red pixels seen in the middle of the fixture image (quarter-size RGB frames)
 function redInQuarter({ width, data }, box) {
@@ -295,13 +355,14 @@ async function watchForRed(flow, env, debugDir) {
 async function watchForToast(flow, env, debugDir) {
   const full = await rawFrame();
   spawnSync('adb', ['-s', SERIAL, 'logcat', '-c']);
+  const stopLog = streamAppLog();
   let visible = false, last = null;
   const m = await recordWatch(flow, env, debugDir, full, (f) => {
     if (!visible && toastBoxIn(f)) visible = true;
     last = f;
   });
-  const shown = run('adb', ['-s', SERIAL, 'logcat', '-d', '-s', 'ReactNativeJS:I'], { maxBuffer: 64 * 1024 * 1024 })
-    .split(/\r?\n/).map((l) => l.match(/\[toast\] (\w+) (.*)$/)).filter(Boolean).map(([, type, message]) => ({ type, message }));
+  const shown = (await stopLog())
+    .map((l) => l.match(/\[toast\] (\w+) (.*)$/)).filter(Boolean).map(([, type, message]) => ({ type, message }));
   mkdirSync(debugDir, { recursive: true });
   writeFileSync(join(debugDir, 'toasts.json'), JSON.stringify({ shown, visible, frames: m.frames }));
   if (!visible && last) writeFileSync(join(debugDir, 'last-recorded-frame.png'), framePng(last)); // copied to the report on failure
@@ -348,6 +409,12 @@ function framePng({ width, height, data }) {
 // Network loss for the app: airplane mode AND no route to the local API (adb reverse goes over
 // the adb connection, which airplane mode does not cut). Metro (8081) stays so the dev client runs.
 function network(online) {
+  if (PHONE) {
+    // never airplane mode on a real phone (calls, alarms): a step that needs the network gone fails
+    if (!online) throw new Error('network loss is not simulated on a phone (it would switch on airplane mode)');
+    adb('reverse', 'tcp:5000', 'tcp:5000');
+    return;
+  }
   adb('shell', 'cmd', 'connectivity', 'airplane-mode', online ? 'disable' : 'enable');
   if (online) adb('reverse', 'tcp:5000', 'tcp:5000');
   else spawnSync('adb', ['-s', SERIAL, 'reverse', '--remove', 'tcp:5000']);
@@ -404,8 +471,9 @@ async function stopLocalApi() {
 /** (Re)starts the local API; `overrides` are extra env vars (APP_MIN_VERSION_ANDROID, APP_MAINTENANCE…). */
 async function startLocalApi(overrides = {}) {
   const was = await stopLocalApi();
-  const port = run('docker', ['port', 'meetnet-mongo', '27017']).split(/\r?\n/)[0].split(':').pop();
-  const env = { ...process.env, NODE_ENV: 'development', PORT: '5000', MONGO_URI: `mongodb://127.0.0.1:${port}/meetnet_local`,
+  const mongoUri = MONGO_URI
+    ?? `mongodb://127.0.0.1:${run('docker', ['port', 'meetnet-mongo', '27017']).split(/\r?\n/)[0].split(':').pop()}/meetnet_local`;
+  const env = { ...process.env, NODE_ENV: 'development', PORT: '5000', MONGO_URI: mongoUri,
     PUBLIC_APP_URL: 'http://localhost:5173', VERIFICATION_REQUIRED_FROM: RUN_STARTED, JWT_SECRET: RUN_JWT_SECRET, ...overrides };
   for (const k of API_ENV_DROP) delete env[k];
   writeFileSync(API_LOG, `\n── ${new Date().toISOString()} start${Object.keys(overrides).length ? ` with ${Object.keys(overrides).join(', ')}` : ''} (${was})\n`, { flag: 'a' });
@@ -423,7 +491,7 @@ async function startLocalApi(overrides = {}) {
 
 // ── database and uploaded files ───────────────────────────────────────────────────────────────
 const mongo = (js) => {
-  const out = run('docker', ['exec', 'meetnet-mongo', 'mongosh', 'meetnet_local', '--quiet', '--eval', js]);
+  const out = run(...mongoshCall(js));
   return out ? JSON.parse(out) : null;
 };
 const q = (v) => JSON.stringify(v);
@@ -1133,8 +1201,8 @@ function maestroReachesDevice() {
 
 function preflight() {
   if (maestroReachesDevice()) return;
-  log(`Maestro cannot reach ${SERIAL}; restarting the (emulators-only) adb server once`);
-  adbServer(true);
+  log(`Maestro cannot reach ${SERIAL}; restarting the ${PHONE ? '' : '(emulators-only) '}adb server once`);
+  adbServer(!PHONE);
   spawnSync('adb', ['-s', SERIAL, 'wait-for-device'], { timeout: 60_000 });
   if (maestroReachesDevice()) return;
   const usb = listDevices().filter((d) => !d[0].startsWith('emulator-'));
@@ -1159,7 +1227,8 @@ function appProblems() {
       if (p) current.app = p[1];
     }
   }
-  return problems.map((x) => `${x.at} ${x.type} ${x.app}`);
+  // on a phone, other apps' crashes are the owner's business, not the report's
+  return problems.filter((x) => !PHONE || x.app === APP_ID).map((x) => `${x.at} ${x.type} ${x.app}`);
 }
 let problemsBefore = [];
 
@@ -1239,7 +1308,10 @@ try {
     if (only.length && !only.some((o) => step.id.startsWith(o))) continue;
     const r = { id: step.id, title: step.title, flow: step.flow };
     results.push(r);
-    if (step.needs && results.find((x) => x.id === step.needs)?.result !== 'PASS') { r.result = 'SKIPPED'; r.details = `needs ${step.needs}`; log(step.id, 'SKIPPED'); continue; }
+    // on a phone where p6-11b can't run (ColorOS refuses `pm clear` over adb), the push steps only
+    // need what p6-11b leaves behind: this device registered for pushes (the app has the permission)
+    const phoneHasDevice = () => PHONE && step.needs === 'p6-11b' && testerDevices().some((d) => d.platform === 'android' && d.expo);
+    if (step.needs && results.find((x) => x.id === step.needs)?.result !== 'PASS' && !phoneHasDevice()) { r.result = 'SKIPPED'; r.details = `needs ${step.needs}`; log(step.id, 'SKIPPED'); continue; }
     const debugDir = join(REPORT_DIR, 'debug', step.id);
     const expectedToasts = step.toasts ?? [];
     const start = new Date(Date.now() - 2000);

@@ -11,4 +11,10 @@ export type AppConfig = {
   maintenance: { enabled: boolean; message: string };
 };
 
-export const getAppConfig = () => request<AppConfig>({ method: 'GET', url: '/app/config' });
+/**
+ * Always from the server: the API sends `Cache-Control: max-age=60`, and Android's HTTP cache
+ * (OkHttp) would otherwise answer "Check again" / "Try again" with the copy it already has, so a
+ * lowered minimum version or the end of maintenance showed up only a minute later.
+ */
+export const getAppConfig = () =>
+  request<AppConfig>({ method: 'GET', url: '/app/config', headers: { 'Cache-Control': 'no-cache' } });

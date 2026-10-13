@@ -1,5 +1,6 @@
 import type { AppConfig } from '@/api/endpoints/app';
-import { useAppConfig } from '@/stores/appConfig.store';
+import { refreshAppConfig, useAppConfig } from '@/stores/appConfig.store';
+import { mockApi } from '@/test/helpers';
 
 const config = (patch: Partial<AppConfig> = {}): AppConfig => ({
   minVersion: { ios: '0.0.0', android: '0.0.0' },
@@ -43,5 +44,16 @@ describe('app config (jest-expo runs as iOS)', () => {
       .getState()
       .apply(config({ maintenance: { enabled: true, message: ' Back at 6 pm ' } }), '1.0.0');
     expect(useAppConfig.getState().maintenance).toEqual({ enabled: true, message: 'Back at 6 pm' });
+  });
+});
+
+describe('"Check again" / "Try again"', () => {
+  it('ask the server every time: the request says no-cache (Android answered from its HTTP cache for 60 s)', async () => {
+    const calls = mockApi(() => ({ status: 200, data: config() }));
+    await refreshAppConfig();
+    await refreshAppConfig(); // seconds later, as on the phone
+    const gets = calls.filter((c) => c.url === '/app/config');
+    expect(gets).toHaveLength(2);
+    for (const c of gets) expect(c.headers['Cache-Control']).toBe('no-cache');
   });
 });

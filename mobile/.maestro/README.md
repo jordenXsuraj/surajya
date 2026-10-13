@@ -157,6 +157,26 @@ Things the flows work around on purpose:
   `MountingCoordinator::pullTransaction`, a react-native-screens race fixed upstream in 4.28.0).
   Every app crash and "not responding" during a run is listed at the top of the report.
 
+## Without Docker / on a phone (when the emulator and Docker don't fit in memory)
+
+Both are opt-in through environment variables; without them the run is the usual emulator + Docker one.
+
+- **Native Mongo:** `MAESTRO_MONGO_URI=mongodb://127.0.0.1:38127/meetnet_local` and
+  `MAESTRO_MONGOSH=<path to node_modules/mongosh/bin/mongosh.js>` (npm package `mongosh`). The runner
+  and `seed.mjs` then use that mongod instead of `docker exec meetnet-mongo …`. A mongod binary is
+  already in `server/node_modules/.cache/mongodb-memory-server/` (from the server tests); start it with
+  `--port 38127 --bind_ip 127.0.0.1 --dbpath .maestro/reports/_mongo-native/data` and seed it once
+  (local API on 5000 + `node .maestro/seed.mjs`). Stop it before starting Docker again (same port).
+- **On a phone — only with the owner's OK for that run:** `MAESTRO_PHONE=<serial>`. adb keeps its
+  normal server, nothing switches the network off (no airplane mode: p4-14 / p4-16 fail instead),
+  toasts and the double-tap heart are checked from screenshots (ColorOS has no `screenrecord`), and
+  crash records are read for MeetNet Dev only. Set "stay awake while charging" for the run and restore
+  it afterwards; leave out steps that touch more than the app (p4-14/15/16/17 airplane mode, p5-18
+  opens the phone's mail app). ColorOS also refuses `pm clear` over adb unless Developer options →
+  *Disable permission monitoring* is on, so p6-11 / p6-11b can't run there; the push steps then run
+  when the phone already has a registered token. Screens of a phone can show the owner's
+  notifications: keep screenshots of failed steps only, never upload them.
+
 ## Not automated (check by eye on the phone)
 
 Camera permission prompt and taking a photo; how the uploaded photos look; haptics; the phone's own

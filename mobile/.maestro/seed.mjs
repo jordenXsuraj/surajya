@@ -24,12 +24,19 @@ import {
 } from './seed-data.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+// Mongo: the Docker container meetnet-mongo, or, with MAESTRO_MONGO_URI set, any mongod reached
+// through the mongosh CLI script at MAESTRO_MONGOSH (e.g. a native mongod when Docker doesn't fit
+// in memory; README "Without Docker")
+const MONGO_URI = process.env.MAESTRO_MONGO_URI;
+const mongoshCall = (js) => (MONGO_URI
+  ? [process.execPath, [process.env.MAESTRO_MONGOSH, MONGO_URI, '--quiet', '--eval', js]]
+  : ['docker', ['exec', 'meetnet-mongo', 'mongosh', 'meetnet_local', '--quiet', '--eval', js]]);
 const API = 'http://localhost:5000/api';
 const UPLOAD_DIR = process.env.LOCAL_UPLOAD_DIR || path.join(HERE, '..', '..', 'server', 'uploads');
 const LOCAL_UPLOAD = /^http:\/\/(localhost|127\.0\.0\.1):5000\/uploads\/images\/([\w.-]+)$/;
 
 const mongo = (js) => {
-  const out = String(execFileSync('docker', ['exec', 'meetnet-mongo', 'mongosh', 'meetnet_local', '--quiet', '--eval', js])).trim();
+  const out = String(execFileSync(...mongoshCall(js))).trim();
   return out ? JSON.parse(out) : null;
 };
 const q = (v) => JSON.stringify(v);
