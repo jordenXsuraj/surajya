@@ -222,7 +222,7 @@ Without Expo's **enhanced push security**, anyone who has a device's Expo push t
    - with the token: `sendTestPush.js` → `ok`, and a push from the production API arrives.
    - If *with the token* is refused too, the robot's role is too small: on the robot's page raise it one step (**Viewer → Developer**), same token, test again. Record the role that works here.
 
-**Role in use:** _(filled in after step 7)_. **Current token:** `push-api-2` on `meetnet-push-sender` (2026-10-12; the first one, `push-api`, was deleted). It is on Render and in the owner's Windows user variables.
+**Role in use:** **Viewer** (enough; checked 2026-10-13 with enhanced security on: without the token Expo refused "Insufficient permissions to send push notifications to @aniket078s-team/meetnet", with it the push went through, and a production push from Render arrived). **Current token:** `push-api-2` on `meetnet-push-sender` (2026-10-12; the first one, `push-api`, was deleted). It is on Render and in the owner's Windows user variables.
 
 - **Undo**: turn enhanced security off: Expo accepts pushes without a token again at once (the server keeps sending its token, which is fine).
 - **Rotate**: create a new token on the robot → update Render (deploy) and the Windows variable → delete the old token on the robot's page.
