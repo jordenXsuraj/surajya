@@ -1,0 +1,27 @@
+# Prompt 6 · A fresh install again: pre-prompt → "Turn on notifications" → Android 13+ system
+# dialog → Allow. The app then registers its push token (checked in the database).
+appId: com.themeetnet.app.dev
+name: Pre-prompt, allow
+---
+- runFlow: ../subflows/open-app.yaml
+- tapOn: "Log In"
+- tapOn: "Enter your Email"
+- inputText: ${EMAIL}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: "Turn on notifications\\?"
+    timeout: 30000
+- tapOn:
+    text: "Turn on notifications"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "com.android.permissioncontroller:id/permission_allow_button"
+    timeout: 15000
+- tapOn:
+    id: "com.android.permissioncontroller:id/permission_allow_button"
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 15000

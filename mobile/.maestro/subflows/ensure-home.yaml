@@ -9,6 +9,12 @@ appId: com.themeetnet.app.dev
       visible: ".*isn't responding"
     commands:
       - tapOn: "Close app"
+# The notifications pre-prompt (see dismiss-push-prompt.yaml)
+- runFlow:
+    when:
+      visible: "Turn on notifications\\?"
+    commands:
+      - tapOn: "Not now"
 - runFlow:
     when:
       notVisible: "Create a post"

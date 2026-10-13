@@ -35,9 +35,11 @@ name: Edit profile (rules)
 - inputText: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 - assertVisible: "250/250"
 - runFlow: ../subflows/hide-keyboard.yaml
+# a long form; on a real phone every screen read is slower than on the emulator
 - scrollUntilVisible:
     element:
       id: "edit-media-url"
+    timeout: 60000
 - tapOn:
     id: "edit-media-url"
 - inputText: "instagram.com/p/xyz"

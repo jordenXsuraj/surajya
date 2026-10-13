@@ -1,0 +1,13 @@
+# Prompt 6 · The runner restarted the API in maintenance mode while the app was open: the app reads
+# /app/config again when it returns to the front and shows the maintenance message.
+appId: com.themeetnet.app.dev
+name: Maintenance
+---
+- pressKey: Home
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: "Back soon"
+    timeout: 30000
+- assertVisible: "Maestro maintenance check"
+- assertVisible: "Try again"

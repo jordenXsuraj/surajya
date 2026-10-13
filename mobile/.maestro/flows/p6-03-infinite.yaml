@@ -1,0 +1,15 @@
+# Prompt 6 · Find people loads 20 students at a time: scrolling to the end brings the second page
+# (no "Load more" button) with the oldest filler account, then "All students loaded ✓".
+appId: com.themeetnet.app.dev
+name: Infinite scroll
+---
+- runFlow: ../subflows/open-connect.yaml
+- extendedWaitUntil:
+    visible: "Arjun Patil"
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Batch Student 01"
+    timeout: 60000
+- scrollUntilVisible:
+    element: "All students loaded ✓"
+    timeout: 20000

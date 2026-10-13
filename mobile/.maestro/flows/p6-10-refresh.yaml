@@ -1,0 +1,20 @@
+# Prompt 6 · While Notifications is open, Ishaan likes the tester's post (through the API); pull to
+# refresh shows it under Today.
+appId: com.themeetnet.app.dev
+name: Notifications refresh
+---
+- runFlow: ../subflows/open-notifications.yaml
+- assertNotVisible: "Ishaan Verma liked your post.*"
+- runScript:
+    file: ../scripts/api.js
+    env:
+      METHOD: PUT
+      API_PATH: /posts/${TESTER_DSA_ID}/like
+      TOKEN: ${ISHAAN_TOKEN}
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 85%"
+- extendedWaitUntil:
+    visible: "Ishaan Verma liked your post.*"
+    timeout: 20000
+- back

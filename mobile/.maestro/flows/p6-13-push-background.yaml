@@ -1,0 +1,22 @@
+# Prompt 6 · A real push with the app in the background (the runner pressed Home, had Arjun like the
+# tester's post, waited for the notification and opened the shade): tapping it opens that post.
+appId: com.themeetnet.app.dev
+name: Push in the background
+---
+- runFlow:
+    when:
+      notVisible: "Arjun Patil liked your post"
+    commands:
+      - swipe:
+          start: "50%, 2%"
+          end: "50%, 70%"
+          duration: 600
+- extendedWaitUntil:
+    visible: "Arjun Patil liked your post"
+    timeout: 15000
+- tapOn: "Arjun Patil liked your post"
+- extendedWaitUntil:
+    visible: "Write a reply"
+    timeout: 30000
+- assertVisible: "Finished my DSA sheet today.*"
+- back

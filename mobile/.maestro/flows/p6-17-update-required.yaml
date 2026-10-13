@@ -1,0 +1,20 @@
+# Prompt 6 · The runner restarted the API with minVersion 9.9.9 for Android: a cold start shows the
+# blocking "Update required" screen with the store button; Back doesn't get past it.
+appId: com.themeetnet.app.dev
+name: Update required
+---
+- stopApp
+- openLink: meetnet-dev://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+- extendedWaitUntil:
+    visible: "Update required"
+    timeout: 120000
+- assertVisible: "This version of MeetNet \\(1\\.0\\.0\\) is no longer supported\\..*"
+- assertVisible: "Update"
+- assertVisible: "Check again"
+- back
+- assertVisible: "Update required"

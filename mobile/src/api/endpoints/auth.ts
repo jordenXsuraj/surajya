@@ -1,4 +1,5 @@
 import { request } from '@/api/client';
+import { flushPendingUnregister } from '@/lib/push';
 import type { SignupRequest } from '@/lib/validation';
 import type { MessageResponse } from '@/types/api';
 import type { AuthUser } from '@/types/user';
@@ -12,16 +13,23 @@ export type SendVerificationResponse = MessageResponse & {
 
 export type VerifyEmailResponse = MessageResponse & { user: AuthUser };
 
-export const signup = (body: SignupRequest) =>
-  request<AuthResponse>({ method: 'POST', url: '/auth/signup', data: body });
+// Before any sign-in: a previous account's push token that an offline logout left on the server
+// is removed first, so this phone stops getting that account's pushes (src/lib/push.ts)
+
+export const signup = async (body: SignupRequest) => {
+  await flushPendingUnregister();
+  return request<AuthResponse>({ method: 'POST', url: '/auth/signup', data: body });
+};
 
 /** Wrong credentials answer 400 'Invalid email or password' (never 401). */
-export const login = (email: string, password: string) =>
-  request<AuthResponse>({
+export const login = async (email: string, password: string) => {
+  await flushPendingUnregister();
+  return request<AuthResponse>({
     method: 'POST',
     url: '/auth/login',
     data: { email: email.trim().toLowerCase(), password },
   });
+};
 
 export const sendVerification = () =>
   request<SendVerificationResponse>({ method: 'POST', url: '/auth/send-verification' });

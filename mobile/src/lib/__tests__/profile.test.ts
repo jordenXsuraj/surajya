@@ -20,21 +20,34 @@ const base: ProfileValues = {
 };
 
 describe('username', () => {
-  it('is lowercased and stripped while typing, like the web, max 20', () => {
+  it('is lowercased and stripped like the web, max 20', () => {
     expect(normaliseUsername('Ab C')).toBe('abc');
     expect(normaliseUsername('Asha_P.2026!')).toBe('asha_p.2026');
     expect(normaliseUsername('a'.repeat(30))).toHaveLength(20);
   });
 
-  it('needs 3–20 of a-z 0-9 _ . (the route refuses more than 20)', () => {
+  it('the field keeps the text as typed; validation and the save use it normalised', () => {
+    // SwiftKey regression: rewriting the text while it was typed doubled letters ("aabaabc"), so
+    // the field no longer does that; what it holds is normalised here (and on blur)
+    const schema = profileSchema(true);
+    const saved = (username: string) => {
+      const r = schema.safeParse({ ...base, username });
+      return r.success ? r.data.username : null;
+    };
+    expect(saved('Ab C')).toBe('abc');
+    expect(saved('Asha')).toBe('asha');
+    expect(saved('asha patil')).toBe('ashapatil');
+    expect(saved('a'.repeat(21))).toBe('a'.repeat(20));
+  });
+
+  it('needs 3–20 of a-z 0-9 _ . after normalising (the route refuses more than 20)', () => {
     const schema = profileSchema(true);
     const check = (username: string) => schema.safeParse({ ...base, username }).success;
     expect(check('abc')).toBe(true);
     expect(check('a.b_c.2026')).toBe(true);
     expect(check('ab')).toBe(false);
-    expect(check('a'.repeat(21))).toBe(false);
-    expect(check('Asha')).toBe(false);
-    expect(check('asha patil')).toBe(false);
+    expect(check('a!b')).toBe(false); // "ab": too short once the "!" is dropped
+    expect(check('!!!')).toBe(false);
   });
 
   it('may stay empty only for an account that never had one', () => {

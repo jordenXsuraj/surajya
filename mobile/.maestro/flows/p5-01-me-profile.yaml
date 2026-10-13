@@ -13,7 +13,7 @@ name: Me profile
 - assertVisible: "Third-year CS student.*"
 - assertVisible: "3rd year"
 - assertVisible: "🏫 Seed Test College"
-- assertVisible: "🤝 Follow requests \\(2\\)"
+- assertVisible: "🤝 Follow requests \\(3\\)"
 - scrollUntilVisible:
     element: "JavaScript"
 - scrollUntilVisible:

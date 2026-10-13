@@ -5,11 +5,10 @@
       {
         "appID": "TEAMID.com.themeetnet.app",
         "appIDs": ["TEAMID.com.themeetnet.app"],
-        "paths": ["/post/*", "/profile/*", "/reset-password*"],
+        "paths": ["/post/*", "/profile/*"],
         "components": [
           { "/": "/post/*" },
-          { "/": "/profile/*" },
-          { "/": "/reset-password*" }
+          { "/": "/profile/*" }
         ]
       }
     ]

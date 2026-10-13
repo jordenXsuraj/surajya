@@ -21,6 +21,11 @@ type AuthState = {
   user: SessionUser | null;
   /** Set by signup: the tabs layout opens /verify-email once the signed-in stack is mounted. */
   pendingVerify: boolean;
+  /**
+   * A link (or notification) opened while signed out: the tabs layout opens it once signed in.
+   * Kept in memory only, like the link itself.
+   */
+  pendingPath: string | null;
   /** When "Resend code" becomes available (ms). Every successful send starts a 60 s wait. */
   resendAvailableAt: number;
 
@@ -32,6 +37,7 @@ type AuthState = {
   /** Change password / log out of all devices answer with a new token for this device. */
   setToken: (token: string) => void;
   clearPendingVerify: () => void;
+  setPendingPath: (path: string | null) => void;
   markCodeSent: () => void;
   setResendWait: (seconds: number) => void;
   logout: () => void;
@@ -50,6 +56,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   token: null,
   user: null,
   pendingVerify: false,
+  pendingPath: null,
   resendAvailableAt: 0,
 
   hydrate: () => {
@@ -89,6 +96,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   clearPendingVerify: () => set({ pendingVerify: false }),
 
+  setPendingPath: (pendingPath) => set({ pendingPath }),
+
   markCodeSent: () => set({ resendAvailableAt: Date.now() + RESEND_SECONDS * 1000 }),
 
   setResendWait: (seconds) => set({ resendAvailableAt: Date.now() + seconds * 1000 }),
@@ -107,6 +116,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       token: null,
       user: null,
       pendingVerify: false,
+      pendingPath: null,
       resendAvailableAt: 0,
     });
   },

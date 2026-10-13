@@ -1,0 +1,13 @@
+# Prompt 6 · After p6-18 the API is out of maintenance: "Try again" goes back into the app.
+appId: com.themeetnet.app.dev
+name: Maintenance over
+---
+- assertVisible: "Back soon"
+- runFlow: ../subflows/hide-keyboard.yaml
+- tapOn: "Try again"
+- extendedWaitUntil:
+    notVisible: "Back soon"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 15000

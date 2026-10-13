@@ -30,7 +30,37 @@ jest.mock('expo-crypto', () => ({
   getRandomBytes: jest.fn(
     (count: number) => new Uint8Array(jest.requireActual('crypto').randomBytes(count)),
   ),
+  randomUUID: jest.fn(() => jest.requireActual('crypto').randomUUID()),
 }));
+
+// Push (src/lib/push.ts): permission granted, a fixed Expo push token, no-op listeners.
+jest.mock('expo-notifications', () => {
+  const subscription = () => ({ remove: jest.fn() });
+  return {
+    AndroidImportance: { DEFAULT: 5, HIGH: 6, MAX: 7 },
+    DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
+    setNotificationHandler: jest.fn(),
+    setNotificationChannelAsync: jest.fn(async () => null),
+    getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true, status: 'granted' })),
+    requestPermissionsAsync: jest.fn(async () => ({
+      granted: true,
+      canAskAgain: true,
+      status: 'granted',
+    })),
+    getDevicePushTokenAsync: jest.fn(async () => ({ type: 'android', data: 'fcm-device-token' })),
+    getExpoPushTokenAsync: jest.fn(async () => ({
+      type: 'expo',
+      data: 'ExponentPushToken[test-token]',
+    })),
+    setBadgeCountAsync: jest.fn(async () => true),
+    dismissAllNotificationsAsync: jest.fn(async () => undefined),
+    addPushTokenListener: jest.fn(subscription),
+    addNotificationReceivedListener: jest.fn(subscription),
+    addNotificationResponseReceivedListener: jest.fn(subscription),
+    useLastNotificationResponse: jest.fn(() => undefined),
+    clearLastNotificationResponse: jest.fn(),
+  };
+});
 
 // Native modules added for the feeds
 jest.mock('@react-native-community/netinfo', () =>

@@ -1,9 +1,11 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { colors, layout } from '@/theme/tokens';
+
+import { FOOTER_GAP, KeyboardFooter } from './KeyboardFooter';
 
 type ScreenProps = {
   children: ReactNode;
@@ -12,7 +14,10 @@ type ScreenProps = {
   edges?: Edge[];
   padded?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
-  /** Pinned under the scroll content (e.g. step 2 footer). */
+  /**
+   * Pinned under the content (Save changes, Create account). On a scrolling screen it rides on top
+   * of the keyboard (KeyboardFooter), so a tall keyboard never hides it or the focused field.
+   */
   footer?: ReactNode;
 };
 
@@ -25,6 +30,7 @@ export function Screen({
   footer,
 }: ScreenProps) {
   const inner = [padded && styles.padded, styles.content, contentStyle];
+  const [footerHeight, setFooterHeight] = useState(0);
 
   return (
     <SafeAreaView style={styles.root} edges={edges}>
@@ -33,7 +39,8 @@ export function Screen({
           style={styles.flex}
           contentContainerStyle={[styles.grow, inner]}
           keyboardShouldPersistTaps="handled"
-          bottomOffset={24}
+          bottomOffset={footer ? footerHeight + FOOTER_GAP : 24}
+          testID="screen-scroll"
           showsVerticalScrollIndicator={false}
         >
           {children}
@@ -41,7 +48,7 @@ export function Screen({
       ) : (
         <View style={[styles.flex, inner]}>{children}</View>
       )}
-      {footer}
+      {footer && scroll ? <KeyboardFooter onHeight={setFooterHeight}>{footer}</KeyboardFooter> : footer}
     </SafeAreaView>
   );
 }

@@ -1,8 +1,10 @@
-# Maestro checks (Prompts 3, 4 and 5)
+# Maestro checks (Prompts 3, 4, 5 and 6)
 
-Automated version of the phone checklists: login, feed, post actions, the whole compose flow, and
-profiles: own profile, photo and cover upload, edit profile, other profiles, the follow system
-(request, accept, reject, unfollow), lists, report and block, settings, change password, log out.
+Automated version of the phone checklists: login, feed, post actions, the whole compose flow,
+profiles (own profile, photo and cover upload, edit profile, other profiles, the follow system,
+lists, report and block, settings, change password, log out) and Prompt 6: Connect (find, skill
+pills, paging, suggestions, requests), notifications, **real pushes** in the foreground, background
+and killed state, deep links, the forced-update and maintenance screens.
 `run.mjs` runs each flow on an Android emulator, turns the network off and on where a step needs
 it, and checks the result in the **local database** and in **`server/uploads`** (the local API
 stores uploads on disk when Cloudinary is not configured), not only on screen. It only ever talks
@@ -19,11 +21,18 @@ to the local stack.
    `avdmanager create avd -n meetnet_oppo -k "system-images;android-35;google_apis;x86_64" -d pixel_6`,
    then in `~/.android/avd/meetnet_oppo.avd/config.ini`: `hw.lcd.width=1080`, `hw.lcd.height=2400`,
    `hw.lcd.density=480`, `hw.ramSize=3072`, `hw.keyboard=no` (on-screen keyboard like a phone).
-4. Start it headless **on the host GPU**: `emulator -avd meetnet_oppo -no-window -no-audio -no-boot-anim -gpu host -no-snapshot-save`
+4. Start it headless **on the host GPU**, with explicit DNS servers: `emulator -avd meetnet_oppo -no-window -no-audio -no-boot-anim -gpu host -no-snapshot-save -dns-server 8.8.8.8,1.1.1.1`
+   (without `-dns-server` the emulator sometimes boots with working IP but no name resolution: Google
+   Play services then gets no FCM token, the app logs `[push] registration failed: E_REGISTRATION_FAILED …
+   SERVICE_NOT_AVAILABLE` and every push step fails)
+   Once Expo's enhanced push security is on (docs/DEPLOYMENT.md, "Push security"), the push steps
+   also need `EXPO_ACCESS_TOKEN` in the runner's environment (it passes it to the local API it
+   starts); without it Expo answers `UNAUTHORIZED` and p6-10/12/13/14 fail.
    (`-gpu auto` picks software rendering when headless: the app then runs so slowly that animations
    and toasts are missed and it can stop responding),
    install the MeetNet Dev APK (`adb -s emulator-5554 install -r meetnet-dev.apk`; the development
-   build contains x86_64 libraries).
+   build contains x86_64 libraries). The image must have Google Play services (`google_apis` or
+   `google_apis_playstore`): pushes arrive through FCM.
 5. No mail app on the emulator: `adb -s emulator-5554 shell pm disable-user --user 0 com.google.android.gm`
    (the image's Gmail is not set up and stops responding when Settings → Email support opens it;
    without a mail app the app shows the support address in a toast, which `p5-18` checks).
@@ -47,9 +56,14 @@ to the local stack.
   asked to follow the tester, the tester asked Tanvi, the tester blocked Dev, Pooja blocked the
   tester; Ishaan has an empty profile. Every run (and every Prompt 5 step) puts these relations and
   the tester's profile back first; Prompt 5 steps also give the tester exactly one saved post (the
-  run's fixture post), whatever the Prompt 3 save step left.
-- The local API on port 5000 **without** `CLOUDINARY_*` (uploads then go to `server/uploads`; the
-  runner refuses Cloudinary URLs) and Metro on 8081 (`npm run start`).
+  run's fixture post), whatever the Prompt 3 save step left. Prompt 6 adds Sana (also asked to
+  follow the tester), Aditi, Varun (the only C++), Kunal (PICT) and Neha (COEP), two posts by the
+  tester, nine notifications of every type (5 unread; today / this week / earlier) and twelve
+  first-year fillers (`seed-f-batchNN@example.com`) so Connect → Find has a second page.
+- Metro on 8081 (`npm run start`). **The run starts the local API itself** (port 5000, local
+  Mongo, uploads in `server/uploads`, no real emails, one JWT secret for the run) after stopping
+  whatever served port 5000 (e.g. a `start-api` window with nodemon). It keeps running after the
+  run; its log is `.maestro/reports/<run>/api.log`.
 
 ## Run
 
@@ -85,6 +99,34 @@ Prompt 5 specifics:
   stopped in between). The server allows 5 changes per 15 minutes, so run `p5-19` at most twice in
   a row.
 - Log out is in Settings now (`subflows/sign-out.yaml`: Me → ⚙ → Log out).
+
+Prompt 6 specifics:
+
+- **Pushes are real**: the runner (or the flow, through `scripts/api.js`) acts as Ishaan, Arjun or
+  Meera on the local API; the server sends through Expo → FCM to the emulator. `p6-12` checks the
+  in-app banner (logcat `[toast] push …` plus the recording) and that no system notification was
+  posted; `p6-13` / `p6-14` read the posted notification from `dumpsys notification` (title,
+  channel `default`, accent colour) and tap it in the shade. "Killed" is `am kill` of the app in the
+  background, never `force-stop` (a force-stopped app receives no FCM messages).
+- **Permission**: setup revokes `POST_NOTIFICATIONS` and forgets the tester's devices, so no push
+  reaches the emulator before `p6-11b` allows them. `p6-11` / `p6-11b` clear the app's data
+  (`pm clear`) to see the pre-prompt as a new install does. Every other flow answers the pre-prompt
+  "Not now" (`subflows/dismiss-push-prompt.yaml`, also run once by `flows/setup-settle.yaml`).
+- **App config**: `p6-17` / `p6-18` restart the local API with `APP_MIN_VERSION_ANDROID=9.9.9` /
+  `APP_MAINTENANCE=1` and back (same JWT secret, so the app stays signed in); `p6-18` waits 31 s so
+  the app re-reads `/app/config` on its return to the front.
+- **Killed state (`p6-14`) in a development build**: the push arrives and tapping it cold-starts the
+  app, but the dev launcher then reloads the bundle with its own intent and drops the notification's
+  tap data, so the app opens on Home. "Lands on the post" can only be checked on a release build (the
+  preview APK on a phone); the JS side (tap → pending path → tabs layout) is in `pushTap.test.tsx`.
+- `p6-12`, `p6-13`, `p6-14` and `p6-19` need `p6-11b` (a registered device); run them together, e.g.
+  `--only p6-11b,p6-12`.
+- **Dev client**: its floating tools button (⚙) sits over the Home bell and the ⚙ on Me, and its menu
+  opens by itself on the first start after an install or `pm clear`. The runner turns both off (and
+  marks its intro done) by writing the dev menu's preferences through `run-as` at setup and after
+  each `pm clear` (`quietDevClient`); `subflows/open-app.yaml` still closes the menu if it shows.
+  On a phone with the dev build, turn **Tools button** off in the dev menu by hand.
+
 The report goes to `.maestro/reports/<run>/report.md` (git-ignored) with screenshots of failures.
 
 Network-loss steps use airplane mode **and** remove `adb reverse tcp:5000`: the app reaches the
@@ -115,9 +157,31 @@ Things the flows work around on purpose:
   `MountingCoordinator::pullTransaction`, a react-native-screens race fixed upstream in 4.28.0).
   Every app crash and "not responding" during a run is listed at the top of the report.
 
+## Without Docker / on a phone (when the emulator and Docker don't fit in memory)
+
+Both are opt-in through environment variables; without them the run is the usual emulator + Docker one.
+
+- **Native Mongo:** `MAESTRO_MONGO_URI=mongodb://127.0.0.1:38127/meetnet_local` and
+  `MAESTRO_MONGOSH=<path to node_modules/mongosh/bin/mongosh.js>` (npm package `mongosh`). The runner
+  and `seed.mjs` then use that mongod instead of `docker exec meetnet-mongo …`. A mongod binary is
+  already in `server/node_modules/.cache/mongodb-memory-server/` (from the server tests); start it with
+  `--port 38127 --bind_ip 127.0.0.1 --dbpath .maestro/reports/_mongo-native/data` and seed it once
+  (local API on 5000 + `node .maestro/seed.mjs`). Stop it before starting Docker again (same port).
+- **On a phone — only with the owner's OK for that run:** `MAESTRO_PHONE=<serial>`. adb keeps its
+  normal server, nothing switches the network off (no airplane mode: p4-14 / p4-16 fail instead),
+  toasts and the double-tap heart are checked from screenshots (ColorOS has no `screenrecord`), and
+  crash records are read for MeetNet Dev only. Set "stay awake while charging" for the run and restore
+  it afterwards; leave out steps that touch more than the app (p4-14/15/16/17 airplane mode, p5-18
+  opens the phone's mail app). ColorOS also refuses `pm clear` over adb unless Developer options →
+  *Disable permission monitoring* is on, so p6-11 / p6-11b can't run there; the push steps then run
+  when the phone already has a registered token. Screens of a phone can show the owner's
+  notifications: keep screenshots of failed steps only, never upload them.
+
 ## Not automated (check by eye on the phone)
 
 Camera permission prompt and taking a photo; how the uploaded photos look; haptics; the phone's own
 keyboard never covering the text box, the Post button or the toast; how the animations feel;
 pinch and drag on the crop screen (Maestro cannot pinch); a second phone or the web as the other
-side of a request (the runner uses the API for that).
+side of a request (the runner uses the API for that); a push on a real phone and its sound and
+icon in the status bar (`server/scripts/sendTestPush.js`); App Links from another app (checked
+with `pm get-app-links` on a preview build instead).

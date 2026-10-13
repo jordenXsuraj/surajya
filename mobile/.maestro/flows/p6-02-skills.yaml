@@ -1,0 +1,39 @@
+# Prompt 6 · Find people skill pills: React → Aditi and Arjun; C++ → only Varun (the server matches
+# the skill literally; used as a regular expression, "C++" would match every skill with a "c").
+# The pill row scrolls sideways: swipes start inside the row, away from the screen edges (a swipe
+# from the edge is Android's Back gesture).
+appId: com.themeetnet.app.dev
+name: Skill pills
+---
+- runFlow: ../subflows/open-connect.yaml
+- tapOn: "Skill React"
+- extendedWaitUntil:
+    visible: "Aditi Kulkarni"
+    timeout: 15000
+- assertVisible: "Arjun Patil"
+- assertNotVisible: "Varun Mehta"
+- repeat:
+    while:
+      notVisible: "Skill C\\+\\+"
+    times: 4
+    commands:
+      - swipe:
+          start: "75%, 29%"
+          end: "25%, 29%"
+          duration: 400
+- tapOn: "Skill C\\+\\+"
+- extendedWaitUntil:
+    visible: "Varun Mehta"
+    timeout: 15000
+- assertNotVisible: "Aditi Kulkarni"
+- assertNotVisible: "Arjun Patil"
+- repeat:
+    while:
+      notVisible: "Any skill"
+    times: 4
+    commands:
+      - swipe:
+          start: "25%, 29%"
+          end: "75%, 29%"
+          duration: 400
+- tapOn: "Any skill"

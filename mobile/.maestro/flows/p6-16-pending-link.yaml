@@ -1,0 +1,23 @@
+# Prompt 6 · A post link while signed out: the welcome screen first, and right after signing in the
+# app opens that post (not Home).
+appId: com.themeetnet.app.dev
+name: Link before sign-in
+---
+- runFlow: ../subflows/ensure-home.yaml
+- runFlow: ../subflows/sign-out.yaml
+- openLink: meetnet-dev://post/${POST_ID}
+- extendedWaitUntil:
+    visible: "Create account"
+    timeout: 15000
+- tapOn: "Log In"
+- tapOn: "Enter your Email"
+- inputText: ${EMAIL}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: ".*${RUN} fixture post.*"
+    timeout: 30000
+- assertVisible: "Write a reply"
+- back
+- runFlow: ../subflows/dismiss-push-prompt.yaml

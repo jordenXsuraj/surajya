@@ -11,6 +11,7 @@ import { OfflineBanner } from '@/components/feed/OfflineBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { VerifyEmailBanner } from '@/components/VerifyEmailBanner';
 import { useFeed } from '@/hooks/useFeed';
+import { usePushPrompt } from '@/hooks/usePushNotifications';
 import { matchesSearch } from '@/lib/postView';
 import { usePostUi } from '@/stores/postUi.store';
 import { colors } from '@/theme/tokens';
@@ -24,6 +25,7 @@ export default function HomeScreen() {
   const [category, setCategory] = useState<FeedType>('all');
   const [search, setSearch] = useState('');
   const homeTopSignal = usePostUi((s) => s.homeTopSignal);
+  usePushPrompt();
   const query = useFeed(scope, category);
   const posts = useMemo(
     () => (query.data ?? []).filter((p) => matchesSearch(p, search)),

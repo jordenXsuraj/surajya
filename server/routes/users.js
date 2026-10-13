@@ -1,10 +1,11 @@
 
 
+const crypto       = require('crypto')
 const express      = require('express')
 const mongoose     = require('mongoose')
 const router       = express.Router()
 const { Expo }     = require('expo-server-sdk')
-const { rateLimit } = require('express-rate-limit')
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit')
 const User         = require('../models/User')
 const Post         = require('../models/Post')
 const Report       = require('../models/Report')
@@ -20,6 +21,8 @@ const mailer       = require('../services/email')
 const { signToken } = require('../utils/token')
 const { upload }   = require('../config/cloudinary')
 const validObjectIdParam = require('../middleware/validObjectId')
+const { containsText, searchText } = require('../utils/searchText')
+const { clientIp } = require('../utils/clientIp')
 
 const REPORT_REASONS = ['spam','hate','harassment','misinformation','other']
 
@@ -178,8 +181,22 @@ router.post('/me/accept-terms', protect, async (req, res) => {
 // Push tokens (mobile). Never returned by any endpoint.
 // POST   /api/users/me/push-token { token, platform, deviceId }
 // DELETE /api/users/me/push-token { deviceId }   (call on logout)
+// POST   /api/users/push-token/revoke { userId, deviceId, token }   (no login: after an offline logout)
 // ─────────────────────────────────────────────────
-router.post('/me/push-token', protect, async (req, res) => {
+// A client registers on every start; a buggy or old one must not be able to flood this route:
+// identical registrations write nothing, each user keeps their 5 most recent devices, and there
+// are at most 10 registrations per user per hour (the client IP header we trust as a fallback key).
+const PUSH_TOKENS_KEPT = 5
+const pushTokenLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit:    10,
+  keyGenerator: req => (req.user ? `push-token:${req.user._id}` : `push-token:${ipKeyGenerator(clientIp(req))}`),
+  message:  { message: 'Too many push token updates. Try again later.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders:   false,
+})
+
+router.post('/me/push-token', protect, pushTokenLimiter, async (req, res) => {
   const { token, platform, deviceId } = req.body || {}
   if (!Expo.isExpoPushToken(token)) return res.status(400).json({ message: 'Invalid Expo push token' })
   if (!['ios', 'android'].includes(platform)) return res.status(400).json({ message: "platform must be 'ios' or 'android'" })
@@ -188,14 +205,24 @@ router.post('/me/push-token', protect, async (req, res) => {
   }
   const id = deviceId.trim()
 
+  const me = await User.findById(req.user._id).select('+pushTokens').lean()
+  const current = me?.pushTokens || []
   // A token belongs to one device and one account: if another account still
   // has it (same phone, different login), it must stop receiving our pushes.
-  await User.updateMany({ _id: { $ne: req.user._id }, 'pushTokens.token': token }, { $pull: { pushTokens: { token } } })
-  await User.updateOne({ _id: req.user._id }, { $pull: { pushTokens: { deviceId: id } } })
-  await User.updateOne({ _id: req.user._id }, { $pull: { pushTokens: { token } } })
-  await User.updateOne({ _id: req.user._id }, {
-    $push: { pushTokens: { $each: [{ token, platform, deviceId: id, updatedAt: new Date() }], $slice: -10 } },
-  })
+  const elsewhere = await User.exists({ _id: { $ne: req.user._id }, 'pushTokens.token': token })
+
+  const entry = current.find(t => t.deviceId === id)
+  const unchanged = entry && entry.token === token && entry.platform === platform && !elsewhere &&
+    current.filter(t => t.token === token).length === 1 && current.length <= PUSH_TOKENS_KEPT
+  if (unchanged) return res.json({ ok: true, unchanged: true })
+
+  if (elsewhere) {
+    await User.updateMany({ _id: { $ne: req.user._id }, 'pushTokens.token': token }, { $pull: { pushTokens: { token } } })
+  }
+  // One entry per device and per token, newest last, the 5 most recent kept
+  const next = current.filter(t => t.deviceId !== id && t.token !== token)
+  next.push({ token, platform, deviceId: id, updatedAt: new Date() })
+  await User.updateOne({ _id: req.user._id }, { $set: { pushTokens: next.slice(-PUSH_TOKENS_KEPT) } })
   res.json({ ok: true })
 })
 
@@ -203,6 +230,43 @@ router.delete('/me/push-token', protect, async (req, res) => {
   const deviceId = req.body?.deviceId ?? req.query.deviceId
   if (typeof deviceId !== 'string' || !deviceId.trim()) return res.status(400).json({ message: 'deviceId is required' })
   await User.updateOne({ _id: req.user._id }, { $pull: { pushTokens: { deviceId: deviceId.trim() } } })
+  res.json({ ok: true })
+})
+
+// The app logged out while it couldn't reach us, so the DELETE above never arrived and the phone
+// would keep getting that account's pushes. It sends this once it can, without a session (the
+// login token is gone by then, on purpose). The Expo push token is the proof: only the device that
+// registered it has it, and no endpoint returns tokens. Removes that one entry and nothing else,
+// and answers the same whether or not it existed.
+// Limits: 20 an hour per token (one phone's retries), so phones behind one carrier or college IP
+// don't share a bucket, plus a ceiling of 300 an hour per IP against made-up tokens. The token is
+// only kept as a short hash in the limiter's memory.
+const revokeTokenKey = token =>
+  crypto.createHash('sha256').update(typeof token === 'string' ? token : '').digest('hex').slice(0, 32)
+const pushRevokeIpCeiling = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit:    300,
+  keyGenerator: req => `push-revoke-ip:${ipKeyGenerator(clientIp(req))}`,
+  message:  { message: 'Too many requests. Try again later.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders:   false,
+})
+const pushRevokeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit:    20,
+  keyGenerator: req => `push-revoke-token:${revokeTokenKey(req.body?.token)}`,
+  message:  { message: 'Too many requests. Try again later.' },
+  standardHeaders: 'draft-7',
+  legacyHeaders:   false,
+})
+
+router.post('/push-token/revoke', pushRevokeIpCeiling, pushRevokeLimiter, async (req, res) => {
+  const { userId, deviceId, token } = req.body || {}
+  if (typeof userId !== 'string' || !/^[0-9a-f]{24}$/i.test(userId) || !Expo.isExpoPushToken(token) ||
+      typeof deviceId !== 'string' || !deviceId.trim() || deviceId.length > 200) {
+    return res.status(400).json({ message: 'userId, deviceId and token are required' })
+  }
+  await User.updateOne({ _id: userId }, { $pull: { pushTokens: { token, deviceId: deviceId.trim() } } })
   res.json({ ok: true })
 })
 
@@ -490,27 +554,23 @@ router.get('/suggestions', protect, async (req, res) => {
   }
 })
 
+// Connect → Find: the skill pill and the name / username search. Both are the user's own text,
+// matched literally and cut to 50 characters (utils/searchText), never used as a regex.
+function applyPeopleSearch(filter, { skill, search }) {
+  const skillText = searchText(skill)
+  if (skillText && skillText !== 'All') filter.skills = { $elemMatch: containsText(skillText) }
+  const name = containsText(search)
+  if (name) filter.$or = [{ name }, { username: { ...name } }]
+}
+
 // ─────────────────────────────────────────────────
 // GET /api/users — Campus students list (Connect page)
 // ─────────────────────────────────────────────────
 router.get('/', protect, async (req, res) => {
   try {
-const { skill, search } = req.query
 const sets   = await getBlockSets(req.user)
 const filter = { college: collegeRegex(req.user.college), _id: { $nin: [req.user._id, ...sets.allIds] } }
-
-if (skill && skill !== 'All' && skill.trim()) {
-  filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
-}
-
-// Search by name OR username
-if (search && search.trim()) {
-  const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  filter.$or = [
-    { name:     { $regex: escaped, $options: 'i' } },
-    { username: { $regex: escaped, $options: 'i' } },
-  ]
-}
+applyPeopleSearch(filter, req.query)
 
 const page  = parseInt(req.query.page)  || 1
 const limit = 20
@@ -554,27 +614,13 @@ const users = await User.find(filter)
 
 router.get('/all', protect, async (req, res) => {
   try {
-    const { skill, search } = req.query
     const page  = parseInt(req.query.page)  || 1
     const limit = 20
     const skip  = (page - 1) * limit
 
     const sets   = await getBlockSets(req.user)
     const filter = { _id: { $nin: [req.user._id, ...sets.allIds] } }
-
-    // Skill filter
-    if (skill && skill !== 'All' && skill.trim()) {
-      filter.skills = { $elemMatch: { $regex: skill.trim(), $options: 'i' } }
-    }
-
-    // Search by name OR username
-   if (search && search.trim()) {
-  const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  filter.$or = [
-    { name:     { $regex: escaped, $options: 'i' } },
-    { username: { $regex: escaped, $options: 'i' } },
-  ]
-}
+    applyPeopleSearch(filter, req.query)
 
     const users = await User.find(filter)
       .select('name username year branch bio skills projects following followers sentRequests college avatar isContributor')

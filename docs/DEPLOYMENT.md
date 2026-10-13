@@ -14,6 +14,8 @@ No secret values belong in this file. Secrets live only in the Render and Vercel
 
 Both apps deploy from GitHub `jordenXsuraj/surajya`.
 
+**Render account:** the `surajya` service is in the Render workspace **"My Workspace"**, which is under a different Render login from the one whose workspace is called "AniKeT's workspace". If the service isn't listed after signing in, you are in the other login: sign out and use the one that owns "My Workspace".
+
 ## How to deploy
 
 Push (or merge) to `main`. Both hosts deploy automatically:
@@ -55,7 +57,7 @@ If a Render deploy fails (build error, or the app exits at startup), Render keep
 | `PUBLIC_APP_URL` | `https://themeetnet.com`. Base of emailed links (`/reset-password?token=…`). Defaults to that value. |
 | `RESEND_API_KEY` | **Required for password-reset emails.** Without it in production, reset requests still answer 200 but no email is sent (an error is logged). See [Email](#email-resend). |
 | `EMAIL_FROM` | `MeetNet <no-reply@themeetnet.com>` (the domain must be verified in Resend) |
-| `EXPO_ACCESS_TOKEN` | Optional. Only if "Enhanced push security" is turned on in the Expo project. |
+| `EXPO_ACCESS_TOKEN` | **Required.** The robot user's access token for Expo's push service (see [Push security](#push-security-expo-access-token)). In production the server refuses to start without it (`❌ EXPO_ACCESS_TOKEN is not set … Refusing to start in production.`), so the deploy fails and Render keeps the old version. |
 | `CLIENT_IP_HEADER`, `CLIENT_IP_XFF_INDEX` | Which header carries the real client IP for rate limits. **Production: `CLIENT_IP_HEADER=cf-connecting-ip`**, no index. Empty = `req.ip`. See [Client IP](#client-ip-rate-limiting). |
 | `DEBUG_IP_ROUTE` | `1` only **temporarily**, while choosing `CLIENT_IP_HEADER`. Remove afterwards. |
 | `VERIFICATION_REQUIRED_FROM` | ISO date-time. Accounts created **at or after** it must verify their email before posting, replying, following, "interested" or reporting. Unset = the default in `server/middleware/requireVerifiedEmail.js` (the release time, see [Email verification](#email-verification)). An invalid value blocks nobody. |
@@ -174,20 +176,57 @@ Only bounces after the webhook is set up are recorded. Earlier ones, such as the
 
 ## Mobile deep links
 
-`nexusnetwork/public/.well-known/` holds the files Android and iOS fetch from `https://themeetnet.com` to let the app open `/post/*`, `/profile/*` and `/reset-password` links. `vercel.json` (and `nginx.conf`) serve both as `application/json` and keep them out of the SPA rewrite. Both contain placeholders to replace before release:
+`nexusnetwork/public/.well-known/` holds the files Android and iOS fetch from `https://themeetnet.com` and `https://www.themeetnet.com` to let the app open `/post/*` and `/profile/*` links (`/reset-password` stays in the browser until the app has that screen). `vercel.json` (and `nginx.conf`) serve both as `application/json` and keep them out of the SPA rewrite. `vercel.json` also redirects every `www` path to the apex **except `/.well-known/`**: both platforms reject verification files behind a redirect, so `www` must answer them directly (the `www.themeetnet.com` domain in Vercel must not redirect on its own).
 
-- **`assetlinks.json` → `sha256_cert_fingerprints`**: Play Console → your app → **Test and release → Setup → App integrity → App signing** → *App signing key certificate* → **SHA-256 certificate fingerprint**. Google re-signs Play builds with this key, so the upload key's fingerprint isn't enough. To test App Links on EAS builds before Play (internal/dev builds), also add that keystore's SHA-256 from `eas credentials` (the list accepts several).
-- **`apple-app-site-association` → `TEAMID`**: your Apple Developer Team ID (developer.apple.com → Membership). Replace it in all three places.
-
-Declare **only `themeetnet.com`** (not `www`) in the app's intent filters and associated domains: `www` answers with a redirect, and both platforms reject verification files behind a redirect.
+- **`assetlinks.json` → `sha256_cert_fingerprints`** (`com.themeetnet.app`):
+  - now: the EAS keystore of `com.themeetnet.app` (`3F:0E:B2:…:7D:98:01:74`, created by the first preview build; `eas credentials -p android` shows it). It signs preview builds and is the **upload key** for Play.
+  - at the Play launch, **add** (don't replace) the Play signing key: Play Console → your app → **Test and release → Setup → App integrity → App signing** → *App signing key certificate* → **SHA-256 certificate fingerprint**. Google re-signs Play builds with that key, so without it App Links fail for Play installs.
+- **`apple-app-site-association` → `TEAMID`**: still a placeholder until there is an Apple Developer account (developer.apple.com → Membership → Team ID). Replace it in all three places; until then iOS universal links don't work.
 
 Verify after deploying:
 ```bash
-curl -sI https://themeetnet.com/.well-known/assetlinks.json              # 200, content-type: application/json
-curl -sI https://themeetnet.com/.well-known/apple-app-site-association   # 200, content-type: application/json
+for h in themeetnet.com www.themeetnet.com; do
+  curl -sI https://$h/.well-known/assetlinks.json | head -1                # 200 (no redirect), application/json
+  curl -sI https://$h/.well-known/apple-app-site-association | head -1     # 200 (no redirect), application/json
+done
+curl -sI https://www.themeetnet.com/ | head -3                             # 308 → https://themeetnet.com/
+# on an Android device / emulator with a preview build (com.themeetnet.app):
+adb shell pm verify-app-links --re-verify com.themeetnet.app
+adb shell pm get-app-links com.themeetnet.app                              # themeetnet.com: verified, www.themeetnet.com: verified
+adb shell am start -W -a android.intent.action.VIEW -d "https://themeetnet.com/post/<id>" com.themeetnet.app
 # Google's checker:
 curl -s "https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://themeetnet.com&relation=delegate_permission/common.handle_all_urls"
 ```
+
+## Push notifications (Expo → FCM)
+
+- **Firebase project `themeetnet`** (Spark, free; Google Cloud project of the same id). Android apps `com.themeetnet.app` and `com.themeetnet.app.dev`; both are in one `google-services.json`.
+- **`google-services.json` is not in git** (public repo; it holds an Android API key). EAS builds get it from the **file environment variable `GOOGLE_SERVICES_JSON`** (secret visibility, development / preview / production): `eas env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret …`. A local copy in `mobile/` is ignored by git and `.easignore`. Get it again with `firebase apps:sdkconfig ANDROID <app id> --project themeetnet`.
+- **FCM V1 sender**: service account `meetnet-fcm-sender@themeetnet.iam.gserviceaccount.com` with **only** `roles/firebasecloudmessaging.admin`. Its single key is stored **only on EAS** (Credentials → Android → FCM V1 service account key, attached to both package names); no copy is kept anywhere else. To rotate: create a new key for the account, upload it in `eas credentials -p android` (or the EAS API), then delete the old key in Google Cloud → IAM → Service accounts → Keys.
+- The server sends through Expo's push service (`expo-server-sdk`, no channelId → the app's `default` channel). Test one user's devices: `cd server && MONGO_URI=… node scripts/sendTestPush.js <email> [--url=/post/<id>]` (prints ticket and receipt status only; needs `EXPO_ACCESS_TOKEN` for any database but a local one).
+
+### Push security (Expo access token)
+
+Without Expo's **enhanced push security**, anyone who has a device's Expo push token can send it pushes through Expo. With it on, Expo accepts pushes for the projects of the account **`aniket078s-team`** only with an access token (`UNAUTHORIZED` otherwise). The setting covers **every project of that account**. The token is a dedicated **robot user** with the smallest role that works, never a personal token and never the Admin robot EAS builds use (`EXPO_TOKEN`). Its value never goes into chat, git or logs.
+
+**Order** (each step only after the previous one worked):
+
+1. **Robot + token** (Expo dashboard): expo.dev → account switcher (top left) → **aniket078s-team** → **Settings → Access tokens** (`https://expo.dev/accounts/aniket078s-team/settings/access-tokens`) → **Robot users → Add robot** → name `meetnet-push-sender`, role **Viewer** (the smallest; step 7 shows whether it is enough) → create. On that robot: **Create token** → name `push-api` → copy it (it is shown once).
+2. **Windows (local tests)**: Win+R → `rundll32 sysdm.cpl,EditEnvironmentVariables` → *User variables* → **New** → `EXPO_ACCESS_TOKEN` = the token → OK. New terminals get it; Claude reads it into the test process only, never prints it.
+3. **Render**: Dashboard → `surajya` → **Environment** → **Add Environment Variable** → key `EXPO_ACCESS_TOKEN`, value = the token → save with **Save only** (the merge deploys it; *Save and deploy* is harmless too: the running version already uses the variable when set).
+4. **Merge → deploy.** Render's log must show `✅ Server running`. Without the variable the deploy fails with `EXPO_ACCESS_TOKEN is not set … Refusing to start in production.` and the old version keeps running.
+5. **Test with the token, setting still off**: a push from the production API reaches a phone (preview build signed in with a disposable account; another disposable account sends it a follow request), and the Render log has no `push ticket error` / `push: send failed`. Locally: `sendTestPush.js` to the emulator → `Tickets: { ok: 1 }`.
+6. **Turn it on**: same Access tokens page → **Enhanced security for push notifications** → enable.
+7. **Test again**:
+   - without the token (local database, `EXPO_ACCESS_TOKEN` empty in that one command): `sendTestPush.js` → ticket / send error **`UNAUTHORIZED`** (rejected);
+   - with the token: `sendTestPush.js` → `ok`, and a push from the production API arrives.
+   - If *with the token* is refused too, the robot's role is too small: on the robot's page raise it one step (**Viewer → Developer**), same token, test again. Record the role that works here.
+
+**Role in use:** _(filled in after step 7)_. **Current token:** `push-api-2` on `meetnet-push-sender` (2026-10-12; the first one, `push-api`, was deleted). It is on Render and in the owner's Windows user variables.
+
+- **Undo**: turn enhanced security off: Expo accepts pushes without a token again at once (the server keeps sending its token, which is fine).
+- **Rotate**: create a new token on the robot → update Render (deploy) and the Windows variable → delete the old token on the robot's page.
+- **Local development once it is on**: real pushes from the local API (Maestro p6-12/13/14, p6-10's like, `sendTestPush.js`) need `EXPO_ACCESS_TOKEN` in its environment; the Maestro runner passes its own environment on to the API it starts.
 
 ## Verify a deploy
 
@@ -196,7 +235,7 @@ curl -s https://surajya.onrender.com/healthz                 # OK
 curl -s https://surajya.onrender.com/api/posts/not-an-id     # 400 {"message":"Invalid post id"}
 curl -s https://surajya.onrender.com/api/app/config          # 200 JSON config
 curl -s -H "Origin: https://evil.example" https://surajya.onrender.com/api/app/config   # 403 {"message":"Origin not allowed"}
-curl -sI https://www.themeetnet.com | head -3                # 308 → https://themeetnet.com/
+curl -sI https://www.themeetnet.com | head -3                # 308 → https://themeetnet.com/ (but /.well-known/* answers 200)
 ```
 
 A free-plan instance sleeps after about 15 minutes idle, so the first request can take up to about a minute.
@@ -205,7 +244,7 @@ A free-plan instance sleeps after about 15 minutes idle, so the first request ca
 ## Domains and HTTPS
 
 DNS for `themeetnet.com` is hosted at **Hostinger** (nameservers `nova.dns-parking.com` / `cosmos.dns-parking.com`), so every DNS change is made in Hostinger's DNS zone editor. The site itself is on Vercel: the apex `A` record points to `76.76.21.21`, and `www` is a `CNAME` to `cname.vercel-dns.com`. Vercel issues and renews the Let's Encrypt certificates for both names. Both must keep valid HTTPS for the mobile app's Universal Links / App Links.
-The root domain has **no MX record**, so `@themeetnet.com` addresses can't receive email (Resend only sends).
+Inbound mail: the apex has **ImprovMX** MX records (`mx1.improvmx.com` 10, `mx2.improvmx.com` 20) and the SPF `v=spf1 include:spf.improvmx.com ~all`; ImprovMX (free plan) forwards `support@themeetnet.com` to the owner's Gmail: one alias, `support` (the default catch-all `*` was removed, so mail to any other address bounces). Verified 2026-10-10: a test mail from Resend to support@ was accepted by ImprovMX (Resend: delivered) and arrived in the owner's Gmail inbox. Test again any time by sending a mail to support@themeetnet.com and looking in Gmail (and Spam). Resend's records (`send` MX/TXT, `rsend` CNAME, `resend._domainkey`, `_dmarc`) are separate names and stay as they are; Resend sends with `send.themeetnet.com` as return path, so the apex SPF doesn't affect it.
 `surajya.in` is also attached to the Vercel project, but its DNS does not point at Vercel ("misconfigured").
 
 ## Backups

@@ -1,0 +1,43 @@
+# Prompt 6 · Connect → Find people: name search (sent once typing stops), My college / All colleges,
+# the ★ contributor and 🎓 Senior badges, "No students found".
+appId: com.themeetnet.app.dev
+name: Find people
+---
+- runFlow: ../subflows/open-connect.yaml
+# the campus list, seniors first: Arjun is a 4th-year contributor
+- extendedWaitUntil:
+    visible: "Arjun Patil"
+    timeout: 20000
+- assertVisible: "Top Contributor"
+- assertVisible: "🎓 Senior"
+- tapOn: "Search students"
+- inputText: "adi"
+- extendedWaitUntil:
+    visible: "Aditi Kulkarni"
+    timeout: 15000
+- assertVisible: "3rd yr CS · Seed Test College"
+- assertNotVisible: "Arjun Patil"
+# another college only under All colleges
+- tapOn: "Clear search"
+- tapOn: "All colleges"
+- tapOn: "Search students"
+- inputText: "kunal"
+- extendedWaitUntil:
+    visible: "Kunal Rao"
+    timeout: 15000
+- assertVisible: "2nd yr ENTC · Pune Institute of Computer Technology \\(PICT\\)"
+- tapOn: "Clear search"
+- tapOn: "Search students"
+- inputText: "iyer"
+- extendedWaitUntil:
+    visible: "Neha Iyer"
+    timeout: 15000
+- assertVisible: "4th yr CS · College of Engineering Pune \\(COEP\\)"
+# "iyer": only Neha matches, and she is at another college
+- tapOn: "My college only"
+- extendedWaitUntil:
+    visible: "No students found"
+    timeout: 15000
+- assertNotVisible: "Neha Iyer"
+- tapOn: "Clear search"
+- runFlow: ../subflows/hide-keyboard.yaml

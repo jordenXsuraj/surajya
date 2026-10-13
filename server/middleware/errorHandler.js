@@ -1,14 +1,18 @@
+const util = require('util')
+const { redactPushTokens } = require('../utils/redact')
+
 module.exports = function errorHandler(err, req, res, next) {
   // Request from an Origin not in the CORS allow-list (expected, not worth a log line)
   if (err.code === 'CORS_ORIGIN_NOT_ALLOWED') {
     return res.status(403).json({ message: 'Origin not allowed' })
   }
 
+  // Push tokens are cut to a prefix (utils/redact.js): an error may quote one
   if (process.env.NODE_ENV !== 'production') {
-  console.error('❌ Error:', err)
-} else {
-  console.error('❌ Error:', err.message)
-}
+    console.error('❌ Error:', redactPushTokens(util.inspect(err)))
+  } else {
+    console.error('❌ Error:', redactPushTokens(err.message))
+  }
 
   // Duplicate key
   if (err.code === 11000) {

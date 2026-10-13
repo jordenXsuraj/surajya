@@ -7,25 +7,36 @@
 //
 // Creates, if missing:
 // - the tester (tester@meetnet.local) and the three feed authors from Prompt 3 with ~120 posts;
-// - eight profile people (seed-p-<key>@example.com, password seedpass123) with photos uploaded
-//   through the API (stored in server/uploads), bios, skills, projects, media and a few posts.
-// Then sets the tester's profile and every follow / request / block between seed accounts.
+// - profile people (seed-p-<key>@example.com, password seedpass123; two at other colleges) with
+//   photos uploaded through the API (stored in server/uploads), bios, skills, projects, media and
+//   a few posts; two posts by the tester;
+// - 12 first-year fillers (seed-f-batchNN@example.com) so Connect → Find people has two pages.
+// Then sets the tester's profile, every follow / request / block between seed accounts, and the
+// tester's notifications (every type, read and unread, today / this week / earlier).
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  BASE_PEOPLE, PROFILE_PEOPLE, SEED_COLLEGE, SEED_PASSWORD, TESTER, TESTER_PROFILE, relationsScript,
+  ARJUN_POST_TEXT, BASE_PEOPLE, FILLER_PEOPLE, PROFILE_PEOPLE, SEED_COLLEGE, SEED_PASSWORD, TESTER, TESTER_POSTS,
+  TESTER_PROFILE, notificationsScript, relationsScript,
 } from './seed-data.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+// Mongo: the Docker container meetnet-mongo, or, with MAESTRO_MONGO_URI set, any mongod reached
+// through the mongosh CLI script at MAESTRO_MONGOSH (e.g. a native mongod when Docker doesn't fit
+// in memory; README "Without Docker")
+const MONGO_URI = process.env.MAESTRO_MONGO_URI;
+const mongoshCall = (js) => (MONGO_URI
+  ? [process.execPath, [process.env.MAESTRO_MONGOSH, MONGO_URI, '--quiet', '--eval', js]]
+  : ['docker', ['exec', 'meetnet-mongo', 'mongosh', 'meetnet_local', '--quiet', '--eval', js]]);
 const API = 'http://localhost:5000/api';
 const UPLOAD_DIR = process.env.LOCAL_UPLOAD_DIR || path.join(HERE, '..', '..', 'server', 'uploads');
 const LOCAL_UPLOAD = /^http:\/\/(localhost|127\.0\.0\.1):5000\/uploads\/images\/([\w.-]+)$/;
 
 const mongo = (js) => {
-  const out = String(execFileSync('docker', ['exec', 'meetnet-mongo', 'mongosh', 'meetnet_local', '--quiet', '--eval', js])).trim();
+  const out = String(execFileSync(...mongoshCall(js))).trim();
   return out ? JSON.parse(out) : null;
 };
 const q = (v) => JSON.stringify(v);
@@ -44,10 +55,10 @@ async function api(method, route, body, token) {
 const login = async (email, password) => (await api('POST', '/auth/login', { email, password })).token;
 
 /** Signs up when the account does not exist yet; always marks it verified and long-standing. */
-async function ensureAccount({ email, password, name, year, branch }, { oldAccount = true } = {}) {
+async function ensureAccount({ email, password, name, year, branch, college = SEED_COLLEGE }, { oldAccount = true } = {}) {
   let user = mongo(`print(JSON.stringify(db.users.findOne({ email: ${q(email)} }, { _id: 1 })))`);
   if (!user) {
-    await api('POST', '/auth/signup', { name, email, password, college: SEED_COLLEGE, year, branch, acceptTerms: true });
+    await api('POST', '/auth/signup', { name, email, password, college, year, branch, acceptTerms: true });
     user = mongo(`print(JSON.stringify(db.users.findOne({ email: ${q(email)} }, { _id: 1 })))`);
     console.log(`created ${name}`);
   }
@@ -120,9 +131,31 @@ for (const p of PROFILE_PEOPLE) {
   }
 }
 
-// ── 4. tester's profile and all relations ─────────────
-await api('PUT', '/users/me', TESTER_PROFILE, await login(TESTER.email, TESTER.password));
+// ── 3b. fillers: a second page for Connect → Find people ─
+for (const [i, f] of FILLER_PEOPLE.entries()) {
+  const id = await ensureAccount({ ...f, email: `seed-f-${f.key}@example.com`, password: SEED_PASSWORD });
+  // oldest accounts of all, "Batch Student 01" first (the list is newest first within a year)
+  mongo(`db.users.updateOne({ _id: ObjectId(${q(id)}) }, { $set: { createdAt: new Date(${Date.UTC(2019, 11, 1) + i * 3600000}) } }); print('true')`);
+}
+
+// ── 4. tester's profile, own posts, all relations, notifications ─
+const testerToken = await login(TESTER.email, TESTER.password);
+await api('PUT', '/users/me', TESTER_PROFILE, testerToken);
 mongo(relationsScript(ids));
+
+const postIds = {};
+for (const p of TESTER_POSTS) {
+  let found = mongo(`const x = db.posts.findOne({ postedBy: ObjectId(${q(ids.tester)}), text: ${q(p.text)} }, { _id: 1 });
+    print(JSON.stringify(x ? String(x._id) : null))`);
+  if (!found) {
+    found = (await api('POST', '/posts', { type: p.type, text: p.text }, testerToken))._id;
+    mongo(`db.posts.updateOne({ _id: ObjectId(${q(found)}) }, { $set: { createdAt: new Date(Date.now() - ${p.daysAgo} * 86400000) } }); print('true')`);
+  }
+  postIds[p.key] = String(found);
+}
+postIds['arjun-placement'] = mongo(`print(JSON.stringify(String(db.posts.findOne({ postedBy: ObjectId(${q(ids.arjun)}), text: ${q(ARJUN_POST_TEXT)} })._id)))`);
+const notifications = mongo(notificationsScript(ids, postIds));
+console.log(`tester: ${TESTER_POSTS.length} own posts, ${notifications} notifications (every type)`);
 
 const summary = mongo(`print(JSON.stringify(db.users.find({ _id: { $in: ${q(Object.values(ids))}.map(id => ObjectId(id)) } }).toArray().map(u => ({
   name: u.name, photo: !!u.avatar, cover: !!u.coverImage, skills: u.skills.length, media: (u.mediaItems || []).length,

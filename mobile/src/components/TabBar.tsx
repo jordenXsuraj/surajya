@@ -6,11 +6,13 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ConnectIcon, FollowingIcon, HomeIcon, MeIcon, PostIcon } from '@/components/TabIcons';
 import { Text } from '@/components/ui/Text';
+import { useActivityCounts } from '@/hooks/useUnreadCount';
 import { colors, fonts, fontSize, layout } from '@/theme/tokens';
 
 // Port of BottomNav.jsx: Home, Following, raised Post button (opens the compose modal; it is not
 // a tab), Connect, Me. Re-tapping the active tab emits the standard tabPress event, which
-// useScrollToTop / useTabReselect use to scroll up and refetch.
+// useScrollToTop / useTabReselect use to scroll up and refetch. Connect carries the web's
+// Activity badge: pending follow requests + unread notifications.
 
 const TABS: Record<string, { label: string; Icon: ComponentType<{ active: boolean }> }> = {
   index: { label: 'Home', Icon: HomeIcon },
@@ -23,6 +25,7 @@ const TAP_DEBOUNCE_MS = 300; // web: navigating flag
 
 export function TabBar({ state, navigation, insets }: BottomTabBarProps) {
   const navigating = useRef(false);
+  const activity = useActivityCounts().total;
 
   // Ignores taps for 300 ms after one was handled (double taps, taps during the transition).
   function debounced(): boolean {
@@ -40,6 +43,7 @@ export function TabBar({ state, navigation, insets }: BottomTabBarProps) {
       const index = state.routes.indexOf(route);
       const focused = state.index === index;
       const { label, Icon } = TABS[route.name]!;
+      const badge = route.name === 'connect' ? activity : 0;
 
       const onPress = () => {
         if (debounced()) return;
@@ -59,11 +63,18 @@ export function TabBar({ state, navigation, insets }: BottomTabBarProps) {
           onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
           accessibilityRole="tab"
           accessibilityState={{ selected: focused }}
-          accessibilityLabel={label}
+          accessibilityLabel={badge ? `${label}, ${badge} new` : label}
           style={styles.item}
         >
           <View style={[styles.icon, focused && styles.iconActive]}>
             <Icon active={focused} />
+            {badge > 0 ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText} maxFontSizeMultiplier={1.1}>
+                  {badge > 9 ? '9+' : badge}
+                </Text>
+              </View>
+            ) : null}
           </View>
           <Text style={[styles.label, focused && styles.labelActive]} maxFontSizeMultiplier={1.2}>
             {label}
@@ -140,4 +151,20 @@ const styles = StyleSheet.create({
   label: { fontFamily: fonts.medium, fontSize: fontSize.xxs, color: colors.dim },
   labelActive: { fontFamily: fonts.bold, color: colors.accent },
   centerLabel: { color: colors.muted },
+  // Same pill as the Home bell (FeedHeader)
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: 0,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.bg,
+  },
+  badgeText: { fontFamily: fonts.bold, fontSize: 9, color: colors.white, lineHeight: 11 },
 });

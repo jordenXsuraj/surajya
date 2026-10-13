@@ -1,3 +1,4 @@
+import type { PeopleScope, SkillFilter } from '@/lib/people';
 import type { PostType } from '@/types/post';
 
 export type FeedScope = 'college' | 'global' | 'following';
@@ -27,8 +28,14 @@ export const queryKeys = {
   userPosts: (id: string) => ['user', id, 'posts'] as const,
   userFollowers: (id: string) => ['user', id, 'followers'] as const,
   userFollowing: (id: string) => ['user', id, 'following'] as const,
-  /** Connect suggestions (Prompt 6); invalidated when relations change. */
+  /** Connect → Suggested (GET /users/suggestions); invalidated when relations change. */
   suggestions: ['suggestions'] as const,
+  /** Connect → Find people: every search (infinite, 20 per page). */
+  peopleSearches: ['people'] as const,
+  peopleSearch: (scope: PeopleScope, search: string, skill: SkillFilter) =>
+    ['people', scope, search, skill] as const,
+  /** Everything about notifications: invalidating this refreshes the list and the count. */
   notifications: ['notifications'] as const,
+  notificationsList: ['notifications', 'list'] as const,
   unreadCount: ['notifications', 'unread-count'] as const,
 };

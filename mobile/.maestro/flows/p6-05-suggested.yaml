@@ -1,0 +1,20 @@
+# Prompt 6 · Connect → Suggested: students from my college as cards; Follow on Ishaan's card.
+appId: com.themeetnet.app.dev
+name: Suggested
+---
+- runFlow: ../subflows/open-connect.yaml
+- tapOn: "Suggested"
+- extendedWaitUntil:
+    visible: "Based on your branch, year and skills"
+    timeout: 20000
+- assertVisible: "Suggested 💡"
+- scrollUntilVisible:
+    element: "Follow Ishaan Verma"
+    timeout: 30000
+- tapOn:
+    text: "Follow Ishaan Verma"
+    label: "Follow [watch]"
+- extendedWaitUntil:
+    visible: "Follow request sent to Ishaan Verma"
+    timeout: 10000
+- tapOn: "Find"

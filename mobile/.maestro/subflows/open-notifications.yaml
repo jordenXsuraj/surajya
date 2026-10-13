@@ -1,0 +1,8 @@
+# Opens the notifications screen from the Home bell ("Notifications, 5 unread").
+appId: com.themeetnet.app.dev
+---
+- runFlow: ensure-home.yaml
+- tapOn: "Notifications(, \\d+ unread)?"
+- extendedWaitUntil:
+    visible: "Today|This week|Earlier|No notifications yet"
+    timeout: 20000

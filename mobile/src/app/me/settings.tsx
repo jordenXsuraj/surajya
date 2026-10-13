@@ -1,12 +1,18 @@
-import { router } from 'expo-router';
-import type { ReactNode } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState, type ReactNode } from 'react';
+import { Alert, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { BackButton } from '@/components/BackButton';
 import { Badge, Button, Screen, Text } from '@/components/ui';
 import { signOut, useLogoutAllDevices } from '@/hooks/useAccount';
 import { appVersionLabel } from '@/lib/appVersion';
 import { openWebPage, SUPPORT_EMAIL, webPages } from '@/lib/links';
+import {
+  pushPermission,
+  registerForPush,
+  requestPushPermission,
+  type PushPermission,
+} from '@/lib/push';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
 import { colors, fonts, radius, touch } from '@/theme/tokens';
@@ -14,9 +20,30 @@ import { colors, fonts, radius, touch } from '@/theme/tokens';
 // Settings (⚙ on Me): account (email, change email / password, log out everywhere), blocked
 // users, notifications, legal pages, support, version, log out, delete account. Web: the
 // AccountSettings block on Profile.jsx plus the footer links.
+/** The notification permission, re-read when Settings comes into view or the app returns. */
+function usePushPermissionState() {
+  const [permission, setPermission] = useState<PushPermission | null>(null);
+  const read = useCallback(() => {
+    void pushPermission()
+      .then(setPermission)
+      .catch(() => undefined);
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      read();
+      const sub = AppState.addEventListener('change', (state) => {
+        if (state === 'active') read();
+      });
+      return () => sub.remove();
+    }, [read]),
+  );
+  return { permission, setPermission };
+}
+
 export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const { mutate: logoutAll, isPending: loggingOutAll } = useLogoutAllDevices();
+  const { permission, setPermission } = usePushPermissionState();
 
   if (!user) return null;
 
@@ -93,6 +120,18 @@ export default function SettingsScreen() {
       </Section>
 
       <Section title="Notifications">
+        {permission && !permission.granted ? (
+          <Row
+            label="🔕 Turn on notifications"
+            hint="Follow requests, likes, replies and interest in your posts"
+            onPress={async () => {
+              if (!permission.canAskAgain) return void Linking.openSettings();
+              const next = await requestPushPermission().catch(() => null);
+              if (next) setPermission(next);
+              if (next?.granted) void registerForPush({ force: true }).catch(() => undefined);
+            }}
+          />
+        ) : null}
         <Row
           label="🔔 Notification settings"
           hint="Opens your phone's settings for MeetNet"

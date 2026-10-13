@@ -1,6 +1,11 @@
-# Closes the on-screen keyboard if it is open: taps the keyboard's own Back button in the system
-# navigation bar, which only exists while the keyboard is shown. Never presses Back otherwise
+# Closes the on-screen keyboard if it is open. Never presses Back when no keyboard is shown
 # (Maestro's hideKeyboard does, and that closes the screen).
+# 1. The keyboard's own hide button in the navigation bar (3-button navigation, and the small ⌄
+#    Android 13 shows under the keyboard with gesture navigation), which only exists while the
+#    keyboard is shown. That closes the emulator's keyboard.
+# 2. Still open (on the owner's OPPO that button leaves SwiftKey open), or no such button: the
+#    keyboard's own window is on screen (SwiftKey, Gboard, the AOSP keyboard), and Back then only
+#    closes the keyboard.
 appId: com.themeetnet.app.dev
 ---
 - runFlow:
@@ -10,3 +15,11 @@ appId: com.themeetnet.app.dev
     commands:
       - tapOn:
           id: "android:id/input_method_nav_back"
+      - waitForAnimationToEnd:
+          timeout: 1500
+- runFlow:
+    when:
+      visible:
+        id: '(com\.touchtype\.swiftkey|com\.google\.android\.inputmethod\.latin|com\.android\.inputmethod\.latin):id/.*'
+    commands:
+      - back

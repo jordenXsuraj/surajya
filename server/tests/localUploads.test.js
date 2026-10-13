@@ -70,7 +70,7 @@ function startServer(env) {
 
 describe('startup', () => {
   test('production without Cloudinary refuses to start', () => {
-    const r = startServer({ NODE_ENV: 'production', JWT_SECRET: 'x'.repeat(40), ...NONE })
+    const r = startServer({ NODE_ENV: 'production', JWT_SECRET: 'x'.repeat(40), EXPO_ACCESS_TOKEN: 'robot-token', ...NONE })
     expect(r.status).toBe(1)
     expect(r.stderr).toContain('❌ Cloudinary is not configured')
     expect(r.stderr).toContain('Production never stores uploads on local disk. Refusing to start.')
@@ -78,7 +78,7 @@ describe('startup', () => {
   })
 
   test('production with half the Cloudinary values refuses to start', () => {
-    const r = startServer({ NODE_ENV: 'production', JWT_SECRET: 'x'.repeat(40), ...ALL, CLOUDINARY_API_KEY: '' })
+    const r = startServer({ NODE_ENV: 'production', JWT_SECRET: 'x'.repeat(40), EXPO_ACCESS_TOKEN: 'robot-token', ...ALL, CLOUDINARY_API_KEY: '' })
     expect(r.status).toBe(1)
     expect(r.stderr).toContain('CLOUDINARY_API_KEY missing')
   })

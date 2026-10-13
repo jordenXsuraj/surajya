@@ -7,13 +7,18 @@ name: Compose ${TYPE_WORD}
 # the type grid scrolls off screen while the keyboard is open
 - runFlow: ../subflows/dismiss-keyboard.yaml
 - tapOn: "${TYPE_RE}"
-- assertVisible:
-    text: "${TYPE_RE}"
-    checked: true
+# The type's placeholder shows at once. With a tall keyboard (SwiftKey) the focused text box is
+# brought above it and the type cards scroll away, so the chosen card is checked after typing,
+# with the keyboard closed and the form back at the top (only the strip between the header and
+# the button bar scrolls while a tall keyboard is open)
 - assertVisible: "${PLACEHOLDER_RE}"
 - tapOn:
     id: "compose-text"
 - inputText: "Maestro ${RUN} ${TYPE_WORD} post"
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- assertVisible:
+    text: "${TYPE_RE}"
+    checked: true
 - assertVisible: "Post as You.*"
 - runFlow:
     file: ../subflows/post-and-check-home.yaml

@@ -3,7 +3,10 @@ import type { NativeStackNavigationProp } from 'expo-router/native-stack';
 import { usePreventRemove } from 'expo-router/react-navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View, type TextInput } from 'react-native';
-import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
+import {
+  KeyboardAwareScrollView,
+  type KeyboardAwareScrollViewRef,
+} from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError, errorMessage } from '@/api/errors';
@@ -15,9 +18,11 @@ import { TypeGrid } from '@/components/compose/TypeGrid';
 import { YouTubePreview } from '@/components/compose/YouTubePreview';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { FOOTER_GAP, KeyboardFooter } from '@/components/ui/KeyboardFooter';
 import { Text } from '@/components/ui/Text';
 import { usePdfUpload, usePhotoUpload } from '@/hooks/useComposeUploads';
 import { useCreatePost } from '@/hooks/useCreatePost';
+import { useKeepFocusedFieldVisible } from '@/hooks/useKeepFocusedFieldVisible';
 import {
   COMPOSE_SUBTITLE,
   COMPOSE_TITLE,
@@ -40,6 +45,7 @@ import { useUiStore } from '@/stores/ui.store';
 import { colors, fonts, layout, touch } from '@/theme/tokens';
 import type { PostType } from '@/types/post';
 
+/** The post button bar's height until it has been measured (KeyboardFooter). */
 const FOOTER_HEIGHT = 76;
 
 const toast = (message: string, type: 'info' | 'success' | 'error' = 'info') =>
@@ -73,6 +79,9 @@ export default function ComposeScreen() {
   });
   const [leaving, setLeaving] = useState(false);
   const textRef = useRef<TextInput>(null);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const [footerHeight, setFooterHeight] = useState(FOOTER_HEIGHT);
+  const keepTextVisible = useKeepFocusedFieldVisible(scrollRef);
 
   // Confessions switched off remotely while this screen is open: treat it as Social
   const fellBack = !confessionsEnabled && type === 'confession';
@@ -165,6 +174,10 @@ export default function ComposeScreen() {
   function selectType(next: PostType) {
     setType(next);
     setAnonymous(next === 'confession'); // web: confession forces it on, other types reset it
+    // Some keyboards (SwiftKey) come back for the still focused text box when the type changes,
+    // and the confession note moves it: bring the focused box back above the keyboard (nothing
+    // is focused or opened when the keyboard stays closed)
+    keepTextVisible();
   }
 
   function onAttachment(kind: AttachmentKind) {
@@ -236,10 +249,11 @@ export default function ComposeScreen() {
       </View>
 
       <KeyboardAwareScrollView
+        ref={scrollRef}
         style={styles.flex}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
-        bottomOffset={FOOTER_HEIGHT + 16}
+        bottomOffset={footerHeight + FOOTER_GAP}
       >
         <Text style={styles.label} testID="compose-heading">
           What are you sharing?
@@ -372,9 +386,11 @@ export default function ComposeScreen() {
         ) : null}
       </KeyboardAwareScrollView>
 
-      <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <Button
+      <KeyboardFooter
+        onHeight={setFooterHeight}
+        style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}
+      >
+        <Button
             title={
               photo.state.status === 'uploading'
                 ? `Uploading ${Math.round(photo.state.progress * 100)}%…`
@@ -386,8 +402,7 @@ export default function ComposeScreen() {
             onPress={submit}
             accessibilityHint={problem ?? undefined}
           />
-        </View>
-      </KeyboardStickyView>
+      </KeyboardFooter>
     </View>
   );
 }

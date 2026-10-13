@@ -1,0 +1,36 @@
+# Prompt 6 · Home bell ("5 unread") → Notifications: every type of the seed, grouped Today / This week
+# / Earlier, unread ones marked; opening the screen marks them all read (the bell's badge goes).
+appId: com.themeetnet.app.dev
+name: Notifications screen
+---
+- runFlow: ../subflows/fresh-home.yaml
+- extendedWaitUntil:
+    visible: "Notifications, 5 unread"
+    timeout: 30000
+- tapOn: "Notifications, 5 unread"
+- extendedWaitUntil:
+    visible: "Today"
+    timeout: 20000
+- assertVisible: "Sana Shaikh wants to follow you\\. .*\\. Unread"
+- assertVisible: "Arjun Patil liked your post: Finished my DSA sheet.*\\. Unread"
+- assertVisible: "Rohan Kale wants to follow you\\. .*\\. Unread"
+- assertVisible: "Meera Joshi replied to your post: Finished my DSA sheet.*\\. Unread"
+- scrollUntilVisible:
+    element: "This week"
+- scrollUntilVisible:
+    element: "Riya Deshmukh is interested in your project post: Looking for one teammate.*\\. Unread"
+- scrollUntilVisible:
+    element: "Arjun Patil accepted your follow request\\. 4d ago"
+- scrollUntilVisible:
+    element: "Kabir Shah wants to follow you\\. 5d ago"
+- scrollUntilVisible:
+    element: "Earlier"
+- scrollUntilVisible:
+    element: "Arjun Patil shared a new placement post: .*\\. 12d ago"
+- scrollUntilVisible:
+    element: "Nikhil Jain liked your post: Looking for one teammate.*\\. 20d ago"
+- back
+- extendedWaitUntil:
+    visible: "Notifications"
+    timeout: 15000
+- assertNotVisible: "Notifications, \\d+ unread"

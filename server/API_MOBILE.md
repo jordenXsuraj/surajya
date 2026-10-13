@@ -102,8 +102,9 @@ Suggested flow: after signup, open the verify screen. Allow "skip" (browsing wor
 
 | Method | Path | Auth | Body | Success | Errors |
 |---|---|---|---|---|---|
-| POST | `/users/me/push-token` | ✓ | `{ token: ExponentPushToken[…], platform: 'ios'|'android', deviceId }` | 200 `{ ok: true }`. Upserts by `deviceId` and keeps at most 10 devices; a token already used by another account is moved here. | 400 invalid token / platform / deviceId |
+| POST | `/users/me/push-token` | ✓ | `{ token: ExponentPushToken[…], platform: 'ios'|'android', deviceId }` | 200 `{ ok: true }`, or `{ ok: true, unchanged: true }` when this device already has this token (nothing is written). Upserts by `deviceId` and keeps the **5 most recent** devices; a token already used by another account is moved here. | 400 invalid token / platform / deviceId; 429 after **10 requests per hour per user** |
 | DELETE | `/users/me/push-token` | ✓ | `{ deviceId }` (or `?deviceId=`) | 200 `{ ok: true }` — call **before** clearing the token on logout | 400 |
+| POST | `/users/push-token/revoke` | — | `{ userId, deviceId, token }` | 200 `{ ok: true }` whether or not it matched. For a logout whose DELETE didn't arrive (offline, 401, 5xx): removes that one entry when all three match. No session: the Expo token is the proof (no endpoint returns tokens) | 400 bad input; 429 after **20 per hour per token**, or **300 per hour per IP** in total (phones behind one IP each have their own 20) |
 
 Register after login, after `logout-all`/`change-password` (they clear tokens), and whenever Expo gives a new token. `deviceId`: a stable per-install id (e.g. a random id stored in SecureStore).
 

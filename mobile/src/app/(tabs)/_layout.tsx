@@ -8,14 +8,22 @@ import { colors } from '@/theme/tokens';
 
 export default function TabsLayout() {
   const pendingVerify = useAuthStore((s) => s.pendingVerify);
+  const pendingPath = useAuthStore((s) => s.pendingPath);
 
-  // Right after signup: open the verify screen on top of Home once this stack exists
-  // ("Skip for now" goes back to Home).
+  // Right after sign-in, once this stack exists: first the link or notification opened while
+  // signed out, then (after signup) the verify screen on top ("Skip for now" goes back).
   useEffect(() => {
-    if (!pendingVerify) return;
-    useAuthStore.getState().clearPendingVerify();
-    router.push('/verify-email');
-  }, [pendingVerify]);
+    if (!pendingPath && !pendingVerify) return;
+    const auth = useAuthStore.getState();
+    if (pendingPath) {
+      auth.setPendingPath(null);
+      router.push(pendingPath as never);
+    }
+    if (pendingVerify) {
+      auth.clearPendingVerify();
+      router.push('/verify-email');
+    }
+  }, [pendingPath, pendingVerify]);
 
   return (
     <Tabs
