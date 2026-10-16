@@ -3,6 +3,7 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { router } from 'expo-router';
 
 import { uploadAvatar, uploadCover } from '@/api/endpoints/users';
+import { errorMessage } from '@/api/errors';
 import { updateAuthor } from '@/api/postCache';
 import { queryKeys } from '@/api/queryKeys';
 import { cropRect, PHOTO_OUTPUT, type PhotoKind, type Point, type Size } from '@/lib/crop';
@@ -89,7 +90,7 @@ async function runUpload(qc: QueryClient, kind: PhotoKind, file: UploadFile): Pr
     toast(DONE[kind], 'success');
   } catch (error) {
     if (error instanceof UploadCancelled || controllers[kind] !== controller) return;
-    const message = error instanceof Error ? error.message : 'Upload failed';
+    const message = errorMessage(error, 'Upload failed');
     useProfilePhotoStore
       .getState()
       .setUpload(kind, { status: 'error', localUri: file.uri, message, file });

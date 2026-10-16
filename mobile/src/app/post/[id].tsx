@@ -6,18 +6,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/errors';
 import { BackButton } from '@/components/BackButton';
+import { OfflineBanner } from '@/components/feed/OfflineBanner';
 import { PostCard } from '@/components/post/PostCard';
 import { PostCardSkeleton } from '@/components/post/PostCardSkeleton';
 import { ReplyComposer } from '@/components/post/ReplyComposer';
 import { ReplyItem } from '@/components/post/ReplyItem';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { OfflineState, waitingForNetwork } from '@/components/ui/OfflineState';
 import { Text } from '@/components/ui/Text';
 import { usePost } from '@/hooks/usePost';
 import { usePostActions } from '@/hooks/usePostActions';
 import { useDeleteReply } from '@/hooks/usePostMutations';
 import { visibleAuthor } from '@/lib/postView';
 import { useAuthStore } from '@/stores/auth.store';
+import { usePostUi } from '@/stores/postUi.store';
 import { colors, fonts, layout } from '@/theme/tokens';
 import type { Reply } from '@/types/post';
 
@@ -32,6 +35,10 @@ export default function PostScreen() {
   const viewerId = useAuthStore((s) => s.user?._id ?? '');
   const followingIds = useAuthStore((s) => s.user?.followingIds);
   const sentIds = useAuthStore((s) => s.user?.sentRequestIds);
+  const blockedIds = useAuthStore((s) => s.user?.blockedIds);
+  const postAuthorId = post ? visibleAuthor(post)?._id : undefined;
+  // Blocked from this post's menu or the author's profile: the post leaves the screen at once
+  const blockedAuthor = !!postAuthorId && !!blockedIds?.includes(String(postAuthorId));
   const focusComposer = useCallback(() => composerRef.current?.focus(), []);
   const actions = usePostActions({ openReplies: focusComposer });
   const { mutate: deleteReply } = useDeleteReply();
@@ -39,6 +46,10 @@ export default function PostScreen() {
   const onDeleteReply = useCallback(
     (reply: Reply) => id && deleteReply({ postId: id, reply }),
     [deleteReply, id],
+  );
+  const onReplyMore = useCallback(
+    (reply: Reply) => id && usePostUi.getState().openReplyMenu({ postId: id, reply }),
+    [id],
   );
 
   const header = useMemo(() => {
@@ -65,7 +76,19 @@ export default function PostScreen() {
   }, [post, viewerId, followingIds, sentIds, actions]);
 
   let content;
-  if (query.isPending) {
+  if (blockedAuthor) {
+    content = (
+      <EmptyState
+        emoji="🚫"
+        title="Post not available"
+        message="You blocked this person. Unblock them in Settings → Blocked users."
+        actionTitle="Go back"
+        onAction={goBack}
+      />
+    );
+  } else if (waitingForNetwork(query)) {
+    content = <OfflineState onRetry={() => void query.refetch()} />;
+  } else if (query.isPending) {
     content = <PostCardSkeleton withMedia />;
   } else if (query.isError && !post) {
     const status = query.error instanceof ApiError ? query.error.status : 0;
@@ -102,6 +125,7 @@ export default function PostScreen() {
                 viewerId={viewerId}
                 onDelete={onDeleteReply}
                 onPressAuthor={actions.openProfile}
+                onMore={onReplyMore}
               />
             </View>
           )}
@@ -131,6 +155,7 @@ export default function PostScreen() {
       <View style={styles.bar}>
         <BackButton />
       </View>
+      <OfflineBanner message="📡 You're offline — showing a saved copy" />
       {content}
     </View>
   );

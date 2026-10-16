@@ -6,7 +6,7 @@ import { Text } from '@/components/ui/Text';
 import { isAnonAuthorReply, isOwnReply, replyAuthorName } from '@/lib/postView';
 import { decodeEntities } from '@/lib/text';
 import { timeAgo } from '@/lib/time';
-import { colors, fonts, touch } from '@/theme/tokens';
+import { colors, fonts, hitSlopFor, touch } from '@/theme/tokens';
 import type { Reply } from '@/types/post';
 
 type ReplyItemProps = {
@@ -14,15 +14,22 @@ type ReplyItemProps = {
   viewerId: string;
   onDelete: (reply: Reply) => void;
   onPressAuthor: (userId: string) => void;
+  /** Reply menu (Report reply, Block; Delete on your own): long-press the reply or tap ⋯. */
+  onMore: (reply: Reply) => void;
 };
 
-// Web ReplyItem: avatar · name · "2nd yr · 3h ago" · 🗑️ on your own replies.
-// The anonymous author's own replies show as "Anonymous (author)" and are never navigable.
+// The 🗑️ / ⋯ glyphs are ~16 pt: this makes their touch area 44 pt.
+const SMALL_HIT = hitSlopFor(16);
+
+// Web ReplyItem: avatar · name · "2nd yr · 3h ago" · 🗑️ on your own replies (⋯ on the others:
+// report, block). The anonymous author's own replies show as "Anonymous (author)" and are
+// never navigable.
 export const ReplyItem = memo(function ReplyItem({
   reply,
   viewerId,
   onDelete,
   onPressAuthor,
+  onMore,
 }: ReplyItemProps) {
   const anonAuthor = isAnonAuthorReply(reply);
   const own = isOwnReply(reply, viewerId);
@@ -31,7 +38,14 @@ export const ReplyItem = memo(function ReplyItem({
   const name = decodeEntities(replyAuthorName(reply));
 
   return (
-    <View style={[styles.row, reply.pending && styles.pending]}>
+    <Pressable
+      onLongPress={reply.pending ? undefined : () => onMore(reply)}
+      delayLongPress={350}
+      // Screen readers reach the menu through the ⋯ / 🗑️ button instead
+      accessible={false}
+      style={[styles.row, reply.pending && styles.pending]}
+      testID="reply-item"
+    >
       <Pressable
         onPress={canVisit ? () => onPressAuthor(authorId) : undefined}
         disabled={!canVisit}
@@ -65,18 +79,29 @@ export const ReplyItem = memo(function ReplyItem({
           ) : own ? (
             <Pressable
               onPress={() => onDelete(reply)}
-              hitSlop={touch.hitSlop}
+              hitSlop={SMALL_HIT}
               accessibilityRole="button"
               accessibilityLabel="Delete your reply"
               style={styles.delete}
             >
               <Text style={styles.deleteText}>🗑️</Text>
             </Pressable>
-          ) : null}
+          ) : (
+            <Pressable
+              onPress={() => onMore(reply)}
+              hitSlop={SMALL_HIT}
+              accessibilityRole="button"
+              accessibilityLabel={`More options for ${name}'s reply`}
+              style={styles.more}
+              testID="reply-more"
+            >
+              <Text style={styles.moreText}>⋯</Text>
+            </Pressable>
+          )}
         </View>
         <Text style={styles.text}>{decodeEntities(reply.text)}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 });
 
@@ -90,5 +115,7 @@ const styles = StyleSheet.create({
   spacer: { flex: 1 },
   delete: { paddingHorizontal: 3, opacity: 0.6 },
   deleteText: { fontSize: 12.5 },
+  more: { paddingHorizontal: 3 },
+  moreText: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 16, color: colors.muted },
   text: { fontFamily: fonts.regular, fontSize: 12.8, lineHeight: 20.5, color: colors.muted },
 });

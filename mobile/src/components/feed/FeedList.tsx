@@ -16,6 +16,7 @@ import { refreshFeed } from '@/api/postCache';
 import { PostCard } from '@/components/post/PostCard';
 import { FeedSkeleton } from '@/components/post/PostCardSkeleton';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { OfflineState, waitingForNetwork } from '@/components/ui/OfflineState';
 import { Text } from '@/components/ui/Text';
 import type { useFeed } from '@/hooks/useFeed';
 import { usePostActions } from '@/hooks/usePostActions';
@@ -36,6 +37,8 @@ type FeedListProps = {
   header?: ReactElement | null;
   /** Changing this number scrolls the list to the top (e.g. after posting). */
   scrollSignal?: number;
+  /** Once, when the list has first drawn posts on screen (Home: the start-up marker). */
+  onPostsDrawn?: () => void;
 };
 
 const EMPTY_IDS: readonly string[] = [];
@@ -52,6 +55,7 @@ export function FeedList({
   empty,
   header,
   scrollSignal = 0,
+  onPostsDrawn,
 }: FeedListProps) {
   const qc = useQueryClient();
   const listRef = useRef<FlashListRef<Post>>(null);
@@ -103,6 +107,7 @@ export function FeedList({
     [viewerId, following, sent, actions],
   );
 
+  if (waitingForNetwork(query)) return <OfflineState onRetry={() => void query.refetch()} />;
   if (query.isPending) return <FeedSkeleton />;
   if (query.isError && !query.data)
     return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
@@ -133,6 +138,8 @@ export function FeedList({
       keyExtractor={keyOf}
       getItemType={typeOf}
       renderItem={renderItem}
+      // FlashList draws items after measuring itself; onLoad also fires for the empty state
+      onLoad={posts.length && onPostsDrawn ? onPostsDrawn : undefined}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
       // Off: a post the user just created is added at the top while Home is under the compose

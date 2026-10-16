@@ -12,7 +12,7 @@ import { cloudinaryUrl } from '@/lib/cloudinary';
 import type { ProfileData } from '@/lib/profile';
 import { decodeEntities } from '@/lib/text';
 import type { PhotoUpload } from '@/stores/profilePhoto.store';
-import { colors, fonts, touch } from '@/theme/tokens';
+import { colors, fonts, hitSlopFor, touch } from '@/theme/tokens';
 
 const AVATAR = 76;
 
@@ -64,6 +64,7 @@ export function ProfileHeader({
             source={{ uri: cloudinaryUrl(coverUri, { width: 1500 }) }}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
+            cachePolicy="memory-disk"
             accessibilityLabel="Cover photo"
           />
         ) : null}
@@ -105,7 +106,7 @@ export function ProfileHeader({
               onPress={onEditAvatar}
               accessibilityRole="button"
               accessibilityLabel="Change profile photo"
-              hitSlop={touch.hitSlop}
+              hitSlop={hitSlopFor(26)}
               style={styles.avatarEdit}
             >
               <Text style={styles.avatarEditText}>📷</Text>

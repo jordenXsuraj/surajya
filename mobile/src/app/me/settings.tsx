@@ -6,7 +6,8 @@ import { BackButton } from '@/components/BackButton';
 import { Badge, Button, Screen, Text } from '@/components/ui';
 import { signOut, useLogoutAllDevices } from '@/hooks/useAccount';
 import { appVersionLabel } from '@/lib/appVersion';
-import { openWebPage, SUPPORT_EMAIL, webPages } from '@/lib/links';
+import { emailSupport, openWebPage, SUPPORT_EMAIL, webPages } from '@/lib/links';
+import { crashTestsAvailable, testNativeCrash, throwTestJsError } from '@/lib/monitoring';
 import {
   pushPermission,
   registerForPush,
@@ -14,7 +15,6 @@ import {
   type PushPermission,
 } from '@/lib/push';
 import { useAuthStore } from '@/stores/auth.store';
-import { useUiStore } from '@/stores/ui.store';
 import { colors, fonts, radius, touch } from '@/theme/tokens';
 
 // Settings (⚙ on Me): account (email, change email / password, log out everywhere), blocked
@@ -61,14 +61,6 @@ export default function SettingsScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Log out others', style: 'destructive', onPress: () => logoutAll() },
     ]);
-  }
-
-  async function emailSupport() {
-    try {
-      await Linking.openURL(`mailto:${SUPPORT_EMAIL}`);
-    } catch {
-      useUiStore.getState().showToast(`No email app found. Write to ${SUPPORT_EMAIL}`, 'info');
-    }
   }
 
   return (
@@ -152,15 +144,38 @@ export default function SettingsScreen() {
         <Row label="✉️ Email support" hint={SUPPORT_EMAIL} onPress={() => void emailSupport()} />
       </Section>
 
+      {crashTestsAvailable() ? (
+        // Development and preview builds only: checks that crashes reach Sentry
+        <Section title="Crash reporting test">
+          <Row
+            label="Send a test JS error"
+            hint="The app closes; the report goes to Sentry"
+            onPress={() => confirmCrashTest(throwTestJsError)}
+          />
+          <Row
+            label="Test native crash"
+            hint="The app closes; the report is sent at the next start"
+            onPress={() => confirmCrashTest(testNativeCrash)}
+          />
+        </Section>
+      ) : null}
+
       <Text style={styles.version}>{appVersionLabel()}</Text>
 
       <Button title="Log out" variant="secondary" onPress={confirmLogout} style={styles.logout} />
-      <Row
-        label="🗑️ Delete account"
-        danger
-        onPress={() => void openWebPage(webPages.deleteAccount)}
-      />
+      <Row label="🗑️ Delete account" danger onPress={() => router.push('/me/delete-account')} />
     </Screen>
+  );
+}
+
+function confirmCrashTest(run: () => void) {
+  Alert.alert(
+    'Close the app with a test crash?',
+    'Only in test builds. Open the app again afterwards.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Crash', style: 'destructive', onPress: run },
+    ],
   );
 }
 
@@ -252,7 +267,7 @@ const styles = StyleSheet.create({
   rowHint: { fontFamily: fonts.regular, fontSize: 11.5, color: colors.dim, marginTop: 2 },
   rowValue: { fontFamily: fonts.bold, fontSize: 13, color: colors.muted },
   chevron: { fontFamily: fonts.bold, fontSize: 18, color: colors.dim },
-  danger: { color: colors.accent },
+  danger: { color: colors.accentText },
   version: {
     textAlign: 'center',
     fontFamily: fonts.regular,

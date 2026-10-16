@@ -21,13 +21,13 @@ Both apps deploy from GitHub `jordenXsuraj/surajya`.
 Push (or merge) to `main`. Both hosts deploy automatically:
 
 - **Vercel** builds `nexusnetwork/` and promotes it to production. Every other branch gets a Preview deployment, and its status shows on the GitHub commit.
-- **Render** builds `server/` and swaps in the new instance once it starts. Render does not report to GitHub, so check the Render dashboard (Events) or the health checks below.
+- **Render** builds `server/` and swaps in the new instance once it starts — only for commits that change `server/` (docs-only commits such as 241db37 deploy nothing, so the live commit can be older than `main`). Render does not report to GitHub: confirm a deploy by the commit SHA `GET /healthz` returns (below), or in the Render dashboard (Events).
 
 If a Render deploy fails (build error, or the app exits at startup), Render keeps the previous version running and marks the deploy `update_failed` or `build_failed`. **A push to `main` is not live until Render says so.** Always run the checks in [Verify a deploy](#verify-a-deploy).
 
 ### Manual deploy / rollback
 
-- **Render:** Dashboard → `surajya` → **Manual Deploy → Deploy latest commit**. To roll back: **Events** → pick an earlier successful deploy → **Rollback**.
+- **Render:** Dashboard → `surajya` → **Manual Deploy → Deploy latest commit**. To roll back: **Events** → pick an earlier successful deploy → **Rollback** (this also brings back that deploy's Node version: the version comes from the commit's `server/package.json`). Pick a commit that was actually deployed, i.e. one that changed `server/`: before the security patch 2e1144b (live 2026-10-13 17:44Z) that is **9d816bc** (Prompt 6 merge), not 241db37 (docs only, never deployed). Afterwards check `/healthz` shows the rolled-back SHA.
   API alternative: `POST https://api.render.com/v1/services/srv-d7rf1ljt6lks73fs4e10/deploys` with body `{"commitId":"<sha>"}`.
 - **Vercel:** Dashboard → project `surajya` → **Deployments** → pick a deployment → **Promote to Production** (or **Redeploy**).
 
@@ -39,7 +39,7 @@ If a Render deploy fails (build error, or the app exits at startup), Render keep
 | Root directory | `server` |
 | Build command | `npm ci --omit=dev` (production dependencies only; the lockfile must be in sync) |
 | Start command | `npm start` (`node index.js`) |
-| Node version | from `server/package.json` → `engines.node` (20.20.2) |
+| Node version | from `server/package.json` → `engines.node` (22.23.3). `server/.nvmrc` says the same for nvm; a server test keeps the two equal. Render prefers a `NODE_VERSION` variable or a repo-root `.node-version` / `.nvmrc` over `engines`, so don't add those |
 
 ## Environment variables
 
@@ -228,16 +228,33 @@ Without Expo's **enhanced push security**, anyone who has a device's Expo push t
 - **Rotate**: create a new token on the robot → update Render (deploy) and the Windows variable → delete the old token on the robot's page.
 - **Local development once it is on**: real pushes from the local API (Maestro p6-12/13/14, p6-10's like, `sendTestPush.js`) need `EXPO_ACCESS_TOKEN` in its environment; the Maestro runner passes its own environment on to the API it starts.
 
+## Crash reports (Sentry, mobile app)
+
+The app reports crashes with `@sentry/react-native` (`mobile/src/lib/monitoring.ts`): user id only, no request bodies, auth headers, push tokens or emails, 5 % performance traces. Release = `com.themeetnet.app@<version>+<build number>`, dist = build number (SDK defaults, the same names the build uploads source maps for).
+
+**Set up 2026-10-13:** organisation `meetnet` (its own org, **EU region**: `meetnet.sentry.io`, API `https://de.sentry.io/`), project `meetnet-mobile`. `mobile/eas.json` (preview, production) has `EXPO_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_URL`; the org auth token is the EAS secret `SENTRY_AUTH_TOKEN` (preview, production). Development builds have no DSN, so they send nothing. If the token is ever revoked, set a new one the same way (step 3); without it every release build fails its upload step.
+
+How it was set up (for a new organisation or project):
+
+1. Create an organisation (if none) and a project: platform **React Native**, name `meetnet-app`. Note the **organisation slug** and **project slug** (Settings → General).
+2. Copy the project's **DSN** (Settings → Client Keys). It is not a secret (it only allows sending events); send it to be added to `mobile/eas.json` (`EXPO_PUBLIC_SENTRY_DSN`, preview and production) together with `SENTRY_ORG` / `SENTRY_PROJECT` (the slugs).
+3. Create an **organisation auth token** for source maps: Settings → Developer Settings → **Organization Tokens** → Create (organisation tokens have fixed CI permissions; use this one only for the app's source maps). Store it **only** on EAS, never in chat or the repo:
+   `cd mobile; npx eas-cli env:set --name SENTRY_AUTH_TOKEN --environment preview --environment production --visibility secret`
+   Leave out `--value`: the CLI then asks for it, so it isn't kept in the shell history (or use EAS dashboard → project → Environment variables). For a local release build, a Windows user variable `SENTRY_AUTH_TOKEN` works the same way.
+4. Then remove `"SENTRY_DISABLE_AUTO_UPLOAD": "true"` from `mobile/eas.json` (preview and production) and add `SENTRY_ORG`, `SENTRY_PROJECT` and, for an EU organisation, `SENTRY_URL=https://de.sentry.io/`: from the next build on, the Gradle step uploads the source maps. (`SENTRY_DISABLE_AUTO_UPLOAD=true` turns the upload off again, e.g. while a token is missing.)
+5. Check: build a preview APK, open it once, trigger a test error from a debug screen (or wait for a real one) and confirm the event shows readable file names and line numbers, and the user shows as an id only.
+
 ## Verify a deploy
 
 ```bash
-curl -s https://surajya.onrender.com/healthz                 # OK
+curl -s https://surajya.onrender.com/healthz                 # OK 2e1144b  ← must be the commit you deployed (first 7 characters)
 curl -s https://surajya.onrender.com/api/posts/not-an-id     # 400 {"message":"Invalid post id"}
 curl -s https://surajya.onrender.com/api/app/config          # 200 JSON config
 curl -s -H "Origin: https://evil.example" https://surajya.onrender.com/api/app/config   # 403 {"message":"Origin not allowed"}
 curl -sI https://www.themeetnet.com | head -3                # 308 → https://themeetnet.com/ (but /.well-known/* answers 200)
 ```
 
+`/healthz` shows `OK <short SHA>` from Render's `RENDER_GIT_COMMIT` (`OK unknown` locally): a deploy counts as live only when that SHA is the new commit. Poll it after a push (e.g. every 20 s); while the old instance still serves, it shows the old SHA. Don't infer deploys from other signals (rate-limit counters, timings): on 2026-10-13 that missed a deploy that went live within a minute of the push.
 A free-plan instance sleeps after about 15 minutes idle, so the first request can take up to about a minute.
 `GET /api/posts/<real id>` must never contain `password` or `email`, and anonymous posts must have `postedBy: null` (covered by `cd server && npm test`).
 
@@ -277,11 +294,9 @@ Still to do before the app ships:
 
 - Legal placeholders: `TODO(owner)` in `nexusnetwork/src/pages/{Terms,Privacy,CommunityGuidelines,DeleteAccount}.jsx` and `src/config/legal.js`.
 - Deep-link placeholders: Play App Signing SHA-256, Apple Team ID (see [Mobile deep links](#mobile-deep-links)).
-- A working support mailbox (see Known issues).
 
 ## Known issues / follow-ups
 
-- **`support@themeetnet.com` can't receive email**: the root domain has no MX. Set up receiving (Hostinger email or forwarding) or change `SUPPORT_EMAIL` in `nexusnetwork/src/config/legal.js`; the app stores require a working contact.
 - **Cold starts** on the free plan (see above). Consider a paid instance before the mobile launch.
 
 ## History

@@ -19,7 +19,9 @@ export function Message({ text, type = 'error' }: MessageProps) {
       accessibilityLiveRegion="polite"
       accessibilityRole="alert"
     >
-      <Text style={[styles.text, { color: success ? colors.green : colors.accent }]}>{text}</Text>
+      <Text style={[styles.text, { color: success ? colors.green : colors.accentText }]}>
+        {text}
+      </Text>
     </View>
   );
 }

@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ReplyComposer } from '@/components/post/ReplyComposer';
 import { ReplyItem } from '@/components/post/ReplyItem';
+import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
 import { usePostActions } from '@/hooks/usePostActions';
 import { useModalSheet } from '@/hooks/useModalSheet';
@@ -71,7 +72,7 @@ function SheetComposer({ postId, autoFocus }: { postId: string; autoFocus: boole
 }
 
 function RepliesList({ postId }: { postId: string }) {
-  const { data: post, isPlaceholderData, isFetching, isError } = usePost(postId);
+  const { data: post, isPlaceholderData, isFetching, isError, refetch } = usePost(postId);
   const viewerId = useAuthStore((s) => s.user?._id ?? '');
   const { mutate: deleteReply } = useDeleteReply();
   const actions = usePostActions();
@@ -88,6 +89,10 @@ function RepliesList({ postId }: { postId: string }) {
     },
     [actions, close],
   );
+  const onMore = useCallback(
+    (reply: Reply) => usePostUi.getState().openReplyMenu({ postId, reply }),
+    [postId],
+  );
 
   const replies = post?.replies ?? [];
   const isQa = post?.type === 'qa';
@@ -102,6 +107,7 @@ function RepliesList({ postId }: { postId: string }) {
           viewerId={viewerId}
           onDelete={onDelete}
           onPressAuthor={onPressAuthor}
+          onMore={onMore}
         />
       )}
       contentContainerStyle={styles.list}
@@ -118,13 +124,18 @@ function RepliesList({ postId }: { postId: string }) {
         </View>
       }
       ListEmptyComponent={
-        <Text style={styles.empty}>
-          {isError
-            ? "Couldn't load replies. Check your connection."
-            : isQa
+        isError ? (
+          <View style={styles.error}>
+            <Text style={styles.empty}>Couldn't load replies. Check your connection.</Text>
+            <Button title="Try again" variant="secondary" onPress={() => void refetch()} />
+          </View>
+        ) : (
+          <Text style={styles.empty}>
+            {isQa
               ? 'No answers yet. Be the first to answer.'
               : 'No replies yet. Start the conversation.'}
-        </Text>
+          </Text>
+        )
       }
     />
   );
@@ -149,4 +160,5 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     textAlign: 'center',
   },
+  error: { paddingBottom: 12 },
 });

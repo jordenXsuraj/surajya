@@ -10,6 +10,7 @@ const Report       = require('../models/Report')
 const protect      = require('../middleware/auth')
 const requireVerifiedEmail = require('../middleware/requireVerifiedEmail')
 const { sanitizePost, sanitizeReply, sanitizeLikes } = require('../utils/sanitizePost')
+const { hasProfanity, PROFANITY } = require('../utils/moderation')
 const { getBlockSets, addPostBlockFilter, isPostHidden } = require('../utils/blocks')
 const { notify, notifyFollowers } = require('../services/notify')
 const validObjectIdParam = require('../middleware/validObjectId')
@@ -240,6 +241,8 @@ router.post('/', protect, requireVerifiedEmail, async (req, res) => {
 
     const validTypes = ['social','placement','qa','study','project','confession']
     if (!validTypes.includes(type)) return res.status(400).json({ message: 'Invalid type' })
+    // Objectionable language (App Store 1.2): refused before anything is stored
+    if (hasProfanity(text, pdfName, ...(Array.isArray(tags) ? tags : []))) return res.status(400).json(PROFANITY)
 
 
 
@@ -559,6 +562,7 @@ router.post('/:id/replies', protect, requireVerifiedEmail, async (req, res) => {
     if (typeof text !== 'string' || !text.trim()) {
       return res.status(400).json({ message: 'Reply text required' })
     }
+    if (hasProfanity(text)) return res.status(400).json({ ...PROFANITY, message: 'Please remove offensive language before replying.' })
 
     if (!(await visiblePost(req))) return res.status(404).json({ message: 'Post not found' })
 

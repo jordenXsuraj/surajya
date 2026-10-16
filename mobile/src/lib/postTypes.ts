@@ -41,7 +41,7 @@ export const POST_TYPES: readonly PostTypeInfo[] = [
     label: 'Confession',
     desc: 'Anonymous, private, safe',
     tag: '🤫 Confession',
-    color: 'accent',
+    color: 'accentText', // text on dark: accent itself is 2.9:1
     tint: 'al',
   },
   {
@@ -78,7 +78,7 @@ export const FEED_CATEGORIES: readonly { id: PostType; label: string; color: Col
   { id: 'social', label: '🔥 Social', color: 'orange' },
   { id: 'study', label: '📚 Study Material', color: 'green' },
   { id: 'placement', label: '💼 Placement', color: 'blue' },
-  { id: 'confession', label: '🤫 Confession', color: 'accent' },
+  { id: 'confession', label: '🤫 Confession', color: 'accentText' },
   { id: 'project', label: '🚀 Project', color: 'yellow' },
   { id: 'qa', label: '❓ Q&A', color: 'purple' },
 ];

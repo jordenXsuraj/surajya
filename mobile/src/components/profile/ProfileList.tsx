@@ -1,6 +1,7 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useCallback, useMemo, type ReactElement, type ReactNode, type Ref } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MediaGrid } from '@/components/profile/MediaGrid';
 import { PostCard } from '@/components/post/PostCard';
@@ -48,6 +49,10 @@ export function ProfileList({
   onRefresh,
 }: ProfileListProps) {
   const actions = usePostActions();
+  // Someone else's profile is a pushed screen (no tab bar): its last post stays above the
+  // system navigation bar (edge-to-edge). On the Me tab the tab bar takes care of that.
+  const insets = useSafeAreaInsets();
+  const bottom = isOwn ? 0 : insets.bottom;
   const viewerId = useAuthStore((s) => s.user?._id ?? '');
   const followingIds = useAuthStore((s) => s.user?.followingIds ?? EMPTY_IDS);
   const sentIds = useAuthStore((s) => s.user?.sentRequestIds ?? EMPTY_IDS);
@@ -93,7 +98,7 @@ export function ProfileList({
       // Off for the same reason as the feeds (FeedList): switching tabs replaces every row
       maintainVisibleContentPosition={{ disabled: true }}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={styles.content}
+      contentContainerStyle={{ paddingBottom: 32 + bottom }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -119,7 +124,6 @@ const typeOf = (row: ProfileRow) =>
     : row.kind;
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 32 },
   state: { paddingHorizontal: layout.gutter, paddingVertical: 8 },
   media: { paddingHorizontal: 15 },
 });

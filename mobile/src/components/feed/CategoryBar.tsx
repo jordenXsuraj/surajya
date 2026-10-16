@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/ui/Text';
 import type { FeedType } from '@/api/queryKeys';
 import { FEED_CATEGORIES } from '@/lib/postTypes';
+import { useAppConfig } from '@/stores/appConfig.store';
 import { colors, fonts, touch, type ColorName } from '@/theme/tokens';
 import type { PostType } from '@/types/post';
 
@@ -21,8 +22,11 @@ type CategoryBarProps = {
 };
 
 // .cat-row: scope select (🌐 All / 🏫 My College) · divider · category chips.
-// Tapping the active chip goes back to all types, like the web.
+// Tapping the active chip goes back to all types, like the web. 🤫 Confession only while the
+// remote switch allows confessions (same switch as compose).
 export function CategoryBar({ scope, onScope, category, onCategory }: CategoryBarProps) {
+  const confessionsEnabled = useAppConfig((s) => s.confessionsEnabled);
+  const categories = FEED_CATEGORIES.filter((c) => confessionsEnabled || c.id !== 'confession');
   function pickScope() {
     Alert.alert('Show posts from', undefined, [
       { text: SCOPE_LABELS.global, onPress: () => onScope('global') },
@@ -47,7 +51,7 @@ export function CategoryBar({ scope, onScope, category, onCategory }: CategoryBa
           <Text style={styles.scopeText}>{SCOPE_LABELS[scope]} ▾</Text>
         </Pressable>
         <View style={styles.divider} />
-        {FEED_CATEGORIES.map((c) => {
+        {categories.map((c) => {
           const on = category === c.id;
           return (
             <Pressable
@@ -55,6 +59,7 @@ export function CategoryBar({ scope, onScope, category, onCategory }: CategoryBa
               onPress={() => onCategory(on ? 'all' : c.id)}
               accessibilityRole="button"
               accessibilityState={{ selected: on }}
+              testID={`category-${c.id}`}
               style={[styles.chip, on && styles.chipOn, on && chipBorder[c.id]]}
             >
               <Text style={[styles.chipText, on && chipText[c.id]]}>{c.label}</Text>

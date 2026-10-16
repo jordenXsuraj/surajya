@@ -3,7 +3,13 @@ import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 
 import { changePassword, logoutAllDevices } from '@/api/endpoints/auth';
-import { deletePushToken, updateMe, type ProfileUpdate } from '@/api/endpoints/users';
+import {
+  acceptTerms,
+  deleteAccount,
+  deletePushToken,
+  updateMe,
+  type ProfileUpdate,
+} from '@/api/endpoints/users';
 import { errorMessage } from '@/api/errors';
 import { updateAuthor } from '@/api/postCache';
 import { queryKeys } from '@/api/queryKeys';
@@ -13,6 +19,7 @@ import {
   logPushFailure,
   PUSH_DEVICE_KEY,
   registerForPush,
+  settlePushAccountDeleted,
   settlePushLogout,
 } from '@/lib/push';
 import { useAuthStore } from '@/stores/auth.store';
@@ -21,7 +28,6 @@ import type { Me } from '@/types/user';
 
 const toast = (message: string, type: 'info' | 'success' | 'error' = 'info') =>
   useUiStore.getState().showToast(message, type);
-
 
 /**
  * PUT /users/me with the changed fields. Errors go back to the form (username messages are shown
@@ -83,6 +89,42 @@ export function useLogoutAllDevices() {
       toast('✅ Logged out of all other devices', 'success');
     },
     onError: (error) => toast(`❌ ${errorMessage(error, 'Something went wrong')}`, 'error'),
+  });
+}
+
+/** Accept-terms screen: POST /users/me/accept-terms, then the session user carries the date. */
+export function useAcceptTerms() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: acceptTerms,
+    onSuccess: ({ termsAcceptedAt }) => {
+      useAuthStore.getState().updateUser({ termsAcceptedAt });
+      qc.setQueryData<Me>(queryKeys.me, (me) => (me ? { ...me, termsAcceptedAt } : me));
+    },
+  });
+}
+
+/**
+ * After DELETE /users/me (204) the account is gone on the server, push tokens included, so this
+ * sends nothing: it forgets the push registration (no pending removal), clears the app badge and
+ * the account's notifications, then everything else (logout → welcome).
+ */
+export function deleteAccountLocally(userId: string): void {
+  settlePushAccountDeleted(userId);
+  forgetPushRegistration();
+  void Notifications.setBadgeCountAsync(0).catch(() => undefined);
+  void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
+  useAuthStore.getState().logout();
+}
+
+/** Delete account screen; errors (wrong password, offline, 429) go back to the screen. */
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: (password: string) => deleteAccount(password),
+    onSuccess: () => {
+      deleteAccountLocally(String(useAuthStore.getState().user?._id ?? ''));
+      toast('Your account was deleted', 'success');
+    },
   });
 }
 

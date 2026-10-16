@@ -1,0 +1,47 @@
+# Prompt 7 · A throwaway local account deletes itself: Settings → Delete account → what is deleted,
+# a wrong password is refused, the right one + the final confirmation → the welcome screen.
+appId: com.themeetnet.app.dev
+name: Delete account
+---
+- runFlow: ../subflows/ensure-home.yaml
+- runFlow: ../subflows/sign-out.yaml
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${DEL_EMAIL}
+      PASSWORD: ${DEL_PASSWORD}
+- tapOn: "Me"
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: ".*Delete account"
+- tapOn: ".*Delete account"
+- extendedWaitUntil:
+    visible: "What gets deleted"
+    timeout: 10000
+- assertVisible: ".*including anonymous posts and confessions"
+- tapOn:
+    id: "delete-account-password"
+- inputText: "wrong-password-1"
+- runFlow: ../subflows/hide-keyboard.yaml
+- tapOn:
+    id: "delete-account-submit"
+- assertVisible: "Delete your account."
+- tapOn:
+    id: "android:id/button1"
+- extendedWaitUntil:
+    visible: "Incorrect password"
+    timeout: 15000
+# the screen empties the password box after a wrong password
+- tapOn:
+    id: "delete-account-password"
+- inputText: ${DEL_PASSWORD}
+- runFlow: ../subflows/hide-keyboard.yaml
+- tapOn:
+    id: "delete-account-submit"
+# the toast is checked by the runner from the "[watch]" command on
+- tapOn:
+    id: "android:id/button1"
+    label: "Confirm delete [watch]"
+- extendedWaitUntil:
+    visible: "Create account"
+    timeout: 30000

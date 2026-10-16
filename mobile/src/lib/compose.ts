@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { hasProfanity, PROFANITY_POST } from '@/lib/moderation';
 import { normaliseLink } from '@/lib/postView';
 import { getYouTubeId } from '@/lib/youtube';
 import type { PostType } from '@/types/post';
@@ -99,12 +100,19 @@ export const composeSchema = z
     if (!text) return fail('Write something first', 'text');
     if (text.length < MIN_POST) return fail('Too short — at least 5 characters', 'text');
     if (text.length > MAX_POST) return fail('Too long — at most 1000 characters', 'text');
+    // Same check as the server (text, tags, PDF name): it would refuse the post with PROFANITY
+    if (isOffensive(v)) return fail(PROFANITY_POST, 'text');
     const yt = v.youtubeUrl.trim();
     if (yt && !getYouTubeId(yt))
       return fail("That doesn't look like a YouTube video link", 'youtubeUrl');
     if (yt && v.imageUrl) return fail('Choose either image or YouTube video', 'youtubeUrl');
     if (v.link.trim() && !normaliseLink(v.link.trim())) return fail('Enter a valid link', 'link');
   });
+
+/** True when the post text, a tag or the PDF name has a word the server refuses. */
+export function isOffensive(v: Pick<ComposeValues, 'text' | 'tags' | 'pdf'>): boolean {
+  return hasProfanity(v.text, v.pdf?.name, ...cleanTags(v.tags));
+}
 
 /** Turns valid form values into the request body (web handlePublish). */
 export function buildCreatePostBody(v: ComposeValues): CreatePostBody {

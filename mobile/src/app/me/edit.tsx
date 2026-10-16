@@ -310,7 +310,7 @@ export default function EditProfileScreen() {
                 <Button
                   title="+ Add Project"
                   variant="secondary"
-                  haptic={false}
+
                   onPress={() => {
                     const name = projectName.trim();
                     if (!name) return setProjectError('⚠️ Project name required');
@@ -381,7 +381,7 @@ export default function EditProfileScreen() {
                 title="Add"
                 testID="media-add"
                 variant="secondary"
-                haptic={false}
+
                 disabled={!hint?.ok}
                 onPress={() => {
                   const result = addMedia(field.value, mediaUrl);
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   at: { fontFamily: fonts.bold, fontSize: 16, color: colors.muted },
   hint: { fontFamily: fonts.semibold, fontSize: 11.5, marginTop: 6 },
   ok: { color: colors.green },
-  warn: { color: colors.accent },
+  warn: { color: colors.accentText },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   project: {
     flexDirection: 'row',

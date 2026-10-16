@@ -1,0 +1,23 @@
+# Prompt 7 · Offline (the runner switched on airplane mode and removed the API tunnel): the banner
+# shows, the cached feed stays, a like says "You are offline" (and is undone), and a post that was
+# never loaded says it waits for the connection instead of loading forever.
+appId: com.themeetnet.app.dev
+name: Offline
+---
+- extendedWaitUntil:
+    visible: ".*You're offline — showing saved posts"
+    timeout: 20000
+- assertVisible: "Like, .*"
+# the toast is checked by the runner from the "[watch]" command on
+- tapOn:
+    text: "Like, .*"
+    index: 0
+    label: "Like the first post [watch]"
+- waitForAnimationToEnd:
+    timeout: 3000
+- openLink: meetnet-dev://post/${OFFLINE_POST_ID}
+- extendedWaitUntil:
+    visible: "You're offline"
+    timeout: 15000
+- assertVisible: "This loads as soon as you're back online."
+- back

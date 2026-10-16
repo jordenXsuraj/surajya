@@ -57,6 +57,14 @@ export const deleteReply = (postId: string, replyId: string) =>
 export const sendInterest = (id: string) =>
   request<MessageResponse>({ method: 'POST', url: `/posts/${id}/interested` });
 
+/** 400 'You already reported this reply' / 'You cannot report your own reply'; 404 when gone. */
+export const reportReply = (postId: string, replyId: string, reason: ReportReason, note?: string) =>
+  request<MessageResponse>({
+    method: 'POST',
+    url: `/posts/${postId}/replies/${replyId}/report`,
+    data: { reason, ...(note?.trim() ? { note: note.trim().slice(0, 300) } : {}) },
+  });
+
 /** 400 'You already reported this post' when reported before. */
 export const reportPost = (id: string, reason: ReportReason, note?: string) =>
   request<MessageResponse>({

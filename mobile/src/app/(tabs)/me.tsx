@@ -14,6 +14,8 @@ import { ProfileSections } from '@/components/profile/ProfileSections';
 import { ProfileTabs, type ProfileTab } from '@/components/profile/ProfileTabs';
 import { EmptyState, ErrorState, Text } from '@/components/ui';
 import { VerifyEmailBanner } from '@/components/VerifyEmailBanner';
+import { OfflineBanner } from '@/components/feed/OfflineBanner';
+import { OfflineState, waitingForNetwork } from '@/components/ui/OfflineState';
 import { useMe } from '@/hooks/useMe';
 import { useProfilePhoto } from '@/hooks/useProfilePhoto';
 import { useMyPosts, useMySaved } from '@/hooks/useProfile';
@@ -158,7 +160,15 @@ export default function MeScreen() {
   } else {
     const query = tab === 'posts' ? posts : saved;
     const list = tab === 'posts' ? postList : savedList;
-    if (query.isPending) rows = [{ kind: 'state', key: 'loading', node: <FeedSkeleton /> }];
+    if (waitingForNetwork(query))
+      rows = [
+        {
+          kind: 'state',
+          key: 'offline',
+          node: <OfflineState onRetry={() => void query.refetch()} />,
+        },
+      ];
+    else if (query.isPending) rows = [{ kind: 'state', key: 'loading', node: <FeedSkeleton /> }];
     else if (query.isError && list.length === 0)
       rows = [
         {
@@ -202,6 +212,7 @@ export default function MeScreen() {
           <Text style={styles.gearText}>⚙️</Text>
         </Pressable>
       </View>
+      <OfflineBanner message="📡 You're offline — showing your saved profile" />
       <ProfileList
         listRef={listRef}
         header={header}
@@ -250,7 +261,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.al,
   },
   uploadErrorText: { flex: 1, fontFamily: fonts.medium, fontSize: 12, color: colors.text },
-  retry: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.accent },
+  retry: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.accentText },
   dismiss: { fontSize: 13, color: colors.muted },
   requests: {
     flexDirection: 'row',
@@ -266,6 +277,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.al,
   },
   requestsText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.text },
-  requestsArrow: { fontFamily: fonts.bold, fontSize: 18, color: colors.accent },
+  requestsArrow: { fontFamily: fonts.bold, fontSize: 18, color: colors.accentText },
   more: { paddingVertical: 20 },
 });

@@ -18,6 +18,7 @@ import { TypeGrid } from '@/components/compose/TypeGrid';
 import { YouTubePreview } from '@/components/compose/YouTubePreview';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Message } from '@/components/ui/Message';
 import { FOOTER_GAP, KeyboardFooter } from '@/components/ui/KeyboardFooter';
 import { Text } from '@/components/ui/Text';
 import { usePdfUpload, usePhotoUpload } from '@/hooks/useComposeUploads';
@@ -32,11 +33,13 @@ import {
   buildCreatePostBody,
   cleanTags,
   composeSchema,
+  isOffensive,
   placeholderFor,
   submitLabel,
   type ComposeValues,
 } from '@/lib/compose';
 import { clearDraft, isEmptyDraft, loadDraft, saveDraft } from '@/lib/composeDraft';
+import { PROFANITY_POST } from '@/lib/moderation';
 import { normaliseLink } from '@/lib/postView';
 import { getYouTubeId } from '@/lib/youtube';
 import { useAppConfig } from '@/stores/appConfig.store';
@@ -301,6 +304,7 @@ export default function ComposeScreen() {
             {len}/{MAX_POST}
           </Text>
         </View>
+        {isOffensive(values) ? <Message text={`⚠️ ${PROFANITY_POST}`} /> : null}
 
         <AttachmentBar
           onPress={onAttachment}
@@ -391,17 +395,17 @@ export default function ComposeScreen() {
         style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}
       >
         <Button
-            title={
-              photo.state.status === 'uploading'
-                ? `Uploading ${Math.round(photo.state.progress * 100)}%…`
-                : submitLabel(values)
-            }
-            loadingTitle="Posting…"
-            loading={create.isPending}
-            disabled={!canSubmit}
-            onPress={submit}
-            accessibilityHint={problem ?? undefined}
-          />
+          title={
+            photo.state.status === 'uploading'
+              ? `Uploading ${Math.round(photo.state.progress * 100)}%…`
+              : submitLabel(values)
+          }
+          loadingTitle="Posting…"
+          loading={create.isPending}
+          disabled={!canSubmit}
+          onPress={submit}
+          accessibilityHint={problem ?? undefined}
+        />
       </KeyboardFooter>
     </View>
   );
@@ -445,7 +449,7 @@ const styles = StyleSheet.create({
   },
   counter: { fontFamily: fonts.regular, fontSize: 10.4, color: colors.dim },
   hint: { fontFamily: fonts.regular, fontSize: 11.2, color: colors.dim },
-  error: { fontFamily: fonts.regular, fontSize: 11.2, color: colors.accent },
+  error: { fontFamily: fonts.regular, fontSize: 11.2, color: colors.accentText },
   field: { marginTop: 14 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   tag: {

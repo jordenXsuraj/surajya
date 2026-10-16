@@ -89,6 +89,8 @@ function VideoCard({
         source={{ uri: youTubeThumbnail(view.videoId) }}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
+        cachePolicy="memory-disk"
+        recyclingKey={view.videoId}
         accessible={false}
       />
       <View style={styles.playOverlay}>
@@ -293,5 +295,5 @@ const styles = StyleSheet.create({
     borderColor: colors.ag,
     backgroundColor: colors.al,
   },
-  addText: { fontFamily: fonts.bold, fontSize: 12, color: colors.accent },
+  addText: { fontFamily: fonts.bold, fontSize: 12, color: colors.accentText },
 });

@@ -20,6 +20,7 @@ always check the versioned Expo docs, never trust remembered APIs).
 | Sheets / keyboard | @gorhom/bottom-sheet, react-native-keyboard-controller |
 | Animation | react-native-reanimated 4 (`.get()` / `.set()` on shared values) |
 | Icons | react-native-svg, ported path-for-path from the web |
+| Crash reports | @sentry/react-native, only through `src/lib/monitoring.ts` |
 
 Install packages with `npx expo install <pkg>` (dev tools: `npx expo install <pkg> -- --save-dev`, then
 check they landed in `devDependencies`).
@@ -147,8 +148,11 @@ src/test/           test helpers (mockApi, fixtures)
 - No `autoFocus` on a text box inside a `KeyboardAwareScrollView` of a screen that slides in:
   focused mid-transition, it can end up under the keyboard. Focus it on the screen's
   `transitionEnd` event instead (compose does).
-- Remote switches from `GET /app/config` live in `useAppConfig` (loaded at start and again when the
-  app returns to the front, at most every 30 s; all on, nothing blocking, if the request fails).
+- Remote switches from `GET /app/config` live in `useAppConfig` (loaded once the first screens have
+  rendered and the JS thread is idle, `whenIdle` in `src/lib/startup.ts`, and again when the app
+  returns to the front, at most every 60 s; all on, nothing blocking, if the request fails).
+  `confessionsEnabled` hides Confession in compose (`TypeGrid`) and the Home chip (`CategoryBar`;
+  a selected chip falls back to all types); existing confession posts still show, anonymously.
   `updateRequired` (installed `nativeApplicationVersion` < `minVersion[platform]`, `src/lib/version.ts`)
   and `maintenance.enabled` cover the app with `src/components/AppGate.tsx`, an overlay above the
   navigator (the navigation state underneath stays). A missing or broken version never blocks.
@@ -248,6 +252,59 @@ src/test/           test helpers (mockApi, fixtures)
   by `../.easignore`. The FCM V1 service-account key lives only on EAS (credentials), never in the
   repo.
 
+## Store readiness (Prompt 7, see STORE_READINESS.md)
+
+- **Errors on screen**: only `errorMessage(error, fallback)` (`src/api/errors.ts`). It shows the
+  API's 4xx `message` and the client's own no-response texts; a 5xx body, a native module's error
+  or a JavaScript exception never reaches the screen (5xx → "Something went wrong. Please try
+  again.", the rest → `fallback`). Messages the app writes for users throw `UserError`
+  (`toUploadError` does). Never `error.message` in a toast or state.
+- **Offline**: mutations run with `networkMode: 'always'` (`src/lib/queryClient.ts`), so offline they
+  fail at once with "You are offline" (`ApiError` code `OFFLINE` when NetInfo says so) and roll back;
+  silent background syncs that should wait (mark notifications read) pin `networkMode: 'online'`.
+  A query with nothing cached pauses offline: render `<OfflineState>` when `waitingForNetwork(query)`
+  instead of the skeleton. `OfflineBanner` (with a `message`) sits under the header of every screen
+  that shows cached data.
+- **UGC (Apple 1.2)**: accounts whose `termsAcceptedAt` is null get the blocking `AcceptTermsScreen`
+  (`src/components/TermsGate.tsx`, an overlay in the root layout below the update/maintenance gate;
+  Back blocked; the push pre-prompt waits for it). Report and Block exist on every post (⋯), every
+  reply (long-press or ⋯ → `ReplyMenuSheet`) and every profile (⋯). The report sheet always shows
+  the 24 h review line, the Community Guidelines and support@. Blocking removes their posts,
+  replies (`removeRepliesBy`), notifications and people rows from every cache, and an open post of
+  theirs shows "Post not available".
+- **Offensive words**: `src/lib/moderation.ts` + `moderationWords.json`, the same list and rules as
+  `server/utils/moderation.js` (a test compares the lists; change both). Compose (`isOffensive` in
+  the schema: text, tags, PDF name) and the reply box warn and keep sending disabled; the server
+  refuses with 400 `PROFANITY` anyway.
+- **Account deletion**: `app/me/delete-account.tsx` → `DELETE /users/me { password }` →
+  `deleteAccountLocally()`: no push-token DELETE (the server removed them all), no pending removal
+  for that account, badge 0, notifications cleared, `logout()` → welcome.
+- **Crashes**: every root-stack screen sits in `ScreenErrorBoundary` (`screenLayout`); the root
+  layout also exports expo-router's `ErrorBoundary`. Both show "Something went wrong / Restart"
+  (Restart clears the query cache and overlays, then goes Home) and report through
+  `reportError`. Sentry runs only with `EXPO_PUBLIC_SENTRY_DSN` (eas.json, preview/production):
+  user id only, no default PII, scrubbed bodies / auth headers / push tokens / emails / query
+  strings (`scrubEvent`), 5 % traces, release and dist left to the SDK (they match the uploaded
+  source maps). The source-map auth token is an EAS secret (`SENTRY_AUTH_TOKEN`), never in the repo.
+  Sentry's Android start-up content providers are removed from the merged manifest
+  (`removeSentryStartupProviders` in app.config.ts; ~330 ms of cold start). Settings shows
+  "Crash reporting test" (a JS error, a native crash) in development and preview builds only
+  (`crashTestsAvailable()`).
+- **Contrast**: text uses `colors.text` / `muted` / `dim` (#848484, raised from the web's #444 for
+  4.5:1) / `accentText` (#d16a6a) — never `colors.accent` as a text colour (2.9:1; it stays for
+  fills, borders and icons). Toast text: `actText` / `green` / `accentText`.
+- **Touch targets**: small glyph buttons get `hitSlop={hitSlopFor(size)}` (`src/theme/tokens.ts`) so
+  they reach 44 pt. Gesture-handler taps (post text, post image) also need `accessibilityActions`
+  (activate, like): screen readers can't perform the gestures.
+- **Haptics** only on like, double-tap like, post success and follow (no default on `Button`).
+- **Lists of images**: `expo-image` with `cachePolicy="memory-disk"` and a `recyclingKey` (the URL or
+  id) in anything FlashList recycles.
+- **Permissions**: unused ones are removed in `blockedPermissions()` (`app.config.ts`); check a built
+  APK's merged manifest after adding a library (STORE_READINESS.md lists the current set).
+- **Start-up**: nothing at module load beyond `bootstrapAuth`, `initMonitoring` and
+  `setupReactQueryNative`; work that can wait (remote config, push registration) goes through
+  `whenIdle`. `refreshSession()` goes through the query cache (one `/users/me` at start).
+
 ## App identities (APP_VARIANT)
 
 | | development | preview / production |
@@ -264,8 +321,9 @@ Debug (dev-client) builds allow cleartext HTTP to the local API; preview/product
 
 ## Environment
 
-- Only `EXPO_PUBLIC_API_URL` (read as the whole expression `process.env.EXPO_PUBLIC_API_URL`).
-  `EXPO_PUBLIC_*` values are bundled in plain text — **never put secrets there**.
+- `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_SENTRY_DSN` (each read as the whole expression
+  `process.env.EXPO_PUBLIC_…`). `EXPO_PUBLIC_*` values are bundled in plain text — **never put
+  secrets there** (a Sentry DSN only allows sending events; it is not a secret).
 - Local: copy `.env.example` → `.env.local`. A dev client loads JS from Metro, so in development
   the local `.env.local` value wins (eas.json only sets it for preview/production builds).
   Restart Metro with `--clear` after changing it.

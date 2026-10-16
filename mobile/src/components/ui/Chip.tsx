@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   },
   selectText: { fontFamily: fonts.semibold, fontSize: fontSize.sm, color: colors.muted },
   on: { backgroundColor: colors.al, borderColor: colors.accent },
-  onText: { color: colors.accent },
+  onText: { color: colors.accentText },
   dashed: { borderStyle: 'dashed' },
   pressed: { opacity: 0.8 },
 });

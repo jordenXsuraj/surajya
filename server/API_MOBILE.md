@@ -81,7 +81,7 @@ Anonymity rule for clients: never try to identify anonymous authors, and never s
 | POST | `/auth/change-password` | ✓ | `{ currentPassword, newPassword (8–128) }` | 200 `{ message, token }` — replace the stored token; other devices logged out; push tokens cleared | 400 wrong current / too short / same as current; 429 |
 | POST | `/auth/forgot-password` | – | `{ email }` | 200 `{ message }` — **identical for unknown emails**; the link goes to `https://themeetnet.com/reset-password?token=…` (a deep link into the app) | 429 |
 | POST | `/auth/reset-password` | – | `{ token, newPassword (8–128) }` | 200 `{ message }` — user must log in again; all sessions and push tokens revoked | 400 invalid/expired/used link or bad password; 429 |
-| POST | `/users/me/accept-terms` | ✓ | – | 200 `{ termsAcceptedAt }` | 401 |
+| POST | `/users/me/accept-terms` | ✓ | – | 200 `{ termsAcceptedAt }` — the first acceptance date; calling it again keeps that date | 401 |
 | DELETE | `/users/me` | ✓ | `{ password }` | **204**, account and all its data permanently deleted; then clear the token | 400 `Incorrect password`; 429 |
 
 Accounts created before terms existed have `termsAcceptedAt: null`: prompt them once and call `accept-terms`.
@@ -118,13 +118,13 @@ Push types: `connection_request`, `connection_accepted`, `post_replied`, `post_l
 |---|---|---|---|---|---|
 | GET | `/posts` | ✓ | `?type=&page=1&limit=20` (college feed), `&global=true`, `&connections=true` (following; never includes anonymous posts) | 200 `Post[]` (college/global feed: last 5 replies each) | 401 |
 | GET | `/posts/:id` | optional | – | 200 `Post` (with a token: block-filtered, `likedByMe`) | 400 `Invalid ID format`; 404 missing, expired or hidden |
-| POST | `/posts` | ✓ | `{ type, text (5–1000), tags?[≤5], link?, imageUrl?, youtubeUrl?, pdfUrl?, pdfName?, pdfSize?, isAnonymous?, todayOnly? }`. `type: 'confession'` is always saved anonymous, whatever `isAnonymous` says; anonymous posts never notify followers. `youtubeUrl`: watch, youtu.be, embed, Shorts or live link on youtube.com / www. / m. / music.; its 11-character id is saved as `youtubeId` (`''` for any other link — see `server/utils/youtube.js`) | 201 `Post` | 400 (incl. `Choose either image or YouTube video`); **403 `EMAIL_NOT_VERIFIED`** |
+| POST | `/posts` | ✓ | `{ type, text (5–1000), tags?[≤5], link?, imageUrl?, youtubeUrl?, pdfUrl?, pdfName?, pdfSize?, isAnonymous?, todayOnly? }`. `type: 'confession'` is always saved anonymous, whatever `isAnonymous` says; anonymous posts never notify followers. `youtubeUrl`: watch, youtu.be, embed, Shorts or live link on youtube.com / www. / m. / music.; its 11-character id is saved as `youtubeId` (`''` for any other link — see `server/utils/youtube.js`) | 201 `Post` | 400 (incl. `Choose either image or YouTube video`; **`{ code: 'PROFANITY', message }`** when `text`, `tags` or `pdfName` contain a word from `server/utils/moderationWords.json`); **403 `EMAIL_NOT_VERIFIED`** |
 | POST | `/posts/upload-image` | ✓ | multipart `image` | 200 `{ url }` | 400 no file, `INVALID_FILE_TYPE`, `FILE_TOO_LARGE` (> 5 MB); 500 Cloudinary down |
 | POST | `/posts/upload-pdf` | ✓ | multipart `pdf` | 200 `{ url, name, size }` | 400 no file, `INVALID_FILE_TYPE` (not a PDF), `FILE_TOO_LARGE` (> 10 MB); 500 Cloudinary down |
 | PUT | `/posts/:id/like` | ✓ | – | 200 `{ liked, count, likeCount, likes }` (toggle) | 404 |
 | PUT | `/posts/:id/save` | ✓ | – | 200 `{ saved }` (toggle) | 404 |
 | DELETE | `/posts/:id` | ✓ | – | 200 `{ message }` | 403 not yours, 404 |
-| POST | `/posts/:id/replies` | ✓ | `{ text (≤350) }` | 201 `Reply` | 400 empty or longer than 350 (`Reply too long`), 404; **403 `EMAIL_NOT_VERIFIED`** |
+| POST | `/posts/:id/replies` | ✓ | `{ text (≤350) }` | 201 `Reply` | 400 empty or longer than 350 (`Reply too long`), **`{ code: 'PROFANITY', message }`**, 404; **403 `EMAIL_NOT_VERIFIED`** |
 | DELETE | `/posts/:id/replies/:replyId` | ✓ | – | 200 `{ message }` | 403, 404 |
 | POST | `/posts/:id/interested` | ✓ | – (project posts) | 200 `{ message }` | 400 not a project post, 404; **403 `EMAIL_NOT_VERIFIED`** |
 | POST | `/posts/:id/report` | ✓ | `{ reason, note? }` | 200 `{ message }` | 400 invalid reason / already reported, 404; **403 `EMAIL_NOT_VERIFIED`** |

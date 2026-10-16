@@ -21,7 +21,8 @@ export function useAppGate(): 'update' | 'maintenance' | null {
 
 // Android back would leave the app on a blank stack: keep these screens until they're resolved.
 // A keyboard left open by the screen underneath would cover their buttons: closed on arrival.
-function useBlockBack() {
+// Also used by the accept-terms screen (TermsGate).
+export function useBlockBack() {
   useEffect(() => {
     Keyboard.dismiss();
     const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
@@ -46,7 +47,9 @@ export function UpdateRequiredScreen() {
         </Text>
         <Text variant="caption" align="center">
           This version of MeetNet ({installedVersion() ?? 'unknown'}) is no longer supported.{' '}
-          {storeUrl ? 'Update to keep using the app.' : `Update MeetNet from ${store} to keep using it.`}
+          {storeUrl
+            ? 'Update to keep using the app.'
+            : `Update MeetNet from ${store} to keep using it.`}
         </Text>
         {storeUrl ? (
           <Button

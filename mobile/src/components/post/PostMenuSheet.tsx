@@ -176,6 +176,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
   disabled: { opacity: 0.5 },
   itemText: { fontFamily: fonts.medium, fontSize: 15, color: colors.text },
-  danger: { color: colors.accent },
+  danger: { color: colors.accentText },
   muted: { color: colors.muted, textAlign: 'center' },
 });

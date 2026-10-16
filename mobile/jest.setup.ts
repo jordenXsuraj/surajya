@@ -41,7 +41,11 @@ jest.mock('expo-notifications', () => {
     DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
     setNotificationHandler: jest.fn(),
     setNotificationChannelAsync: jest.fn(async () => null),
-    getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true, status: 'granted' })),
+    getPermissionsAsync: jest.fn(async () => ({
+      granted: true,
+      canAskAgain: true,
+      status: 'granted',
+    })),
     requestPermissionsAsync: jest.fn(async () => ({
       granted: true,
       canAskAgain: true,
@@ -71,4 +75,13 @@ jest.mock('react-native-worklets', () => jest.requireActual('react-native-workle
 jest.mock('react-native-reanimated', () => ({
   ...jest.requireActual('react-native-reanimated/mock'),
   useReducedMotion: () => false,
+}));
+
+// Crash reporting (src/lib/monitoring.ts): recorded calls only, nothing is sent.
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  setUser: jest.fn(),
+  captureException: jest.fn(),
+  setTag: jest.fn(),
+  nativeCrash: jest.fn(),
 }));

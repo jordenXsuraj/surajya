@@ -169,11 +169,11 @@ router.put('/me/email', protect, changeEmailLimiter, async (req, res) => {
 
 // ─────────────────────────────────────────────────
 // POST /api/users/me/accept-terms — for accounts created before terms existed
+// The first acceptance is the record: calling it again (a retry, a second device) keeps that date.
 // ─────────────────────────────────────────────────
 router.post('/me/accept-terms', protect, async (req, res) => {
-  const user = await User.findByIdAndUpdate(
-    req.user._id, { $set: { termsAcceptedAt: new Date() } }, { returnDocument: 'after' }
-  ).select('termsAcceptedAt')
+  await User.updateOne({ _id: req.user._id, termsAcceptedAt: null }, { $set: { termsAcceptedAt: new Date() } })
+  const user = await User.findById(req.user._id).select('termsAcceptedAt')
   res.json({ termsAcceptedAt: user.termsAcceptedAt })
 })
 

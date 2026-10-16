@@ -37,7 +37,7 @@ export default function DeleteAccount() {
 
   return (
     <DocPage title="Delete your MeetNet account">
-      <p>You can permanently delete your account at any time, from the app (Profile → Delete account) or on this page.</p>
+      <p>You can permanently delete your account at any time, from the app (Me → Settings → Delete account) or on this page.</p>
 
       <h2 className="doc-h2">What gets deleted</h2>
       <ul>
@@ -71,7 +71,7 @@ export default function DeleteAccount() {
         </form>
       ) : (
         <div className="doc-card">
-          <p style={{ marginTop: 0 }}><Link to="/">Log in</Link>, then come back to this page (or use Profile → Delete account).</p>
+          <p style={{ marginTop: 0 }}><Link to="/">Log in</Link>, then come back to this page (or, in the MeetNet app, use Me → Settings → Delete account).</p>
           {/* TODO(owner): confirm you can honour the 30-day manual deletion promise below */}
           <p style={{ marginBottom: 0 }}>Can't log in? <Link to="/forgot-password">Reset your password</Link>, or email <a href={mailto}>{SUPPORT_EMAIL}</a> from the address you signed up with and we'll delete the account within 30 days.</p>
         </div>

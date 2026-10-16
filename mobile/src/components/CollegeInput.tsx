@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   divider: { borderTopWidth: 1, borderTopColor: colors.br },
   pressed: { backgroundColor: colors.bg3 },
   rowText: { fontFamily: fonts.regular, fontSize: 13.6, lineHeight: 19, color: colors.text },
-  match: { fontFamily: fonts.bold, color: colors.accent },
+  match: { fontFamily: fonts.bold, color: colors.accentText },
   footer: { paddingVertical: 9, paddingHorizontal: 14, backgroundColor: colors.bg },
   footerText: { fontFamily: fonts.regular, fontSize: 12, color: colors.dim },
 });

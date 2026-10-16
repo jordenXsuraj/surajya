@@ -1,10 +1,12 @@
-# Maestro checks (Prompts 3, 4, 5 and 6)
+# Maestro checks (Prompts 3 to 7)
 
 Automated version of the phone checklists: login, feed, post actions, the whole compose flow,
 profiles (own profile, photo and cover upload, edit profile, other profiles, the follow system,
 lists, report and block, settings, change password, log out) and Prompt 6: Connect (find, skill
 pills, paging, suggestions, requests), notifications, **real pushes** in the foreground, background
-and killed state, deep links, the forced-update and maintenance screens.
+and killed state, deep links, the forced-update and maintenance screens, and Prompt 7 (store
+readiness): the accept-terms screen, reply report / block, the offensive-words warning, the
+Confession switch, offline behaviour and account deletion.
 `run.mjs` runs each flow on an Android emulator, turns the network off and on where a step needs
 it, and checks the result in the **local database** and in **`server/uploads`** (the local API
 stores uploads on disk when Cloudinary is not configured), not only on screen. It only ever talks
@@ -121,6 +123,18 @@ Prompt 6 specifics:
   preview APK on a phone); the JS side (tap → pending path → tabs layout) is in `pushTap.test.tsx`.
 - `p6-12`, `p6-13`, `p6-14` and `p6-19` need `p6-11b` (a registered device); run them together, e.g.
   `--only p6-11b,p6-12`.
+Prompt 7 specifics (`p7-*`, run after Prompt 6 and before `p5-19`):
+
+| Step | Checks |
+|---|---|
+| p7-01 | runner sets the tester's `termsAcceptedAt` to null → after a start the blocking "Before you continue" screen (three document links; Back does nothing; Agree needs the checkbox) → DB has a new `termsAcceptedAt` |
+| p7-02 | Tanvi replies (API) → long-press the reply → Report reply → the sheet shows the 24 h review line and support@ → Harassment → DB: one `targetType: 'reply'` report |
+| p7-03 | Aditi replies (API) → ⋯ on the reply → Block Aditi → the reply leaves the open post without a refresh → DB: Aditi in `blockedUsers` (not Pooja: she blocks the tester in the baseline) |
+| p7-04 | compose with "bullshit": warning, Post disabled; fixed text: warning gone; reply box with "asshole": warning, Reply disabled → DB: neither was saved |
+| p7-05 | API restarted with `APP_CONFESSIONS_ANDROID=false` → after a start no `category-confession` chip, no `type-confession` in compose → API restored |
+| p7-06 | **emulator only** (skipped with `MAESTRO_PHONE`): airplane mode + no API tunnel → banner, a like toasts "You are offline", a never-loaded post shows "You're offline" instead of a skeleton |
+| p7-07 | runner signs up a throwaway local account (verified, one post) → the app logs out, signs in as it → Settings → Delete account → wrong password refused → right one + confirm → welcome screen, toast → DB: account and post gone. Leaves the app signed out (`p5-19` signs in) |
+
 - **Dev client**: its floating tools button (⚙) sits over the Home bell and the ⚙ on Me, and its menu
   opens by itself on the first start after an install or `pm clear`. The runner turns both off (and
   marks its intro done) by writing the dev menu's preferences through `run-as` at setup and after

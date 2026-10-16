@@ -10,6 +10,7 @@ const connectDB     = require('./config/db')
 const runStartupMigrations = require('./config/migrations')
 const errorHandler  = require('./middleware/errorHandler')
 const { clientIp }  = require('./utils/clientIp')
+const { shortCommit } = require('./utils/deployInfo')
 
 
 require('dotenv').config()
@@ -54,8 +55,9 @@ const morgan = require('morgan')
 
 
 
+// "OK <short commit>": which version is live (utils/deployInfo.js)
 app.get('/healthz', (req, res) => {
-  res.status(200).send('OK')
+  res.status(200).type('text/plain').send(`OK ${shortCommit()}`)
 })
 
 // ── Compression ───────────────────────────────────

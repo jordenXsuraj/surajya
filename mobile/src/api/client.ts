@@ -1,6 +1,7 @@
+import { onlineManager } from '@tanstack/react-query';
 import { AxiosError, create, type AxiosRequestConfig } from 'axios';
 
-import { ApiError } from '@/api/errors';
+import { ApiError, OFFLINE_MESSAGE, SERVER_TROUBLE_MESSAGE } from '@/api/errors';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
 import type { ApiErrorBody } from '@/types/api';
@@ -16,7 +17,13 @@ export const api = create({ baseURL: API_URL, timeout: TIMEOUT_MS });
 
 api.interceptors.request.use((config) => {
   if (!API_URL) {
-    throw new ApiError(0, 'EXPO_PUBLIC_API_URL is not set. Copy .env.example to .env.local.');
+    // A build without the variable is broken: say why in development, nothing technical to users
+    throw new ApiError(
+      0,
+      __DEV__
+        ? 'EXPO_PUBLIC_API_URL is not set. Copy .env.example to .env.local.'
+        : SERVER_TROUBLE_MESSAGE,
+    );
   }
   const token = useAuthStore.getState().token;
   // null: a request that must go without the session (POST /users/push-token/revoke)
@@ -41,7 +48,9 @@ function fallbackMessage(status: number): string {
 export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
   if (!(error instanceof AxiosError)) {
-    return new ApiError(0, error instanceof Error ? error.message : 'Something went wrong');
+    if (__DEV__ && process.env.NODE_ENV !== 'test')
+      console.warn('[api] request failed before it was sent:', error);
+    return new ApiError(0, SERVER_TROUBLE_MESSAGE);
   }
 
   // Stopped on purpose (AbortController), e.g. removing a photo while it uploads
@@ -52,12 +61,12 @@ export function toApiError(error: unknown): ApiError {
   // No response: offline, DNS, timeout, server asleep. Never a reason to sign out.
   if (!error.response) {
     const timedOut = error.code === AxiosError.ECONNABORTED || error.code === AxiosError.ETIMEDOUT;
-    return new ApiError(
-      0,
-      timedOut
-        ? 'The server is taking too long to respond. Please try again.'
-        : 'No internet connection',
-    );
+    if (timedOut) {
+      return new ApiError(0, 'The server is taking too long to respond. Please try again.');
+    }
+    // NetInfo knows there is no connection (code OFFLINE); otherwise the server was unreachable
+    if (!onlineManager.isOnline()) return new ApiError(0, OFFLINE_MESSAGE, { code: 'OFFLINE' });
+    return new ApiError(0, 'No internet connection');
   }
 
   const { status, data } = error.response;

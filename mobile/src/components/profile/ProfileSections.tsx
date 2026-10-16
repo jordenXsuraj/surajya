@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: { fontFamily: fonts.extrabold, fontSize: 17, color: colors.text },
-  sectionAction: { fontFamily: fonts.semibold, fontSize: 11.5, color: colors.accent },
+  sectionAction: { fontFamily: fonts.semibold, fontSize: 11.5, color: colors.accentText },
   skills: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   skill: {
     paddingVertical: 6,

@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/BackButton';
+import { OfflineBanner } from '@/components/feed/OfflineBanner';
 import { NotificationList } from '@/components/notifications/NotificationList';
 import { Text } from '@/components/ui';
 import { colors, fonts, layout } from '@/theme/tokens';
@@ -21,6 +22,7 @@ export default function NotificationsScreen() {
         </Text>
         <View style={styles.topBarEnd} />
       </View>
+      <OfflineBanner message="📡 You're offline — showing saved notifications" />
       <NotificationList active={focused} />
     </View>
   );

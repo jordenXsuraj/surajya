@@ -4,13 +4,16 @@ import { Text } from '@/components/ui/Text';
 import { useIsOnline } from '@/lib/reactQueryNative';
 import { colors, fonts } from '@/theme/tokens';
 
-/** Shown while NetInfo reports no connection; the cached feed stays on screen. */
-export function OfflineBanner() {
+/**
+ * Shown while NetInfo reports no connection, under the header of every screen that shows cached
+ * data (feeds, Connect, Me, notifications, a post, a profile); what is cached stays on screen.
+ */
+export function OfflineBanner({ message = "📡 You're offline — showing saved posts" }) {
   const online = useIsOnline();
   if (online) return null;
   return (
     <View style={styles.banner} accessibilityRole="alert" accessibilityLiveRegion="polite">
-      <Text style={styles.text}>📡 You're offline — showing saved posts</Text>
+      <Text style={styles.text}>{message}</Text>
     </View>
   );
 }

@@ -30,6 +30,7 @@ export function TypeGrid({ value, onChange, confessionsEnabled }: TypeGridProps)
             accessibilityRole="radio"
             accessibilityState={{ checked: on }}
             accessibilityLabel={`${t.label}. ${t.desc}`}
+            testID={`type-${t.id}`}
             style={[styles.cell, on && styles.on, on && selected[t.id]]}
           >
             <Text style={styles.em}>{t.em}</Text>

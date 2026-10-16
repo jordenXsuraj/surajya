@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '@/components/BackButton';
 import { PersonRowItem } from '@/components/profile/PersonRowItem';
 import { EmptyState, ErrorState, Input, Skeleton, Text } from '@/components/ui';
+import { OfflineState, waitingForNetwork } from '@/components/ui/OfflineState';
 import { useFollowActions, useUnblockUser } from '@/hooks/useFollow';
 import { decodeEntities } from '@/lib/text';
 import { useAuthStore } from '@/stores/auth.store';
@@ -17,7 +18,7 @@ type PeopleListProps = {
   title: string;
   query: Pick<
     UseQueryResult<PersonRow[], unknown>,
-    'data' | 'isPending' | 'isError' | 'error' | 'refetch'
+    'data' | 'isPending' | 'isError' | 'error' | 'refetch' | 'fetchStatus'
   >;
   /** follow: rows have the follow button; blocked: rows have Unblock and don't open profiles. */
   mode?: 'follow' | 'blocked';
@@ -92,7 +93,9 @@ export function PeopleList({ title, query, mode = 'follow', empty }: PeopleListP
           />
         </View>
       ) : null}
-      {query.isPending ? (
+      {waitingForNetwork(query) ? (
+        <OfflineState onRetry={() => void query.refetch()} />
+      ) : query.isPending ? (
         <View style={styles.skeletons}>
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} height={64} radius={16} />

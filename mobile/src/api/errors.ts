@@ -22,8 +22,32 @@ export class ApiError extends Error {
   }
 }
 
+/** An error whose message was written for the user (upload problems and the like). */
+export class UserError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'UserError';
+  }
+}
+
+export const OFFLINE_MESSAGE = 'You are offline';
+export const SERVER_TROUBLE_MESSAGE = 'Something went wrong. Please try again.';
+
+/**
+ * Text that is safe to show. The API's 4xx messages and the client's own no-response texts are
+ * written for users (server/API_MOBILE.md); a 5xx body, a native module's error or a JavaScript
+ * exception never is, so those show `fallback` (5xx: "Something went wrong. Please try again.").
+ */
 export function errorMessage(error: unknown, fallback = 'Something went wrong'): string {
-  if (error instanceof ApiError) return error.message;
-  if (error instanceof Error && error.message) return error.message;
+  if (error instanceof ApiError) {
+    if (error.status >= 500) return SERVER_TROUBLE_MESSAGE;
+    return error.message || fallback;
+  }
+  if (error instanceof UserError) return error.message;
   return fallback;
+}
+
+/** True for a request that got no answer because the phone has no connection. */
+export function isOffline(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'OFFLINE';
 }

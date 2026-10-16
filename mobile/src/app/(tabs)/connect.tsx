@@ -6,6 +6,7 @@ import { Activity } from '@/components/connect/Activity';
 import { FindPeople } from '@/components/connect/FindPeople';
 import { SegmentedTabs } from '@/components/connect/SegmentedTabs';
 import { SuggestedPeople } from '@/components/connect/SuggestedPeople';
+import { OfflineBanner } from '@/components/feed/OfflineBanner';
 import { Text } from '@/components/ui';
 import { useActivityCounts } from '@/hooks/useUnreadCount';
 import { colors, layout } from '@/theme/tokens';
@@ -41,6 +42,7 @@ export default function ConnectScreen() {
           ]}
         />
       </View>
+      <OfflineBanner message="📡 You're offline — showing saved results" />
       {tab === 'find' ? <FindPeople /> : tab === 'suggested' ? <SuggestedPeople /> : <Activity />}
     </View>
   );

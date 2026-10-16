@@ -1,0 +1,41 @@
+# Prompt 7 · Offensive words: compose warns and keeps "Post" disabled; the reply box warns and keeps
+# "Reply" disabled. The runner checks that nothing reached the database.
+appId: com.themeetnet.app.dev
+name: Offensive words
+---
+- runFlow: ../subflows/open-compose.yaml
+- tapOn:
+    id: "compose-text"
+- inputText: "Maestro ${RUN} this is bullshit"
+# the warning sits under the text box: scroll down to it (dismiss-keyboard scrolls to the top)
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible: ".*Please remove offensive language before posting."
+- tapOn: "Post as You.*"
+- assertVisible: ".*Please remove offensive language before posting."
+- runFlow:
+    file: ../subflows/replace-text.yaml
+    env:
+      FIELD_ID: "compose-text"
+      TEXT: "Maestro ${RUN} this is fine"
+- runFlow: ../subflows/form-bottom.yaml
+- assertVisible:
+    id: "compose-text"
+- assertNotVisible: ".*Please remove offensive language before posting."
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- tapOn: "Close"
+- tapOn: "(?i)discard"
+- extendedWaitUntil:
+    visible: "Create a post"
+    timeout: 10000
+# the reply box
+- openLink: meetnet-dev://post/${POST_ID}
+- extendedWaitUntil:
+    visible: "Write a reply"
+    timeout: 20000
+- tapOn: "Write a reply"
+- inputText: "Maestro ${RUN} you asshole"
+- runFlow: ../subflows/hide-keyboard.yaml
+- assertVisible: ".*Please remove offensive language before replying."
+- tapOn: "Send reply"
+- assertNotVisible: "sending…"
+- assertVisible: ".*Please remove offensive language before replying."

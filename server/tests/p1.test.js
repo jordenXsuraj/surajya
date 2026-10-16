@@ -662,6 +662,19 @@ describe('terms', () => {
     expect(res.status).toBe(200)
     expect((await as(u, 'get', '/api/users/me')).body.termsAcceptedAt).toBe(res.body.termsAcceptedAt)
   })
+
+  test('accepting again keeps the first date', async () => {
+    const first = new Date('2026-01-02T03:04:05Z')
+    const u = await makeUser({ termsAcceptedAt: first })
+    const res = await as(u, 'post', '/api/users/me/accept-terms')
+    expect(res.status).toBe(200)
+    expect(res.body.termsAcceptedAt).toBe(first.toISOString())
+    expect((await User.findById(u._id).lean()).termsAcceptedAt.toISOString()).toBe(first.toISOString())
+  })
+
+  test('accept-terms needs a session', async () => {
+    expect((await request(app).post('/api/users/me/accept-terms')).status).toBe(401)
+  })
 })
 
 // ───────────────────────────────── pre-commit fixes

@@ -87,12 +87,15 @@ describe('upload helper', () => {
     );
   });
 
-  it('server errors without a message still read well', async () => {
+  it('server errors and unexpected errors never show their own text', async () => {
     mockApi(() => ({ status: 500, data: undefined }));
-    expect((await failure(uploadPostImage(photo))).message).toBe(
-      'Something went wrong. Please try again.',
-    );
+    expect((await failure(uploadPostImage(photo))).message).toBe('Upload failed. Try again.');
+    mockApi(() => ({ status: 502, data: { message: 'upstream connect error' } }));
+    expect((await failure(uploadPostImage(photo))).message).toBe('Upload failed. Try again.');
     expect(toUploadError('weird').message).toBe('Upload failed');
+    expect(toUploadError(new Error('ENOENT: /data/user/0/cache/x.jpg')).message).toBe(
+      'Upload failed',
+    );
   });
 });
 

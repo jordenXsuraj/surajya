@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui';
@@ -36,7 +35,6 @@ export function SegmentedTabs<K extends string>({
             key={segment.key}
             onPress={() => {
               if (selected) return;
-              void Haptics.selectionAsync();
               onChange(segment.key);
             }}
             accessibilityRole="tab"
@@ -49,7 +47,10 @@ export function SegmentedTabs<K extends string>({
             ]}
           >
             <Text
-              style={[styles.text, selected && (look === 'solid' ? styles.solidText : styles.outlineText)]}
+              style={[
+                styles.text,
+                selected && (look === 'solid' ? styles.solidText : styles.outlineText),
+              ]}
               maxFontSizeMultiplier={1.3}
             >
               {segment.label}
@@ -93,7 +94,7 @@ const styles = StyleSheet.create({
   solid: { backgroundColor: colors.bg3 },
   solidOn: { backgroundColor: colors.accent },
   text: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.muted },
-  outlineText: { color: colors.accent },
+  outlineText: { color: colors.accentText },
   solidText: { color: colors.white },
   badge: {
     minWidth: 18,

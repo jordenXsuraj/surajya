@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { queryKeys } from '@/api/queryKeys';
 import { PagingFooter } from '@/components/connect/PagingFooter';
 import { Avatar, EmptyState, ErrorState, Skeleton, Text } from '@/components/ui';
+import { OfflineState, waitingForNetwork } from '@/components/ui/OfflineState';
 import {
   useMarkAllReadWhileOpen,
   useMarkNotificationRead,
@@ -92,6 +93,7 @@ export function NotificationList({ active }: NotificationListProps) {
     [open],
   );
 
+  if (waitingForNetwork(query)) return <OfflineState onRetry={() => void query.refetch()} />;
   if (query.isPending)
     return (
       <View style={styles.skeletons}>

@@ -25,17 +25,24 @@ export function applyMe(me: Me, token: string | null): void {
   }
 }
 
+/** GET /users/me for the `me` query (useMe): the session user follows every answer. */
+export async function fetchMe(): Promise<Me> {
+  const token = useAuthStore.getState().token;
+  const me = await getMe();
+  applyMe(me, token);
+  return me;
+}
+
 /**
  * Refreshes the cached user from GET /users/me. A 401 signs out (client interceptor); a network
  * error keeps the cached user so the app works offline. Returns the fresh user or null.
+ * Through the query cache: at start-up the `me` query of the first screens shares this request
+ * (it was fetched twice before).
  */
 export async function refreshSession(): Promise<Me | null> {
-  const token = useAuthStore.getState().token;
-  if (!token) return null;
+  if (!useAuthStore.getState().token) return null;
   try {
-    const me = await getMe();
-    applyMe(me, token);
-    return me;
+    return await queryClient.fetchQuery({ queryKey: queryKeys.me, queryFn: fetchMe, staleTime: 0 });
   } catch {
     return null;
   }
