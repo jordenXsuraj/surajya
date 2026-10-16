@@ -1,0 +1,10 @@
+{
+  "_comment": "Words refused in posts and replies (whole words only, case-insensitive; common endings like -s, -ed, -er, -ing are covered). Same list in mobile/src/lib/moderationWords.json (a mobile test keeps them equal). Keep it short and unambiguous: every entry here blocks a post.",
+  "words": [
+    "fuck", "motherfucker", "fck", "fuk", "shit", "bullshit", "bitch", "bastard", "asshole", "dickhead",
+    "cunt", "slut", "whore", "wanker", "twat", "nigger", "nigga", "faggot", "retard",
+    "chutiya", "chutiye", "chutia", "madarchod", "madarchot", "behenchod", "bhenchod", "bhosdike",
+    "bhosadike", "bhosdi", "gandu", "randi", "harami", "lund", "lauda", "lavde", "lodu", "jhaatu",
+    "bhadwa", "bhadwe", "chinal", "zavadya", "lavdya", "randya"
+  ]
+}
