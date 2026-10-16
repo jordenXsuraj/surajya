@@ -23,7 +23,11 @@
       "environment": "preview",
       "env": {
         "APP_VARIANT": "preview",
-        "EXPO_PUBLIC_API_URL": "https://surajya.onrender.com/api"
+        "EXPO_PUBLIC_API_URL": "https://surajya.onrender.com/api",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://c2cd02628bb9624f19db2eb063467689@o4512249915113472.ingest.de.sentry.io/4512249920225360",
+        "SENTRY_ORG": "meetnet",
+        "SENTRY_PROJECT": "meetnet-mobile",
+        "SENTRY_URL": "https://de.sentry.io/"
       }
     },
     "production": {
@@ -31,7 +35,11 @@
       "environment": "production",
       "env": {
         "APP_VARIANT": "production",
-        "EXPO_PUBLIC_API_URL": "https://surajya.onrender.com/api"
+        "EXPO_PUBLIC_API_URL": "https://surajya.onrender.com/api",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://c2cd02628bb9624f19db2eb063467689@o4512249915113472.ingest.de.sentry.io/4512249920225360",
+        "SENTRY_ORG": "meetnet",
+        "SENTRY_PROJECT": "meetnet-mobile",
+        "SENTRY_URL": "https://de.sentry.io/"
       }
     }
   },

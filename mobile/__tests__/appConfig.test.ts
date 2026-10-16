@@ -1,7 +1,14 @@
 import type { ExpoConfig } from 'expo/config';
 
 import appJson from '../app.json';
-import { buildConfig, googleServicesFile, resolveVariant } from '../app.config';
+import {
+  blockedPermissions,
+  buildConfig,
+  googleServicesFile,
+  removeSentryStartupProviders,
+  resolveVariant,
+  SENTRY_STARTUP_PROVIDERS,
+} from '../app.config';
 import easJson from '../eas.json';
 
 const base = appJson.expo as ExpoConfig;
@@ -62,7 +69,86 @@ describe('app identities', () => {
       /^[0-9a-f-]{36}$/,
     );
     expect(config.userInterfaceStyle).toBe('dark');
-    expect(config.plugins).toEqual(expect.arrayContaining(['expo-router', 'expo-secure-store']));
+    expect(config.plugins).toEqual(
+      expect.arrayContaining(['expo-router', ['expo-secure-store', { faceIDPermission: false }]]),
+    );
+    expect((config.extra as { appVariant?: string }).appVariant).toBe('production');
+  });
+
+  it('privacy: unused permissions are removed (SYSTEM_ALERT_WINDOW kept for the dev overlay)', () => {
+    const removedEverywhere = [
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+      'android.permission.USE_BIOMETRIC',
+      'android.permission.USE_FINGERPRINT',
+      'com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE',
+      'com.google.android.gms.permission.AD_ID',
+    ];
+    for (const variant of ['preview', 'production'] as const) {
+      expect(buildConfig(base, variant).android?.blockedPermissions).toEqual([
+        ...removedEverywhere,
+        'android.permission.SYSTEM_ALERT_WINDOW',
+      ]);
+    }
+    expect(blockedPermissions('development')).toEqual(removedEverywhere);
+    // Still needed: camera (take photo), notifications, network state
+    for (const kept of ['CAMERA', 'POST_NOTIFICATIONS', 'ACCESS_NETWORK_STATE']) {
+      expect(blockedPermissions('production')).not.toContain(`android.permission.${kept}`);
+    }
+  });
+
+  it("cold start: Sentry's start-up providers are removed from the merged manifest", () => {
+    const manifest = {
+      manifest: {
+        $: { 'xmlns:android': 'http://schemas.android.com/apk/res/android' },
+        application: [
+          {
+            $: { 'android:name': '.MainApplication' },
+            provider: [{ $: { 'android:name': 'expo.modules.filesystem.FileSystemFileProvider' } }],
+          },
+        ],
+      },
+    } as unknown as Parameters<typeof removeSentryStartupProviders>[0];
+    const out = removeSentryStartupProviders(manifest);
+    expect(out.manifest.$['xmlns:tools']).toBe('http://schemas.android.com/tools');
+    const providers = (
+      out.manifest.application![0] as unknown as { provider: { $: Record<string, string> }[] }
+    ).provider;
+    expect(providers.map((p) => p.$['android:name'])).toEqual([
+      'expo.modules.filesystem.FileSystemFileProvider', // other providers stay
+      ...SENTRY_STARTUP_PROVIDERS,
+    ]);
+    for (const p of providers.slice(1)) {
+      expect(p.$['tools:node']).toBe('remove');
+      expect(p.$['android:authorities']).toMatch(
+        /^\$\{applicationId\}\.Sentry(Init|Performance)Provider$/,
+      );
+    }
+    // applying it twice doesn't add the entries twice
+    expect(
+      (
+        removeSentryStartupProviders(out).manifest.application![0] as unknown as {
+          provider: unknown[];
+        }
+      ).provider,
+    ).toHaveLength(3);
+    // every variant registers the manifest change
+    for (const variant of ['development', 'preview', 'production'] as const) {
+      const mods = (buildConfig(base, variant) as { mods?: { android?: { manifest?: unknown } } })
+        .mods;
+      expect(mods?.android?.manifest).toBeDefined();
+    }
+  });
+
+  it('crash reports: the Sentry plugin, org / project from the build env, never a token', () => {
+    const config = buildConfig(base, 'production');
+    const plugin = config.plugins?.find(
+      (p) => Array.isArray(p) && p[0] === '@sentry/react-native/expo',
+    ) as [string, Record<string, unknown>] | undefined;
+    expect(plugin?.[1]).toMatchObject({
+      url: expect.stringMatching(/^https:\/\/(de\.)?sentry\.io\/$/),
+    });
+    expect(plugin?.[1]).not.toHaveProperty('authToken');
   });
 
   it('resolves APP_VARIANT (unset = production) and rejects typos', () => {
@@ -79,11 +165,32 @@ describe('eas.json', () => {
     }
   });
 
-  it('only preview/production bake in the production API; nothing else is in env', () => {
+  it('only preview/production bake in the production API and the Sentry DSN; no secrets', () => {
     const env = (name: keyof typeof easJson.build) =>
       (easJson.build[name] as { env?: Record<string, string> }).env ?? {};
     expect(env('development')).toEqual({ APP_VARIANT: 'development' });
     expect(env('preview').EXPO_PUBLIC_API_URL).toBe('https://surajya.onrender.com/api');
     expect(env('production').EXPO_PUBLIC_API_URL).toBe('https://surajya.onrender.com/api');
+    // Public values only: the auth token for source maps is an EAS secret, never in this file
+    const allowed = [
+      'APP_VARIANT',
+      'EXPO_PUBLIC_API_URL',
+      'EXPO_PUBLIC_SENTRY_DSN',
+      'SENTRY_DISABLE_AUTO_UPLOAD',
+      'SENTRY_ORG',
+      'SENTRY_PROJECT',
+      'SENTRY_URL',
+    ];
+    for (const name of ['preview', 'production'] as const) {
+      for (const key of Object.keys(env(name))) expect(allowed).toContain(key);
+      expect(env(name).EXPO_PUBLIC_SENTRY_DSN ?? '').toMatch(/^(https:\/\/[\w]+@[\w.-]+\/\d+)?$/);
+      // source maps are uploaded (no SENTRY_DISABLE_AUTO_UPLOAD) to the project in the EU region
+      expect(env(name)).toMatchObject({
+        SENTRY_ORG: 'meetnet',
+        SENTRY_PROJECT: 'meetnet-mobile',
+        SENTRY_URL: 'https://de.sentry.io/',
+      });
+      expect(env(name).SENTRY_DISABLE_AUTO_UPLOAD).toBeUndefined();
+    }
   });
 });
