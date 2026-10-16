@@ -33,6 +33,17 @@ describe('hasProfanity()', () => {
     expect(hasProfanity(text)).toBe(false)
   })
 
+  // Names and words that only CONTAIN a listed word (whole-word, case-insensitive matching)
+  test.each([
+    'Shital Patil', 'Kshitij Deshmukh', 'Shitanshu', 'Ashita', 'Mishita', 'Randhir Kapoor', 'Randeep',
+    'Mahatma Gandhi Road', 'Pandurang', 'Chinali', 'Lunawat', 'Lundgren', 'Bhadwal', 'Harmanpreet',
+    'Haramani', 'Dhanashri', 'Pushkar', 'Kanchan', 'Sunder', 'Kulkarni', 'Laudable work', 'Analysis',
+    'Matsushita', 'Fukuoka', 'Hancock', 'Cockburn', 'Essex', 'Penistone', 'therapist', 'grasshopper',
+    'bassist', 'Slutsk', 'Retardant', 'SHITAL', 'kshitij',
+  ])('a name or word that contains a listed word passes: %j', (text) => {
+    expect(hasProfanity(text)).toBe(false)
+  })
+
   test('checks every text it is given', () => {
     expect(hasProfanity('fine', 'also fine')).toBe(false)
     expect(hasProfanity('fine', 'shit')).toBe(true)

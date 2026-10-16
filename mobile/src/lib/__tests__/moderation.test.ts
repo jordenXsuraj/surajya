@@ -45,6 +45,47 @@ describe('hasProfanity()', () => {
     expect(hasProfanity(text)).toBe(false);
   });
 
+  // Same list as server/tests/moderation.test.js: names and words that only CONTAIN a listed word
+  it.each([
+    'Shital Patil',
+    'Kshitij Deshmukh',
+    'Shitanshu',
+    'Ashita',
+    'Mishita',
+    'Randhir Kapoor',
+    'Randeep',
+    'Mahatma Gandhi Road',
+    'Pandurang',
+    'Chinali',
+    'Lunawat',
+    'Lundgren',
+    'Bhadwal',
+    'Harmanpreet',
+    'Haramani',
+    'Dhanashri',
+    'Pushkar',
+    'Kanchan',
+    'Sunder',
+    'Kulkarni',
+    'Laudable work',
+    'Analysis',
+    'Matsushita',
+    'Fukuoka',
+    'Hancock',
+    'Cockburn',
+    'Essex',
+    'Penistone',
+    'therapist',
+    'grasshopper',
+    'bassist',
+    'Slutsk',
+    'Retardant',
+    'SHITAL',
+    'kshitij',
+  ])('a name or word that contains a listed word passes: %j', (text) => {
+    expect(hasProfanity(text)).toBe(false);
+  });
+
   it('checks every text it is given (post text, PDF name, tags)', () => {
     expect(hasProfanity('fine', 'also fine')).toBe(false);
     expect(hasProfanity('fine', 'shit')).toBe(true);
