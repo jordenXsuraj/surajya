@@ -51,6 +51,8 @@ export function Avatar({ name, uri, size = 40, colorIndex, anonymous = false }: 
         contentFit="cover"
         transition={150}
         cachePolicy="memory-disk"
+        // Rows are recycled (FlashList): never show the previous row's photo while this one loads
+        recyclingKey={uri}
         accessibilityLabel={name ?? 'Profile photo'}
       />
     );

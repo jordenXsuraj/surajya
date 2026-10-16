@@ -98,7 +98,8 @@ describe('optimistic like', () => {
     for (const copy of Object.values(read())) {
       expect(copy).toMatchObject({ likedByMe: false, likeCount: 1 });
     }
-    expect(useUiStore.getState().toast?.message).toBe('❌ Failed. Try again');
+    // A 5xx body ("boom") is never shown
+    expect(useUiStore.getState().toast?.message).toBe('❌ Something went wrong. Please try again.');
   });
 
   it('fast taps go to the server one at a time, in order, and only the last answer is applied', async () => {

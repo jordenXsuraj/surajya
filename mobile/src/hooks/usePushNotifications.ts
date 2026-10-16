@@ -6,6 +6,7 @@ import { AppState } from 'react-native';
 
 import { queryKeys } from '@/api/queryKeys';
 import { pushPath, type PushData } from '@/lib/notifications';
+import { whenIdle } from '@/lib/startup';
 import {
   cancelPushRetry,
   flushPendingUnregister,
@@ -80,7 +81,8 @@ export function usePushNotifications(): void {
     if (!signedIn) return;
     // A failure that can pass (offline, server error) is tried again by registerForPush itself
     const register = (force = false) => void registerForPush({ force }).catch(logPushFailure);
-    register(true);
+    // After the first screens, when the JS thread is idle: not in the way of the first feed
+    const cancelStart = whenIdle(() => register(true));
     const appState = AppState.addEventListener('change', (state) => {
       if (state === 'active') register(); // permission may have been turned on in Settings
     });
@@ -89,6 +91,7 @@ export function usePushNotifications(): void {
       if (isNewDevicePushToken(token.data)) register(true);
     });
     return () => {
+      cancelStart();
       appState.remove();
       tokens.remove();
       cancelPushRetry();
@@ -104,7 +107,8 @@ export function usePushNotifications(): void {
       const data = dataOf(notification);
       invalidateForPush(qc, data);
       const { title, body } = notification.request.content;
-      if (body) useUiStore.getState().showBanner({ title: title || 'MeetNet', body, href: pushPath(data) });
+      if (body)
+        useUiStore.getState().showBanner({ title: title || 'MeetNet', body, href: pushPath(data) });
     });
     return () => sub.remove();
   }, [signedIn, qc]);
@@ -120,7 +124,8 @@ export function usePushNotifications(): void {
     Notifications.clearLastNotificationResponse();
     const data = dataOf(response.notification);
     const path = pushPath(data);
-    if (__DEV__ && process.env.NODE_ENV !== 'test') console.log(`[push] opened from a notification: ${path}`);
+    if (__DEV__ && process.env.NODE_ENV !== 'test')
+      console.log(`[push] opened from a notification: ${path}`);
     if (signedIn) invalidateForPush(qc, data);
     // Opened by the tabs layout once it is mounted (like links): a push right at a cold start
     // would otherwise be overridden by the navigator's own first screen; signed out, it waits
@@ -134,11 +139,14 @@ const PROMPT_DELAY_MS = 900;
 /**
  * Home: opens the soft pre-prompt (push-prompt) shortly after Home comes into view, when the
  * system can still ask and it wasn't shown in the last 14 days. Not on top of a link or the
- * verify screen that sign-in is about to open.
+ * verify screen that sign-in is about to open, and not under the accept-terms screen (it comes
+ * once the terms are accepted).
  */
 export function usePushPrompt(): void {
+  const termsAccepted = useAuthStore((s) => Boolean(s.user?.termsAcceptedAt));
   useFocusEffect(
     useCallback(() => {
+      if (!termsAccepted) return;
       let cancelled = false;
       const timer = setTimeout(() => {
         void pushPermission()
@@ -157,6 +165,6 @@ export function usePushPrompt(): void {
         cancelled = true;
         clearTimeout(timer);
       };
-    }, []),
+    }, [termsAccepted]),
   );
 }

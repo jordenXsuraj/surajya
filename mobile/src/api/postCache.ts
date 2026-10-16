@@ -1,7 +1,7 @@
 import type { InfiniteData, Query, QueryClient, QueryKey } from '@tanstack/react-query';
 
 import { queryKeys } from '@/api/queryKeys';
-import type { Post, PostAuthor } from '@/types/post';
+import type { Post, PostAuthor, Reply } from '@/types/post';
 
 // One post can sit in several cached lists (home all/college, filtered types, following, my
 // posts, my saved posts, someone's profile) and in its own post cache. Optimistic updates go
@@ -105,6 +105,40 @@ export function removePosts(
   }
 }
 
+/** Applies `fn` (which returns the same object when nothing changes) to every cached post. */
+function mapEveryPost(qc: QueryClient, fn: (post: Post) => Post): void {
+  qc.setQueriesData<PostList>(allPostLists, (data) =>
+    mapList(data, (page) => {
+      const next = page.map(fn);
+      return next.some((p, i) => p !== page[i]) ? next : page;
+    }),
+  );
+  for (const query of qc.getQueryCache().findAll({ queryKey: ['post'] })) {
+    const post = query.state.data as Post | undefined;
+    const next = post && fn(post);
+    if (next && next !== post) qc.setQueryData<Post>(query.queryKey, next);
+  }
+}
+
+/**
+ * Someone was blocked: their replies leave every cached post at once (feeds, profiles, an open
+ * post and its replies sheet), and the reply counts drop with them. Anonymous replies carry no
+ * author and stay; the server hides them on the next fetch.
+ */
+export function removeRepliesBy(qc: QueryClient, userId: string): void {
+  const byThem = (r: Reply) => !!r.postedBy && String(r.postedBy._id) === userId;
+  mapEveryPost(qc, (post) => {
+    const replies = post.replies ?? [];
+    const removed = replies.filter(byThem).length;
+    if (!removed) return post;
+    return {
+      ...post,
+      replies: replies.filter((r) => !byThem(r)),
+      replyCount: Math.max(0, (post.replyCount ?? replies.length) - removed),
+    };
+  });
+}
+
 /**
  * The signed-in user changed their name or photo: patch their posts and replies in every cached
  * list and post, so cards show the new one without a refetch. Anonymous posts carry no author.
@@ -131,17 +165,7 @@ export function updateAuthor(
         : {}),
     };
   };
-  qc.setQueriesData<PostList>(allPostLists, (data) =>
-    mapList(data, (page) => {
-      const next = page.map(patchPost);
-      return next.some((p, i) => p !== page[i]) ? next : page;
-    }),
-  );
-  for (const query of qc.getQueryCache().findAll({ queryKey: ['post'] })) {
-    const post = query.state.data as Post | undefined;
-    const next = post && patchPost(post);
-    if (next && next !== post) qc.setQueryData<Post>(query.queryKey, next);
-  }
+  mapEveryPost(qc, patchPost);
 }
 
 /** The freshest copy of a post we have: its own cache first, then any list. */

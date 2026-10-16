@@ -8,6 +8,7 @@ import { ContributorBadge } from '@/components/ContributorBadge';
 import { FollowButton } from '@/components/profile/FollowButton';
 import { isSeniorPerson, personRole } from '@/components/profile/PersonRowItem';
 import { Avatar, EmptyState, ErrorState, Skeleton, Text } from '@/components/ui';
+import { OfflineState, waitingForNetwork } from '@/components/ui/OfflineState';
 import { useFollowActions } from '@/hooks/useFollow';
 import { useSuggestions } from '@/hooks/usePeople';
 import { useTabReselect } from '@/hooks/useTabReselect';
@@ -86,6 +87,7 @@ export function SuggestedPeople() {
     [actions],
   );
 
+  if (waitingForNetwork(query)) return <OfflineState onRetry={() => void query.refetch()} />;
   if (query.isPending)
     return (
       <View style={styles.skeletons}>
@@ -157,7 +159,13 @@ const styles = StyleSheet.create({
   name: { flexShrink: 1, fontFamily: fonts.extrabold, fontSize: 15, color: colors.text },
   senior: { marginLeft: 6, fontFamily: fonts.semibold, fontSize: 10.2, color: colors.yellow },
   role: { fontFamily: fonts.regular, fontSize: 11.4, color: colors.dim, marginTop: 2 },
-  bio: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 4 },
+  bio: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.muted,
+    marginTop: 4,
+  },
   skills: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   skill: {
     paddingVertical: 3,

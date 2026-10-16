@@ -215,4 +215,47 @@ describe('useBlockUser', () => {
     expect(qc.getQueryData(queryKeys.user('nikhil'))).toBeUndefined();
     expect(lastToast()?.message).toBe('🚫 Nikhil blocked');
   });
+
+  it('also takes their replies out of every cached post and their notifications out of the list', async () => {
+    mockApi(() => ({ status: 200, data: { message: 'User blocked', blocked: true } }));
+    const { qc, wrapper } = setup();
+    const reply = (id: string, author: string | null) => ({
+      _id: id,
+      text: `reply ${id}`,
+      createdAt: '2026-10-05T11:00:00.000Z',
+      postedBy: author ? { _id: author, name: author } : null,
+    });
+    const riyasPost = {
+      ...post('p2', 'riya'),
+      replies: [reply('r1', 'nikhil'), reply('r2', 'riya'), reply('r3', null)],
+      replyCount: 3,
+    };
+    qc.setQueryData(queryKeys.feed('college', 'all'), page([riyasPost]));
+    qc.setQueryData(queryKeys.post('p2'), riyasPost);
+    qc.setQueryData(queryKeys.notificationsList, {
+      pages: [
+        [
+          { _id: 'n1', sender: { _id: 'nikhil', name: 'Nikhil' }, type: 'post_liked', read: false },
+          { _id: 'n2', sender: 'nikhil', type: 'connection_request', read: false },
+          { _id: 'n3', sender: { _id: 'riya', name: 'Riya' }, type: 'post_liked', read: false },
+        ],
+      ],
+      pageParams: [1],
+    });
+    const { result } = await renderHook(() => useBlockUser(), { wrapper });
+
+    await act(async () => result.current.mutate({ id: 'nikhil', name: 'Nikhil Jain' }));
+    await waitFor(() => expect(me().blockedIds).toEqual(['nikhil']));
+    for (const copy of [
+      qc.getQueryData<InfiniteData<Post[], number>>(queryKeys.feed('college', 'all'))!.pages[0]![0]!,
+      qc.getQueryData<Post>(queryKeys.post('p2'))!,
+    ]) {
+      expect(copy.replies.map((r) => r._id)).toEqual(['r2', 'r3']); // anonymous r3 stays
+      expect(copy.replyCount).toBe(2);
+    }
+    const notes = qc.getQueryData<InfiniteData<{ _id: string }[], number>>(
+      queryKeys.notificationsList,
+    )!;
+    expect(notes.pages[0]!.map((n) => n._id)).toEqual(['n3']);
+  });
 });

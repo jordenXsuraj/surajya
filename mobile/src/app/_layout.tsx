@@ -13,29 +13,36 @@ import { FullWindowOverlay } from 'react-native-screens';
 import { refreshSession } from '@/api/session';
 import { MaintenanceScreen, UpdateRequiredScreen, useAppGate } from '@/components/AppGate';
 import { EmailNotVerifiedSheet } from '@/components/EmailNotVerifiedSheet';
+import { CrashScreen, resetAfterCrash, ScreenErrorBoundary } from '@/components/ErrorBoundary';
 import { ImageViewer } from '@/components/post/ImageViewer';
 import { PostMenuSheet } from '@/components/post/PostMenuSheet';
 import { ProfileMenuSheet } from '@/components/profile/ProfileMenuSheet';
+import { AcceptTermsScreen, useNeedsTerms } from '@/components/TermsGate';
 import { RepliesSheet } from '@/components/post/RepliesSheet';
+import { ReplyMenuSheet } from '@/components/post/ReplyMenuSheet';
 import { ReportSheet } from '@/components/post/ReportSheet';
 import { YouTubeModal } from '@/components/post/YouTubeModal';
 import { ToastHost } from '@/components/ui';
 import { PushBannerHost } from '@/components/ui/PushBanner';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { initMonitoring, reportError } from '@/lib/monitoring';
+import { whenIdle } from '@/lib/startup';
 import { persistOptions, queryClient } from '@/lib/queryClient';
 import { setupReactQueryNative } from '@/lib/reactQueryNative';
 import { loadAppConfig } from '@/stores/appConfig.store';
 import { bootstrapAuth, useAuthStore } from '@/stores/auth.store';
 import { fontAssets } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
+import type { ErrorBoundaryProps } from 'expo-router';
 
 void SplashScreen.preventAutoHideAsync();
 
 // Synchronous: token from SecureStore + cached user from MMKV, so the first render already
 // knows which stack to show (no loading screen, cold-start deep links keep working).
+// The remote config waits until the first screens are on (RootLayout).
 bootstrapAuth();
+initMonitoring();
 setupReactQueryNative();
-loadAppConfig();
 
 const navigationTheme = {
   ...DarkTheme,
@@ -80,9 +87,47 @@ function Gate() {
   );
 }
 
+// Accounts that never accepted the terms (created before they existed) must accept them first.
+// Below the forced-update / maintenance gate, above everything else.
+function TermsGate() {
+  const needsTerms = useNeedsTerms();
+  if (!needsTerms) return null;
+  return (
+    <Overlay>
+      <View style={StyleSheet.absoluteFill}>
+        <AcceptTermsScreen />
+      </View>
+    </Overlay>
+  );
+}
+
 function PushNotifications() {
   usePushNotifications();
   return null;
+}
+
+// Each screen of the stack gets its own boundary (components/ErrorBoundary.tsx)
+const screenLayout = ({ children }: { children: ReactNode }) => (
+  <ScreenErrorBoundary>{children}</ScreenErrorBoundary>
+);
+
+/**
+ * A crash outside the screens (this layout, an overlay, a provider) replaces the whole app
+ * (expo-router renders this export instead of the layout); Restart mounts the layout again.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    reportError(error);
+    void SplashScreen.hideAsync();
+  }, [error]);
+  return (
+    <CrashScreen
+      onRestart={() => {
+        resetAfterCrash();
+        void retry();
+      }}
+    />
+  );
 }
 
 export default function RootLayout() {
@@ -93,6 +138,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
+  }, [ready]);
+
+  // Not needed for the first frames: GET /app/config once the app has rendered and is idle
+  useEffect(() => {
+    if (ready) return whenIdle(loadAppConfig);
   }, [ready]);
 
   // Refresh the cached user in the background on every start and sign-in.
@@ -110,6 +160,7 @@ export default function RootLayout() {
             <BottomSheetModalProvider>
               <StatusBar style="light" />
               <Stack
+                screenLayout={screenLayout}
                 screenOptions={{
                   headerShown: false,
                   contentStyle: { backgroundColor: colors.bg },
@@ -130,6 +181,7 @@ export default function RootLayout() {
                   <Stack.Screen name="me/settings" />
                   <Stack.Screen name="me/change-password" />
                   <Stack.Screen name="me/blocked" />
+                  <Stack.Screen name="me/delete-account" />
                   <Stack.Screen name="me/followers" />
                   <Stack.Screen name="me/following" />
                   <Stack.Screen name="me/requests" />
@@ -156,6 +208,7 @@ export default function RootLayout() {
                 <>
                   <RepliesSheet />
                   <PostMenuSheet />
+                  <ReplyMenuSheet />
                   <ProfileMenuSheet />
                   <ReportSheet />
                   <ImageViewer />
@@ -164,6 +217,7 @@ export default function RootLayout() {
               ) : null}
               <EmailNotVerifiedSheet />
               <PushNotifications />
+              <TermsGate />
               <Gate />
               <Toasts />
             </BottomSheetModalProvider>

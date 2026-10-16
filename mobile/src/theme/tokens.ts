@@ -10,8 +10,13 @@ export const colors = {
   br2: 'rgba(255,255,255,0.11)',
   text: '#f0f0f0',
   muted: '#888888',
-  dim: '#444444',
+  // Web #444444 (2.0:1 on bg). Raised for WCAG AA: >= 4.5:1 on bg, bg2, bg3 and card, because it
+  // colours real text (timestamps, hints, placeholders, counters), not only decoration.
+  dim: '#848484',
   accent: '#a73333',
+  // Accent-coloured text (errors, links, active labels): #a73333 is 2.9:1 on bg, this is >= 4.5:1
+  // on every surface. Fills, borders and the tab icon keep `accent`.
+  accentText: '#d16a6a',
   accentPressed: '#ff1f42', // web: .bn-center.active / .custom-skill-add-btn:hover
   al: 'rgba(255,59,92,0.12)',
   ag: 'rgba(255,59,92,0.25)',
@@ -92,6 +97,12 @@ export const touch = {
   // Longest gap between the two taps of a double-tap: Android's own double-tap timeout
   doubleTapMs: 300,
 } as const;
+
+/** hitSlop that turns a `size`-pt control (glyph, checkbox, badge) into a 44 pt touch target. */
+export function hitSlopFor(size: number) {
+  const s = Math.max(0, Math.ceil((touch.min - size) / 2));
+  return { top: s, bottom: s, left: s, right: s };
+}
 
 export const layout = {
   tabBarHeight: 68, // web: --nav

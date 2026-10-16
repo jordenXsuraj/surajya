@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useRef, type ComponentType } from 'react';
@@ -47,7 +46,6 @@ export function TabBar({ state, navigation, insets }: BottomTabBarProps) {
 
       const onPress = () => {
         if (debounced()) return;
-        void Haptics.selectionAsync();
         const event = navigation.emit({
           type: 'tabPress',
           target: route.key,
@@ -88,7 +86,6 @@ export function TabBar({ state, navigation, insets }: BottomTabBarProps) {
       key="post"
       onPress={() => {
         if (debounced()) return;
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push('/compose');
       }}
       accessibilityRole="button"
@@ -149,7 +146,7 @@ const styles = StyleSheet.create({
   centerPressed: { backgroundColor: colors.accentPressed },
   // .bn-label
   label: { fontFamily: fonts.medium, fontSize: fontSize.xxs, color: colors.dim },
-  labelActive: { fontFamily: fonts.bold, color: colors.accent },
+  labelActive: { fontFamily: fonts.bold, color: colors.accentText },
   centerLabel: { color: colors.muted },
   // Same pill as the Home bell (FeedHeader)
   badge: {

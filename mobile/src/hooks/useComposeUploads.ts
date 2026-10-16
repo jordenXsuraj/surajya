@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRef, useState } from 'react';
 
 import { uploadPostImage, uploadPostPdf } from '@/api/endpoints/posts';
+import { errorMessage } from '@/api/errors';
 import { IMAGE_MAX_WIDTH, IMAGE_QUALITY, MAX_PDF_BYTES } from '@/lib/compose';
 import { pickImage } from '@/lib/pickImage';
 import { UploadCancelled, type UploadFile } from '@/lib/upload';
@@ -56,7 +57,7 @@ export function usePhotoUpload(initialUrl = '') {
       toast('✅ Image ready!', 'success');
     } catch (error) {
       if (error instanceof UploadCancelled || abortRef.current !== controller) return;
-      const message = error instanceof Error ? error.message : 'Upload failed';
+      const message = errorMessage(error, 'Upload failed');
       setState({ status: 'error', localUri: sourceUri, message, file, sourceUri });
       toast(`❌ ${message}`, 'error');
     } finally {
@@ -142,7 +143,7 @@ export function usePdfUpload(initial: PdfInitial = null) {
       toast('✅ PDF ready!', 'success');
     } catch (error) {
       if (error instanceof UploadCancelled || abortRef.current !== controller) return;
-      const message = error instanceof Error ? error.message : 'Upload failed';
+      const message = errorMessage(error, 'Upload failed');
       setState({ status: 'error', name: file.name, size, message, file });
       toast(`❌ ${message}`, 'error');
     } finally {

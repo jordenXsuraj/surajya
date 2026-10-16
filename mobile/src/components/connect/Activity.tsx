@@ -8,6 +8,7 @@ import { SegmentedTabs } from '@/components/connect/SegmentedTabs';
 import { NotificationList } from '@/components/notifications/NotificationList';
 import { PersonRowItem } from '@/components/profile/PersonRowItem';
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui';
+import { OfflineState, waitingForNetwork } from '@/components/ui/OfflineState';
 import { useFollowActions } from '@/hooks/useFollow';
 import { useRequests } from '@/hooks/useProfile';
 import { useTabReselect } from '@/hooks/useTabReselect';
@@ -82,6 +83,7 @@ function RequestList({ query }: { query: ReturnType<typeof useRequests> }) {
     [myId, actions],
   );
 
+  if (waitingForNetwork(query)) return <OfflineState onRetry={() => void query.refetch()} />;
   if (query.isPending)
     return (
       <View style={styles.skeletons}>

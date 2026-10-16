@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.bold, fontSize: 13.1, color: colors.text },
   meta: { fontFamily: fonts.regular, fontSize: 10.9, color: colors.dim },
   barWrap: { marginTop: 2 },
-  pct: { fontFamily: fonts.bold, fontSize: 11.5, color: colors.accent },
+  pct: { fontFamily: fonts.bold, fontSize: 11.5, color: colors.accentText },
   tick: { fontFamily: fonts.bold, fontSize: 12, color: colors.green },
   retry: {
     paddingVertical: 5,

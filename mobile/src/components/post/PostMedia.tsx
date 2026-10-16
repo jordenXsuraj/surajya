@@ -18,6 +18,11 @@ const useMediaHeight = () => {
   return Math.min(400, Math.round(inner * 0.75)); // web: max-height 400px
 };
 
+const IMAGE_ACTIONS = [
+  { name: 'activate', label: 'Open image' },
+  { name: 'like', label: 'Like' },
+];
+
 // ── Image: blurred backdrop + whole image (web .pc-image-wrap). Tap = viewer, double-tap = like.
 type PostImageProps = { url: string; burst: number; onOpen: () => void; onDoubleTap: () => void };
 
@@ -51,7 +56,13 @@ export const PostImage = memo(function PostImage({
         collapsable={false}
         accessible
         accessibilityRole="imagebutton"
-        accessibilityLabel="Post image. Double-tap to like, tap to expand."
+        accessibilityLabel="Post image"
+        accessibilityHint="Opens the image full screen"
+        // Screen readers can't do the tap gestures: activate opens it, the "Like" action likes
+        accessibilityActions={IMAGE_ACTIONS}
+        onAccessibilityAction={(e) =>
+          e.nativeEvent.actionName === 'like' ? onDoubleTap() : onOpen()
+        }
       >
         <Image
           source={{ uri: cloudinaryUrl(url, { width: 60 }) }}
@@ -59,6 +70,7 @@ export const PostImage = memo(function PostImage({
           contentFit="cover"
           blurRadius={25}
           cachePolicy="memory-disk"
+          recyclingKey={url}
         />
         <View style={styles.dim} />
         <Image
@@ -97,6 +109,7 @@ export const PostVideo = memo(function PostVideo({ youtubeUrl, onOpen }: PostVid
         source={{ uri: youTubeThumbnail(id) }}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
+        cachePolicy="memory-disk"
         recyclingKey={id}
       />
       <View style={styles.play} pointerEvents="none">

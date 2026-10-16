@@ -42,8 +42,9 @@ function Player({ videoId, onClose }: { videoId: string; onClose: () => void }) 
   const height = Math.round((width * 9) / 16);
 
   return (
-    <Pressable style={styles.root} onPress={onClose} accessibilityLabel="Close video">
-      <Pressable style={[styles.frame, { height }]} onPress={() => undefined}>
+    // Backdrop tap closes (sighted users); screen readers use the labelled Close button below
+    <Pressable style={styles.root} onPress={onClose} accessible={false}>
+      <Pressable style={[styles.frame, { height }]} onPress={() => undefined} accessible={false}>
         {failed ? (
           <Text style={styles.error}>This video can't be played here.</Text>
         ) : (

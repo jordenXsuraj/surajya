@@ -13,7 +13,8 @@ import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Text';
 import { useReportUser } from '@/hooks/useFollow';
 import { useModalSheet } from '@/hooks/useModalSheet';
-import { useReportPost } from '@/hooks/usePostMutations';
+import { useReportPost, useReportReply } from '@/hooks/usePostMutations';
+import { emailSupport, openWebPage, SUPPORT_EMAIL, webPages } from '@/lib/links';
 import { usePostUi, type ReportTarget } from '@/stores/postUi.store';
 import { colors, fonts, layout, radius, touch } from '@/theme/tokens';
 import { MAX_REPORT_NOTE, REPORT_REASONS, type ReportReason } from '@/types/report';
@@ -23,7 +24,8 @@ const renderBackdrop = (props: BottomSheetBackdropProps) => (
 );
 
 // Same reasons as the web report menu, plus the optional note the API accepts (≤ 300).
-// Reports a post (post ⋯ menu) or a user (profile ⋯ menu).
+// Reports a post (post ⋯ menu), a reply (reply menu) or a user (profile ⋯ menu). Says how reports
+// are handled and links the Community Guidelines and support (App Store guideline 1.2).
 export function ReportSheet() {
   const target = usePostUi((s) => s.report);
   const close = usePostUi((s) => s.closeReport);
@@ -52,12 +54,18 @@ function ReportForm({ target, onDone }: { target: ReportTarget; onDone: () => vo
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [note, setNote] = useState('');
   const reportPost = useReportPost();
+  const reportReply = useReportReply();
   const reportUser = useReportUser();
-  const isPending = reportPost.isPending || reportUser.isPending;
+  const isPending = reportPost.isPending || reportReply.isPending || reportUser.isPending;
 
   const submit = (picked: ReportReason) => {
     if (target.kind === 'user') {
       reportUser.mutate({ id: target.id, reason: picked, note }, { onSettled: onDone });
+    } else if (target.kind === 'reply') {
+      reportReply.mutate(
+        { postId: target.postId, replyId: target.id, reason: picked, note },
+        { onSettled: onDone },
+      );
     } else {
       reportPost.mutate({ postId: target.id, reason: picked, note }, { onSettled: onDone });
     }
@@ -65,8 +73,8 @@ function ReportForm({ target, onDone }: { target: ReportTarget; onDone: () => vo
 
   return (
     <>
-      <Text style={styles.title}>
-        {target.kind === 'user' ? 'Why are you reporting this person?' : 'Why are you reporting?'}
+      <Text style={styles.title} accessibilityRole="header">
+        {TITLE[target.kind]}
       </Text>
       <View style={styles.reasons} accessibilityRole="radiogroup">
         {REPORT_REASONS.map((r) => {
@@ -107,9 +115,29 @@ function ReportForm({ target, onDone }: { target: ReportTarget; onDone: () => vo
         onPress={() => reason && submit(reason)}
       />
       <Button title="Cancel" variant="ghost" onPress={onDone} />
+      <Text style={styles.policy}>
+        We review every report within 24 hours and remove content or accounts that break our{' '}
+        <Text
+          style={styles.link}
+          accessibilityRole="link"
+          onPress={() => void openWebPage(webPages.communityGuidelines)}
+        >
+          Community Guidelines
+        </Text>
+        . Questions:{' '}
+        <Text style={styles.link} accessibilityRole="link" onPress={() => void emailSupport()}>
+          {SUPPORT_EMAIL}
+        </Text>
+      </Text>
     </>
   );
 }
+
+const TITLE: Record<ReportTarget['kind'], string> = {
+  post: 'Why are you reporting?',
+  reply: 'Why are you reporting this reply?',
+  user: 'Why are you reporting this person?',
+};
 
 const styles = StyleSheet.create({
   background: { backgroundColor: colors.bg2 },
@@ -147,6 +175,14 @@ const styles = StyleSheet.create({
     fontSize: 13.6,
     textAlignVertical: 'top',
   },
+  policy: {
+    fontFamily: fonts.regular,
+    fontSize: 11.5,
+    lineHeight: 17,
+    color: colors.muted,
+    textAlign: 'center',
+  },
+  link: { color: colors.text, textDecorationLine: 'underline' },
   count: {
     alignSelf: 'flex-end',
     fontFamily: fonts.regular,

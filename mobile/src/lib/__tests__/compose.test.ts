@@ -2,6 +2,7 @@ import {
   buildCreatePostBody,
   cleanTags,
   composeSchema,
+  isOffensive,
   placeholderFor,
   submitLabel,
   youtubePreview,
@@ -144,5 +145,23 @@ describe('draft in MMKV', () => {
   it('type and toggles alone are not a draft', () => {
     expect(isEmptyDraft({ ...EMPTY_DRAFT, type: 'confession', todayOnly: true })).toBe(true);
     expect(isEmptyDraft({ ...EMPTY_DRAFT, tags: 'dsa' })).toBe(false);
+  });
+});
+
+describe('offensive language (same rule as the server, src/lib/moderation.ts)', () => {
+  const warning = 'Please remove offensive language before posting.';
+
+  it('the text, a tag or the PDF name keep the post from being sent', () => {
+    expect(issue({ text: 'this is bullshit honestly' })).toBe(warning);
+    expect(issue({ tags: 'dsa, fuck' })).toBe(warning);
+    expect(
+      issue({ pdf: { url: 'https://x.test/a.pdf', name: 'shit notes.pdf', size: 1000 } }),
+    ).toBe(warning);
+    expect(isOffensive({ ...base, text: 'what a b1tch' })).toBe(true);
+  });
+
+  it('words that only contain a listed one are fine', () => {
+    expect(issue({ text: 'Class assessment in Scunthorpe, then a cocktail' })).toBeNull();
+    expect(isOffensive({ ...base, tags: 'assassin, grass' })).toBe(false);
   });
 });

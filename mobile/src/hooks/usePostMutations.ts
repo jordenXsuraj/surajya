@@ -6,6 +6,7 @@ import {
   deleteReply,
   likePost,
   reportPost,
+  reportReply,
   savePost,
   sendInterest,
 } from '@/api/endpoints/posts';
@@ -68,10 +69,10 @@ export function useLike() {
       if (pendingLikes.get(post._id) === 1)
         updatePost(qc, post._id, (p) => applyLikeResponse(p, data));
     },
-    onError: (_error, post) => {
+    onError: (error, post) => {
       const uid = useAuthStore.getState().user?._id ?? '';
       updatePost(qc, post._id, (p) => toggleLike(p, uid)); // undo this toggle only
-      toast('❌ Failed. Try again', 'error');
+      toast(`❌ ${errorMessage(error, 'Failed. Try again')}`, 'error');
     },
     onSettled: (_data, _error, post) => {
       const left = (pendingLikes.get(post._id) ?? 1) - 1;
@@ -115,10 +116,10 @@ export function useSave() {
       toast(saved ? '🔖 Saved!' : 'Bookmark removed', 'success');
       if (saved) void qc.invalidateQueries({ queryKey: queryKeys.mySaved, exact: true });
     },
-    onError: (_error, _post, context) => {
+    onError: (error, _post, context) => {
       if (context?.previous) qc.setQueryData(queryKeys.me, context.previous);
       if (context?.previousSaved) qc.setQueryData(queryKeys.mySaved, context.previousSaved);
-      toast('❌ Save failed', 'error');
+      toast(`❌ ${errorMessage(error, 'Save failed')}`, 'error');
     },
   });
 }
@@ -201,9 +202,9 @@ export function useDeleteReply() {
       }));
       return { snapshot };
     },
-    onError: (_error, _vars, context) => {
+    onError: (error, _vars, context) => {
       if (context) restoreSnapshot(qc, context.snapshot);
-      toast('Could not delete', 'error');
+      toast(errorMessage(error, 'Could not delete'), 'error');
     },
   });
 }
@@ -236,6 +237,28 @@ export function useReportPost() {
       // 400 = already reported (web treats it as reported too)
       if (error instanceof ApiError && error.status === 400) {
         usePostUi.getState().markReported(postId);
+        toast(error.message, 'info');
+      } else if (!isNotVerified(error)) {
+        toast(errorMessage(error, 'Could not send the report'), 'error');
+      }
+    },
+  });
+}
+
+type ReplyReportVars = ReportVars & { replyId: string };
+
+/** A reply from the reply menu; "already reported" and "own reply" (400) count as reported. */
+export function useReportReply() {
+  return useMutation({
+    mutationFn: ({ postId, replyId, reason, note }: ReplyReportVars) =>
+      reportReply(postId, replyId, reason, note),
+    onSuccess: (data, { replyId }) => {
+      usePostUi.getState().markReported(replyId);
+      toast(data?.message || 'Report submitted. Thank you.', 'success');
+    },
+    onError: (error, { replyId }) => {
+      if (error instanceof ApiError && error.status === 400) {
+        usePostUi.getState().markReported(replyId);
         toast(error.message, 'info');
       } else if (!isNotVerified(error)) {
         toast(errorMessage(error, 'Could not send the report'), 'error');

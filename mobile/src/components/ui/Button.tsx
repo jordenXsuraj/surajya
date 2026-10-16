@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -23,7 +22,6 @@ export type ButtonProps = {
   /** Text shown while loading (web: "Please wait…", "Checking…"). */
   loadingTitle?: string;
   icon?: ReactNode;
-  haptic?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityHint?: string;
   testID?: string;
@@ -37,7 +35,6 @@ export function Button({
   loading = false,
   loadingTitle,
   icon,
-  haptic = true,
   style,
   accessibilityHint,
   testID,
@@ -46,8 +43,6 @@ export function Button({
 
   function handlePress() {
     if (inactive) return;
-    if (haptic && variant === 'primary')
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   }
 

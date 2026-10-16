@@ -1,13 +1,17 @@
 import { create } from 'zustand';
 
-import type { Post } from '@/types/post';
+import type { Post, Reply } from '@/types/post';
 
-/** What the report sheet is reporting: a post (⋯ menu) or a user (profile menu). */
-export type ReportTarget = { kind: 'post' | 'user'; id: string };
+/** What the report sheet is reporting: a post (⋯ menu), a reply (reply menu) or a user (profile menu). */
+export type ReportTarget =
+  { kind: 'post' | 'user'; id: string } | { kind: 'reply'; id: string; postId: string };
+
+/** The reply whose menu is open (long-press or ⋯ on a reply). */
+export type ReplyMenuTarget = { postId: string; reply: Reply };
 
 // Overlays shared by every list (mounted once in the root layout): replies sheet, post menu,
-// report sheet (posts and users), full-screen image, YouTube player. Also the posts and users
-// reported in this session (by id; post and user ids never clash).
+// reply menu, report sheet (posts, replies and users), full-screen image, YouTube player. Also the
+// posts, replies and users reported in this session (by id; Mongo ids never clash).
 type PostUiState = {
   repliesPostId: string | null;
   /** Focus the reply input when the sheet opens (reply button / Interested). */
@@ -15,6 +19,8 @@ type PostUiState = {
   menuPost: Post | null;
   /** Profile ⋯ menu (Share profile, Report user, Block). */
   menuUser: { id: string; name: string } | null;
+  /** Reply menu (Report reply, Block; Delete on your own). */
+  menuReply: ReplyMenuTarget | null;
   report: ReportTarget | null;
   imageUrl: string | null;
   videoId: string | null;
@@ -28,9 +34,11 @@ type PostUiState = {
   closeMenu: () => void;
   openUserMenu: (user: { id: string; name: string }) => void;
   closeUserMenu: () => void;
+  openReplyMenu: (target: ReplyMenuTarget) => void;
+  closeReplyMenu: () => void;
   openReport: (target: ReportTarget) => void;
   closeReport: () => void;
-  markReported: (postId: string) => void;
+  markReported: (id: string) => void;
   openImage: (url: string) => void;
   closeImage: () => void;
   openVideo: (id: string) => void;
@@ -44,6 +52,7 @@ const initial = {
   repliesFocus: false,
   menuPost: null,
   menuUser: null,
+  menuReply: null,
   report: null,
   imageUrl: null,
   videoId: null,
@@ -59,9 +68,11 @@ export const usePostUi = create<PostUiState>()((set) => ({
   closeMenu: () => set({ menuPost: null }),
   openUserMenu: (user) => set({ menuUser: user }),
   closeUserMenu: () => set({ menuUser: null }),
+  openReplyMenu: (target) => set({ menuReply: target }),
+  closeReplyMenu: () => set({ menuReply: null }),
   openReport: (target) => set({ report: target }),
   closeReport: () => set({ report: null }),
-  markReported: (postId) => set((s) => ({ reported: { ...s.reported, [postId]: true } })),
+  markReported: (id) => set((s) => ({ reported: { ...s.reported, [id]: true } })),
   openImage: (url) => set({ imageUrl: url }),
   closeImage: () => set({ imageUrl: null }),
   openVideo: (id) => set({ videoId: id }),

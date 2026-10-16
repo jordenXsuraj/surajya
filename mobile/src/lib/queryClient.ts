@@ -16,7 +16,9 @@ export const queryClient = new QueryClient({
         failureCount < 2 &&
         (!(error instanceof ApiError) || error.status === 0 || error.status >= 500),
     },
-    mutations: { retry: false },
+    // Actions run even when NetInfo reports no connection: offline they fail at once with
+    // "You are offline" (and roll back) instead of waiting, paused, with a spinner or a fake success.
+    mutations: { retry: false, networkMode: 'always' },
   },
 });
 

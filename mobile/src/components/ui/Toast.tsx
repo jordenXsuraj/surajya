@@ -17,7 +17,12 @@ export function useToast() {
   return { show, clear };
 }
 
-const typeColor = { info: colors.muted, success: colors.green, error: colors.accent } as const;
+// Text colours on the #222 toast, all >= 4.5:1 (muted would be 4.49, accent 2.4)
+const typeColor = {
+  info: colors.actText,
+  success: colors.green,
+  error: colors.accentText,
+} as const;
 
 // .toast-msg — mounted once in the root layout, above the tab bar. Tap to dismiss.
 export function ToastHost() {

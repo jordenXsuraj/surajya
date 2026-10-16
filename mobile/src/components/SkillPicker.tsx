@@ -76,7 +76,6 @@ export function SkillPicker({ branch, skills, onChange }: SkillPickerProps) {
           onPress={addCustom}
           disabled={!custom.trim() || full}
           style={styles.addButton}
-          haptic={false}
         />
       </View>
       {full && (

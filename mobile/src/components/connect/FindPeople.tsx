@@ -1,19 +1,13 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useScrollToTop } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PagingFooter } from '@/components/connect/PagingFooter';
 import { PersonRowItem } from '@/components/profile/PersonRowItem';
 import { Chip, EmptyState, ErrorState, Skeleton, Text } from '@/components/ui';
+import { OfflineState, waitingForNetwork } from '@/components/ui/OfflineState';
 import { useFollowActions } from '@/hooks/useFollow';
 import { useDebounced, usePeopleSearch } from '@/hooks/usePeople';
 import { useTabReselect } from '@/hooks/useTabReselect';
@@ -124,7 +118,9 @@ export function FindPeople() {
         </ScrollView>
       </View>
 
-      {query.isPending ? (
+      {waitingForNetwork(query) ? (
+        <OfflineState onRetry={() => void query.refetch()} />
+      ) : query.isPending ? (
         <View style={styles.skeletons}>
           {[0, 1, 2, 3, 4].map((i) => (
             <Skeleton key={i} height={72} radius={16} />

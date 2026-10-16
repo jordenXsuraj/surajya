@@ -1,17 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getMe } from '@/api/endpoints/users';
 import { queryKeys } from '@/api/queryKeys';
-import { applyMe } from '@/api/session';
+import { fetchMe } from '@/api/session';
 import { useAuthStore } from '@/stores/auth.store';
 import type { Me } from '@/types/user';
-
-async function fetchMe(): Promise<Me> {
-  const token = useAuthStore.getState().token;
-  const me = await getMe();
-  applyMe(me, token);
-  return me;
-}
 
 /** GET /users/me through React Query; keeps the auth store's cached user in sync. */
 export function useMe() {

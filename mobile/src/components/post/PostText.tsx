@@ -21,6 +21,9 @@ type PostTextProps = {
   onPress?: () => void;
 };
 
+const TEXT_ACTIONS = [{ name: 'like', label: 'Like' }];
+const TEXT_ACTIONS_OPEN = [{ name: 'activate', label: 'Open post' }, ...TEXT_ACTIONS];
+
 // .pc-text with the web's "▼ See more" / "▲ See less". Double-tap likes.
 export const PostText = memo(function PostText({
   postId,
@@ -57,7 +60,17 @@ export const PostText = memo(function PostText({
   return (
     <View>
       <GestureDetector gesture={gesture}>
-        <View collapsable={false}>
+        <View
+          collapsable={false}
+          // One element for screen readers (the text is its label); the tap gestures don't reach
+          // them, so "activate" opens the post (feed) and the "Like" action likes
+          accessible
+          accessibilityHint={onPress ? 'Opens the post' : undefined}
+          accessibilityActions={onPress ? TEXT_ACTIONS_OPEN : TEXT_ACTIONS}
+          onAccessibilityAction={(e) =>
+            e.nativeEvent.actionName === 'like' ? onDoubleTap() : onPress?.()
+          }
+        >
           {mayBeLong ? (
             <Text
               style={[styles.text, styles.measure]}
@@ -83,6 +96,7 @@ export const PostText = memo(function PostText({
           onPress={() => setExpanded((v) => !v)}
           hitSlop={touch.hitSlop}
           accessibilityRole="button"
+          accessibilityLabel={expanded ? 'See less' : 'See more'}
           style={styles.more}
         >
           <Text style={styles.moreText}>{expanded ? '▲ See less' : '▼ See more'}</Text>
@@ -96,5 +110,5 @@ const styles = StyleSheet.create({
   text: { fontFamily: fonts.medium, fontSize: 15.2, lineHeight: 25.8, color: colors.muted },
   measure: { position: 'absolute', left: 0, right: 0, opacity: 0 },
   more: { alignSelf: 'flex-start', paddingVertical: 2 },
-  moreText: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.accent },
+  moreText: { fontFamily: fonts.bold, fontSize: 12.5, color: colors.accentText },
 });

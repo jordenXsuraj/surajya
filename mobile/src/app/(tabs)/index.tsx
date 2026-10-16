@@ -13,6 +13,8 @@ import { VerifyEmailBanner } from '@/components/VerifyEmailBanner';
 import { useFeed } from '@/hooks/useFeed';
 import { usePushPrompt } from '@/hooks/usePushNotifications';
 import { matchesSearch } from '@/lib/postView';
+import { markHomeFeedRendered } from '@/lib/startup';
+import { useAppConfig } from '@/stores/appConfig.store';
 import { usePostUi } from '@/stores/postUi.store';
 import { colors } from '@/theme/tokens';
 
@@ -22,7 +24,11 @@ const DEFAULT_SCOPE: HomeScope = 'global'; // web Home.jsx: useState('global')
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [scope, setScope] = useState<HomeScope>(DEFAULT_SCOPE);
-  const [category, setCategory] = useState<FeedType>('all');
+  const [picked, setCategory] = useState<FeedType>('all');
+  // Confessions switched off remotely (GET /app/config): the chip goes, and a selected one falls
+  // back to all types. Confession posts already in the feed still show (anonymously).
+  const confessionsEnabled = useAppConfig((s) => s.confessionsEnabled);
+  const category: FeedType = !confessionsEnabled && picked === 'confession' ? 'all' : picked;
   const [search, setSearch] = useState('');
   const homeTopSignal = usePostUi((s) => s.homeTopSignal);
   usePushPrompt();
@@ -75,6 +81,7 @@ export default function HomeScreen() {
         queryKey={queryKeys.feed(scope, category)}
         empty={empty}
         scrollSignal={homeTopSignal}
+        onPostsDrawn={markHomeFeedRendered}
       />
     </View>
   );

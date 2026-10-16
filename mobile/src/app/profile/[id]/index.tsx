@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError } from '@/api/errors';
 import { queryKeys } from '@/api/queryKeys';
 import { BackButton } from '@/components/BackButton';
+import { OfflineBanner } from '@/components/feed/OfflineBanner';
 import { FeedSkeleton } from '@/components/post/PostCardSkeleton';
 import { FollowButton } from '@/components/profile/FollowButton';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -14,6 +15,7 @@ import { ProfileList, type ProfileRow } from '@/components/profile/ProfileList';
 import { ProfileSections } from '@/components/profile/ProfileSections';
 import { ProfileTabs, type ProfileTab } from '@/components/profile/ProfileTabs';
 import { EmptyState, ErrorState, Text } from '@/components/ui';
+import { OfflineState, waitingForNetwork } from '@/components/ui/OfflineState';
 import { useFollowActions } from '@/hooks/useFollow';
 import { useUser, useUserPosts } from '@/hooks/useProfile';
 import { mediaSections } from '@/lib/media';
@@ -87,6 +89,7 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.root, { paddingTop: insets.top }]}>
         {topBar}
+        <OfflineBanner message="📡 You're offline" />
         {gone ? (
           <EmptyState
             emoji="🚫"
@@ -95,6 +98,8 @@ export default function ProfileScreen() {
           />
         ) : profile.isError ? (
           <ErrorState error={profile.error} onRetry={() => void profile.refetch()} />
+        ) : waitingForNetwork(profile) ? (
+          <OfflineState onRetry={() => void profile.refetch()} />
         ) : (
           <ActivityIndicator style={styles.loading} color={colors.muted} />
         )}
@@ -141,6 +146,14 @@ export default function ProfileScreen() {
 
   let rows: ProfileRow[];
   if (tab === 'media') rows = [{ kind: 'media', items: user.mediaItems }];
+  else if (waitingForNetwork(posts))
+    rows = [
+      {
+        kind: 'state',
+        key: 'offline',
+        node: <OfflineState onRetry={() => void posts.refetch()} />,
+      },
+    ];
   else if (posts.isPending) rows = [{ kind: 'state', key: 'loading', node: <FeedSkeleton /> }];
   else if (posts.isError)
     rows = [
@@ -163,6 +176,7 @@ export default function ProfileScreen() {
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {topBar}
+      <OfflineBanner message="📡 You're offline — showing a saved copy" />
       <ProfileList
         header={header}
         rows={rows}

@@ -2,8 +2,10 @@ import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useState, type Ref } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
+import { Message } from '@/components/ui/Message';
 import { Text } from '@/components/ui/Text';
 import { useAddReply } from '@/hooks/usePostMutations';
+import { hasProfanity, PROFANITY_REPLY } from '@/lib/moderation';
 import { colors, fonts, radius, touch } from '@/theme/tokens';
 import type { Post } from '@/types/post';
 
@@ -19,6 +21,8 @@ type ReplyComposerProps = {
 
 // Web ReplyBox: "Write your answer…" for Q&A, "Write a reply…" otherwise, n/350, Reply / Answer.
 // The reply appears at once (optimistic); if sending fails the text comes back into the box.
+// Offensive words (src/lib/moderation.ts) show a warning and keep Reply disabled; the server
+// refuses them too.
 export function ReplyComposer({
   post,
   inputRef,
@@ -29,10 +33,12 @@ export function ReplyComposer({
   const { mutateAsync, isPending } = useAddReply();
   const isQa = post.type === 'qa';
   const trimmed = text.trim();
+  const offensive = hasProfanity(trimmed);
+  const blocked = !trimmed || isPending || offensive;
   const Input = inSheet ? BottomSheetTextInput : TextInput;
 
   async function submit() {
-    if (!trimmed || isPending) return;
+    if (blocked) return;
     const draft = text;
     setText('');
     try {
@@ -58,18 +64,19 @@ export function ReplyComposer({
         accessibilityLabel={isQa ? 'Write your answer' : 'Write a reply'}
         style={styles.input}
       />
+      {offensive ? <Message text={`⚠️ ${PROFANITY_REPLY}`} /> : null}
       <View style={styles.footer}>
         <Text style={styles.count}>
           {text.length}/{MAX_REPLY}
         </Text>
         <Pressable
           onPress={submit}
-          disabled={!trimmed || isPending}
+          disabled={blocked}
           hitSlop={touch.hitSlop}
           accessibilityRole="button"
           accessibilityLabel={isQa ? 'Send answer' : 'Send reply'}
-          accessibilityState={{ disabled: !trimmed || isPending }}
-          style={[styles.send, (!trimmed || isPending) && styles.sendDisabled]}
+          accessibilityState={{ disabled: blocked }}
+          style={[styles.send, blocked && styles.sendDisabled]}
         >
           <Text style={styles.sendText}>{isQa ? 'Answer' : 'Reply'}</Text>
         </Pressable>

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { FeedType } from '@/api/queryKeys';
 import { Text } from '@/components/ui/Text';
 import { FEED_CATEGORIES } from '@/lib/postTypes';
-import { colors, fonts, touch } from '@/theme/tokens';
+import { colors, fonts, hitSlopFor } from '@/theme/tokens';
 
 import type { HomeScope } from './CategoryBar';
 
@@ -35,8 +35,9 @@ export function ActiveFilters({ scope, category, defaultScope, onClear }: Active
       ) : null}
       <Pressable
         onPress={onClear}
-        hitSlop={touch.hitSlop}
+        hitSlop={hitSlopFor(20)}
         accessibilityRole="button"
+        accessibilityLabel="Clear filters"
         style={styles.clear}
       >
         <Text style={styles.clearText}>Clear ✕</Text>
@@ -63,5 +64,5 @@ const styles = StyleSheet.create({
   },
   pillText: { fontFamily: fonts.semibold, fontSize: 11.2, color: colors.text },
   clear: { marginLeft: 'auto', paddingVertical: 3, paddingHorizontal: 6 },
-  clearText: { fontFamily: fonts.bold, fontSize: 11.2, color: colors.accent },
+  clearText: { fontFamily: fonts.bold, fontSize: 11.2, color: colors.accentText },
 });

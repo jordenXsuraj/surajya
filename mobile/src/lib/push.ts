@@ -186,7 +186,8 @@ export function logPushFailure(error: unknown): void {
 function scheduleRetry(): void {
   if (retryTimer || retriesUsed >= REGISTER_RETRY_MS.length) return;
   const delay = REGISTER_RETRY_MS[retriesUsed++] ?? 0;
-  if (__DEV__ && process.env.NODE_ENV !== 'test') console.log(`[push] trying again in ${delay / 1000} s`);
+  if (__DEV__ && process.env.NODE_ENV !== 'test')
+    console.log(`[push] trying again in ${delay / 1000} s`);
   retryTimer = setTimeout(() => {
     retryTimer = null;
     registerForPush({ force: true }).catch(logPushFailure);
@@ -282,6 +283,18 @@ export function settlePushLogout(removed: boolean): void {
   const registered = readRegistration(PUSH_REGISTERED_KEY);
   writeRegistration(PUSH_REGISTERED_KEY, null);
   if (!removed && registered) writeRegistration(PUSH_PENDING_UNREGISTER_KEY, registered);
+}
+
+/**
+ * The account was deleted (DELETE /users/me): the server already dropped all of its push tokens,
+ * so there is nothing left to remove. Forgets this install's registration and any pending removal
+ * kept for that account, without writing a new one.
+ */
+export function settlePushAccountDeleted(userId: string): void {
+  writeRegistration(PUSH_REGISTERED_KEY, null);
+  if (readRegistration(PUSH_PENDING_UNREGISTER_KEY)?.userId === userId) {
+    writeRegistration(PUSH_PENDING_UNREGISTER_KEY, null);
+  }
 }
 
 /** Longest a pending removal may hold up a sign-in. */

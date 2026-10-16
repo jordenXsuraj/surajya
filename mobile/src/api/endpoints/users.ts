@@ -21,6 +21,18 @@ export type ChangeEmailResponse = MessageResponse & { token: string; user: Me };
 
 export const getMe = () => request<Me>({ method: 'GET', url: '/users/me' });
 
+/**
+ * Permanent: posts (also anonymous ones), replies, likes, follows, blocks, notifications, reports
+ * and push tokens go. 204; 400 'Incorrect password' / 'Password is required'; 429 after 5 tries
+ * in 15 minutes.
+ */
+export const deleteAccount = (password: string) =>
+  request<''>({ method: 'DELETE', url: '/users/me', data: { password } });
+
+/** For accounts created before the terms existed; answers the first acceptance date. */
+export const acceptTerms = () =>
+  request<{ termsAcceptedAt: string }>({ method: 'POST', url: '/users/me/accept-terms' });
+
 /** New address must be verified again; every other session ends and a new token comes back. */
 export const changeEmail = (newEmail: string, password: string) =>
   request<ChangeEmailResponse>({
@@ -135,7 +147,8 @@ export const searchPeople = (scope: PeopleScope, query: PeopleQuery, page: numbe
   });
 
 /** Up to 20 students from my college, scored by branch, year and shared skills. */
-export const getSuggestions = () => request<UserCard[]>({ method: 'GET', url: '/users/suggestions' });
+export const getSuggestions = () =>
+  request<UserCard[]>({ method: 'GET', url: '/users/suggestions' });
 
 export type PushTokenBody = { token: string; platform: 'ios' | 'android'; deviceId: string };
 

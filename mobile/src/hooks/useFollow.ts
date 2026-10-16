@@ -5,6 +5,7 @@ import {
   type Query,
   type QueryClient,
 } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 
 import {
   acceptRequest,
@@ -16,7 +17,7 @@ import {
   unfollowUser,
 } from '@/api/endpoints/users';
 import { ApiError, errorMessage } from '@/api/errors';
-import { removePosts, restoreSnapshot, type CacheSnapshot } from '@/api/postCache';
+import { removePosts, removeRepliesBy, restoreSnapshot, type CacheSnapshot } from '@/api/postCache';
 import { queryKeys } from '@/api/queryKeys';
 import {
   applyFollowEvent,
@@ -28,9 +29,11 @@ import {
   type FollowEvent,
   type Relation,
 } from '@/lib/follow';
+import { senderOf } from '@/lib/notifications';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePostUi } from '@/stores/postUi.store';
 import { useUiStore } from '@/stores/ui.store';
+import type { Notification } from '@/types/notification';
 import type { Post } from '@/types/post';
 import type { ReportReason } from '@/types/report';
 import type { PersonRow, PublicUser, UserCard } from '@/types/user';
@@ -110,6 +113,8 @@ function useFollowMutation(action: FollowAction) {
   return useMutation<unknown, unknown, Person, FollowContext | undefined>({
     mutationFn: ({ id }) => CALLS[action](id),
     onMutate: async ({ id }) => {
+      // One of the few actions with a haptic (like, follow, post success)
+      if (action === 'follow') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const me = useAuthStore.getState().user;
       if (!me) return undefined;
       await qc.cancelQueries({ queryKey: queryKeys.user(id) });
@@ -181,8 +186,9 @@ const isPeopleList = (query: Query) => {
 };
 
 /**
- * Block: their named posts leave every list, they leave every people list, follows and requests
- * end both ways (as on the server), and their profile is no longer cached.
+ * Block: their named posts and their replies leave every list (an open post of theirs closes),
+ * their notifications go, they leave every people list, follows and requests end both ways (as on
+ * the server), and their profile is no longer cached.
  */
 export function useBlockUser() {
   const qc = useQueryClient();
@@ -190,6 +196,18 @@ export function useBlockUser() {
     mutationFn: ({ id }: Person) => blockUser(id),
     onSuccess: (_data, { id, name }) => {
       removePosts(qc, byAuthor(id));
+      removeRepliesBy(qc, id);
+      qc.setQueryData<InfiniteData<Notification[], number>>(
+        queryKeys.notificationsList,
+        (data) =>
+          data && {
+            ...data,
+            pages: data.pages.map((page) =>
+              page.filter((n) => String(senderOf(n)?._id ?? n.sender ?? '') !== id),
+            ),
+          },
+      );
+      void qc.invalidateQueries({ queryKey: queryKeys.unreadCount, exact: true });
       qc.setQueriesData<PersonRow[]>({ predicate: isPeopleList }, (rows) =>
         rows?.some((r) => String(r._id) === id) ? rows.filter((r) => String(r._id) !== id) : rows,
       );

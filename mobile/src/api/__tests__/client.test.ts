@@ -1,5 +1,7 @@
+import { onlineManager } from '@tanstack/react-query';
+
 import { api, request } from '@/api/client';
-import { ApiError } from '@/api/errors';
+import { ApiError, errorMessage, isOffline, UserError } from '@/api/errors';
 import { getMe } from '@/api/endpoints/users';
 import { TOKEN_KEY, useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
@@ -69,6 +71,41 @@ describe('401 handling', () => {
     expect(slow.status).toBe(0);
     expect(slow.message).toMatch(/taking too long/);
     expect(useAuthStore.getState().status).toBe('signedIn');
+  });
+
+  it('says "You are offline" when NetInfo knows there is no connection', async () => {
+    onlineManager.setOnline(false);
+    try {
+      mockApi(() => 'network');
+      const error = await failure(getMe());
+      expect(error).toMatchObject({ status: 0, message: 'You are offline', code: 'OFFLINE' });
+      expect(isOffline(error)).toBe(true);
+      expect(errorMessage(error)).toBe('You are offline');
+    } finally {
+      onlineManager.setOnline(true);
+    }
+  });
+});
+
+describe('errorMessage(): only text written for users is shown', () => {
+  it('4xx: the server message; 5xx: never the server text', () => {
+    expect(errorMessage(new ApiError(400, 'Incorrect password'))).toBe('Incorrect password');
+    expect(errorMessage(new ApiError(500, 'MongoServerError: E11000 duplicate key'))).toBe(
+      'Something went wrong. Please try again.',
+    );
+    expect(errorMessage(new ApiError(503, 'Service temporarily unavailable'))).toBe(
+      'Something went wrong. Please try again.',
+    );
+  });
+
+  it('JavaScript and native errors show the fallback; UserError its own message', () => {
+    expect(errorMessage(new TypeError("Cannot read property 'x' of undefined"), 'Failed')).toBe(
+      'Failed',
+    );
+    expect(errorMessage('weird')).toBe('Something went wrong');
+    expect(errorMessage(new UserError('Upload timed out. Try again.'))).toBe(
+      'Upload timed out. Try again.',
+    );
   });
 });
 

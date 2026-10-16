@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui/Text';
 import { openWebPage, webPages } from '@/lib/links';
-import { colors, fonts, fontSize, touch } from '@/theme/tokens';
+import { colors, fonts, fontSize, hitSlopFor } from '@/theme/tokens';
 
 type TermsCheckboxProps = {
   checked: boolean;
@@ -18,7 +18,7 @@ export function TermsCheckbox({ checked, onChange }: TermsCheckboxProps) {
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
         accessibilityLabel="I'm 18 or older and I agree to the Terms, Privacy Policy and Community Guidelines"
-        hitSlop={touch.hitSlop}
+        hitSlop={hitSlopFor(20)}
         style={styles.boxHit}
       >
         <View style={[styles.box, checked && styles.boxOn]}>
