@@ -1,0 +1,7 @@
+# Prompt 7 · Before going offline: Home with the feed loaded.
+appId: com.themeetnet.app.dev
+---
+- runFlow: ../subflows/ensure-home.yaml
+- extendedWaitUntil:
+    visible: "Like, .*"
+    timeout: 30000

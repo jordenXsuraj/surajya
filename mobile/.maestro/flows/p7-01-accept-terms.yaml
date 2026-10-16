@@ -1,0 +1,26 @@
+# Prompt 7 · An account that never accepted the terms (the runner cleared termsAcceptedAt) gets the
+# blocking accept-terms screen after the next start: links to the three documents, Android Back
+# does nothing, "Agree and continue" needs the checkbox.
+appId: com.themeetnet.app.dev
+name: Accept terms
+---
+- runFlow: ../subflows/open-app.yaml
+# the cached user still has a date; GET /users/me at start brings the null and the screen
+- extendedWaitUntil:
+    visible: "Before you continue"
+    timeout: 30000
+- assertVisible: "Read the Terms of Service"
+- assertVisible: "Read the Privacy Policy"
+- assertVisible: "Read the Community Guidelines"
+- back
+- assertVisible: "Before you continue"
+# without the checkbox nothing happens
+- tapOn: "Agree and continue"
+- assertVisible: "Before you continue"
+- tapOn: "I'm 18 or older.*"
+- tapOn: "Agree and continue"
+- extendedWaitUntil:
+    notVisible: "Before you continue"
+    timeout: 15000
+- runFlow: ../subflows/dismiss-push-prompt.yaml
+- assertVisible: "Create a post"

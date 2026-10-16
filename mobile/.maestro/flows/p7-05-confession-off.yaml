@@ -1,0 +1,57 @@
+# Prompt 7 · The API runs with APP_CONFESSIONS_ANDROID=false: after a start the Home category chips
+# have no 🤫 Confession and compose offers no Confession type.
+appId: com.themeetnet.app.dev
+name: Confessions off
+---
+- runFlow: ../subflows/open-app.yaml
+- runFlow: ../subflows/dismiss-push-prompt.yaml
+- tapOn: "Home"
+- extendedWaitUntil:
+    visible:
+      id: "category-social"
+    timeout: 20000
+# The chips scroll sideways (~790 dp on a ~410 dp screen): check the start of the row, swipe it to
+# its end (Q&A) and check again; a Confession chip would sit between Placement and Project.
+# Confession posts in the feed keep their tag, so only the chip's id is checked.
+- assertNotVisible:
+    id: "category-confession"
+- swipe:
+    from:
+      id: "category-study"
+    direction: LEFT
+    duration: 300
+- runFlow:
+    when:
+      notVisible:
+        id: "category-qa"
+    commands:
+      - swipe:
+          from:
+            id: "category-project"
+          direction: LEFT
+          duration: 300
+- assertVisible:
+    id: "category-qa"
+- assertVisible:
+    id: "category-project"
+# Placement and Project on screen together: nothing can hide between them
+- assertVisible:
+    id: "category-placement"
+- assertNotVisible:
+    id: "category-confession"
+- tapOn: "Create a post"
+- extendedWaitUntil:
+    visible:
+      id: "compose-text"
+    timeout: 15000
+- runFlow: ../subflows/dismiss-keyboard.yaml
+- assertVisible:
+    id: "type-social"
+- assertNotVisible:
+    id: "type-confession"
+- tapOn: "Close"
+- runFlow:
+    when:
+      visible: "Discard post."
+    commands:
+      - tapOn: "(?i)discard"

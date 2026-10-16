@@ -1,0 +1,24 @@
+# Prompt 7 · Long-press someone's reply → Report reply. The sheet says how reports are handled and
+# links the Community Guidelines and support.
+appId: com.themeetnet.app.dev
+name: Report a reply
+---
+- runFlow: ../subflows/ensure-home.yaml
+- openLink: meetnet-dev://post/${POST_ID}
+- extendedWaitUntil:
+    visible: ".*${RUN} p7 reply to report.*"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- longPressOn: ".*${RUN} p7 reply to report.*"
+- tapOn: ".*Report reply"
+- assertVisible: "Why are you reporting this reply."
+- assertVisible: ".*We review every report within 24 hours.*"
+- assertVisible: ".*support@themeetnet.com.*"
+- tapOn: ".*Harassment"
+# the toast is checked by the runner from the "[watch]" command on
+- tapOn:
+    text: "Submit report"
+    label: "Submit report [watch]"
+- waitForAnimationToEnd:
+    timeout: 3000

@@ -194,7 +194,8 @@ async function maestroAsync(flow, env, debugDir) {
 // One raw screen frame (RGBA, no PNG decoding needed): { width, height, top: 0, header, data }
 function rawFrame() {
   return new Promise((resolveFrame, reject) => {
-    execFile('adb', ['-s', SERIAL, 'exec-out', 'screencap'], { encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 }, (err, buf) => {
+    // a capture that hangs (seen once on ColorOS: 13 min) is killed after 15 s instead of stalling the run
+    execFile('adb', ['-s', SERIAL, 'exec-out', 'screencap'], { encoding: 'buffer', maxBuffer: 64 * 1024 * 1024, timeout: 15_000 }, (err, buf) => {
       if (err) return reject(err);
       const width = buf.readUInt32LE(0), height = buf.readUInt32LE(4);
       const header = buf.length - width * height * 4; // 12 or 16 bytes depending on Android version
@@ -960,6 +961,73 @@ const P6_STEPS = [
     } },
 ].map((step) => ({ ...step, beforePrepare: async () => { resetP6(); await step.beforePrepare?.(); } }));
 
+// ── Prompt 7 (store readiness) ────────────────────────────────────────────────────────────────
+const replyAs = async (key, postId, text) => api('POST', `/posts/${postId}/replies`, { text }, await tokenOf(key));
+const testerTermsAt = () => mongo(`print(JSON.stringify(db.users.findOne({ _id: ObjectId(${q(ctx.ids.tester)}) }, { termsAcceptedAt: 1 }).termsAcceptedAt ?? null))`);
+
+const P7_STEPS = [
+  { id: 'p7-01', title: 'Account without accepted terms: blocking accept-terms screen (Back does nothing) → Agree', flow: 'p7-01-accept-terms.yaml',
+    beforePrepare: () => mongo(`print(db.users.updateOne({ _id: ObjectId(${q(ctx.ids.tester)}) }, { $set: { termsAcceptedAt: null } }).modifiedCount)`),
+    verify: (start) => {
+      const at = testerTermsAt();
+      expect(at && new Date(at) >= start, `termsAcceptedAt is ${at}`);
+      return `termsAcceptedAt set (${at})`;
+    } },
+  { id: 'p7-02', title: 'Long-press a reply → Report reply (guidelines, support, 24 h shown)', flow: 'p7-02-report-reply.yaml',
+    toasts: [{ type: 'success', text: 'Report submitted' }],
+    beforePrepare: async () => { ctx.p7ReplyId = (await replyAs('tanvi', ctx.fixtureId, `Maestro ${RUN} p7 reply to report`))._id; },
+    verify: () => {
+      const n = mongo(`print(db.reports.countDocuments({ targetType: 'reply', post: ObjectId(${q(ctx.fixtureId)}), replyId: ObjectId(${q(ctx.p7ReplyId)}), reportedBy: ObjectId(${q(ctx.ids.tester)}), reason: 'harassment' }))`);
+      expect(n === 1, `${n} matching reply reports`);
+      return "one harassment report on Tanvi's reply";
+    } },
+  { id: 'p7-03', title: "Reply ⋯ → Block: the author's reply leaves the open post at once", flow: 'p7-03-block-from-reply.yaml',
+    toasts: [{ type: 'success', text: 'Aditi blocked' }],
+    // Aditi: no follow or block with the tester in the baseline (Pooja blocks the tester there,
+    // so the server would hide her reply)
+    beforePrepare: async () => { await replyAs('aditi', ctx.fixtureId, `Maestro ${RUN} p7 reply to block`); },
+    verify: () => {
+      expect(userDoc('tester').blockedUsers.includes(ctx.ids.aditi), 'Aditi not in blockedUsers');
+      return 'Aditi in blockedUsers';
+    } },
+  { id: 'p7-04', title: 'Offensive words: warning in compose and the reply box, nothing is sent', flow: 'p7-04-profanity.yaml',
+    verify: () => {
+      expect(!postByText(`Maestro ${RUN} this is bullshit`), 'the offensive post was created');
+      const replies = mongo(`print(db.posts.countDocuments({ 'replies.text': /Maestro ${RUN} you asshole/ }))`);
+      expect(replies === 0, `${replies} posts got the offensive reply`);
+      return 'no post and no reply with the offensive text';
+    } },
+  { id: 'p7-05', title: 'Confessions switched off: no 🤫 chip on Home, no Confession type in compose', flow: 'p7-05-confession-off.yaml',
+    before: () => startLocalApi({ APP_CONFESSIONS_ANDROID: 'false' }),
+    after: () => startLocalApi() },
+  { id: 'p7-06', title: 'Offline: banner, a like says "You are offline", an uncached post waits for the connection', flow: 'p7-06-offline.yaml',
+    emulatorOnly: 'real network loss (airplane mode) is only simulated on the emulator',
+    prepare: 'p7-06-prepare.yaml',
+    toasts: [{ type: 'error', text: 'You are offline' }],
+    beforePrepare: async () => { ctx.p7OfflinePostId = await postAs('dev', `Maestro ${RUN} p7 offline post`); },
+    env: () => ({ OFFLINE_POST_ID: ctx.p7OfflinePostId }),
+    before: () => network(false),
+    after: () => network(true) },
+  // last of Prompt 7: it leaves the app signed out (p5-19 signs in again)
+  { id: 'p7-07', title: 'Settings → Delete account (wrong password refused) → deleted, back on the welcome screen', flow: 'p7-07-delete-account.yaml',
+    toasts: [{ type: 'success', text: 'Your account was deleted' }],
+    beforePrepare: async () => {
+      ctx.p7Del = { email: `p7-delete-${RUN.toLowerCase()}@meetnet.local`, password: `Del-${RUN}-pass1` };
+      await api('POST', '/auth/signup', { name: 'Delete Me', email: ctx.p7Del.email, password: ctx.p7Del.password,
+        college: 'Seed Test College', year: '1st', branch: 'CS', acceptTerms: true });
+      mongo(`print(db.users.updateOne({ email: ${q(ctx.p7Del.email)} }, { $set: { emailVerified: true, emailVerifiedAt: new Date() } }).modifiedCount)`);
+      const { token } = await api('POST', '/auth/login', { email: ctx.p7Del.email, password: ctx.p7Del.password });
+      await api('POST', '/posts', { type: 'social', text: `Maestro ${RUN} p7 post to delete` }, token);
+    },
+    env: () => ({ DEL_EMAIL: ctx.p7Del.email, DEL_PASSWORD: ctx.p7Del.password }),
+    verify: () => {
+      const users = mongo(`print(db.users.countDocuments({ email: ${q(ctx.p7Del.email)} }))`);
+      const posts = mongo(`print(db.posts.countDocuments({ text: ${q(`Maestro ${RUN} p7 post to delete`)} }))`);
+      expect(users === 0 && posts === 0, `${users} accounts and ${posts} posts left`);
+      return 'account and its post deleted';
+    } },
+].map((step) => ({ ...step, beforePrepare: async () => { resetP5(); await step.beforePrepare?.(); } }));
+
 const STEPS = [
   { id: 'p3-01', title: 'Login (signed out → Home)', flow: 'p3-01-login.yaml' },
   { id: 'p3-02', title: 'Home feed scrolls to the end', flow: 'p3-02-feed-scroll.yaml',
@@ -1184,8 +1252,8 @@ const STEPS = [
       } },
   ].map((step) => ({ ...step, beforePrepare: async () => { resetP5(); await step.beforePrepare?.(); } })),
 ];
-// Prompt 6 runs before p5-19, which has to stay last
-STEPS.splice(STEPS.findIndex((s) => s.id === 'p5-19'), 0, ...P6_STEPS);
+// Prompts 6 and 7 run before p5-19, which has to stay last
+STEPS.splice(STEPS.findIndex((s) => s.id === 'p5-19'), 0, ...P6_STEPS, ...P7_STEPS);
 
 // ── setup ─────────────────────────────────────────────────────────────────────────────────────
 // Can Maestro reach the emulator? ("Device … was requested, but it is not connected" when adb lists
@@ -1312,6 +1380,7 @@ try {
     // need what p6-11b leaves behind: this device registered for pushes (the app has the permission)
     const phoneHasDevice = () => PHONE && step.needs === 'p6-11b' && testerDevices().some((d) => d.platform === 'android' && d.expo);
     if (step.needs && results.find((x) => x.id === step.needs)?.result !== 'PASS' && !phoneHasDevice()) { r.result = 'SKIPPED'; r.details = `needs ${step.needs}`; log(step.id, 'SKIPPED'); continue; }
+    if (PHONE && step.emulatorOnly) { r.result = 'SKIPPED'; r.details = `emulator only: ${step.emulatorOnly}`; log(step.id, 'SKIPPED'); continue; }
     const debugDir = join(REPORT_DIR, 'debug', step.id);
     const expectedToasts = step.toasts ?? [];
     const start = new Date(Date.now() - 2000);
