@@ -104,7 +104,7 @@ export function buildConfig(config: ExpoConfig, variant: AppVariant): ExpoConfig
   const id = isDev ? 'com.themeetnet.app.dev' : 'com.themeetnet.app';
 
   // the Sentry start-up providers come out of the merged Android manifest (see above)
-  return withoutSentryStartupProviders({
+  return ({
     ...config,
     name: isDev ? 'MeetNet Dev' : 'MeetNet',
     slug: 'meetnet',
@@ -166,17 +166,6 @@ export function buildConfig(config: ExpoConfig, variant: AppVariant): ExpoConfig
           icon: './assets/notification-icon.png',
           color: ACCENT,
           defaultChannel: 'default',
-        },
-      ],
-      [
-        // Crash reports (src/lib/monitoring.ts). Release builds upload source maps with the EAS
-        // secret SENTRY_AUTH_TOKEN; org, project and the region's URL come from the build env in
-        // eas.json (not secrets; the organisation is in Sentry's EU region: de.sentry.io).
-        '@sentry/react-native/expo',
-        {
-          url: process.env.SENTRY_URL || 'https://sentry.io/',
-          organization: process.env.SENTRY_ORG,
-          project: process.env.SENTRY_PROJECT,
         },
       ],
       [

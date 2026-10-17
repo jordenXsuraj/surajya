@@ -1,4 +1,11 @@
-import * as Sentry from '@sentry/react-native';
+// MEASUREMENT BUILD ONLY (branch perf/cold-start-nosentry, never merged): Sentry removed, calls are no-ops.
+const Sentry = {
+  init: (_options: Record<string, unknown>) => undefined,
+  setUser: (_user: unknown) => undefined,
+  setTag: (_key: string, _value: string) => undefined,
+  captureException: (_error: unknown, _hint?: unknown) => undefined,
+  nativeCrash: () => undefined,
+};
 import Constants from 'expo-constants';
 
 import { useAuthStore } from '@/stores/auth.store';

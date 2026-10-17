@@ -1,5 +1,5 @@
-// Expo's default Metro config plus Sentry's debug ids, which tie each release bundle to the source
-// map the EAS build uploads (src/lib/monitoring.ts). No other changes to the defaults.
-const { getSentryExpoConfig } = require('@sentry/react-native/metro');
+// MEASUREMENT BUILD ONLY (branch perf/cold-start-nosentry, never merged): Expo's default Metro
+// config, without Sentry.
+const { getDefaultConfig } = require('expo/metro-config');
 
-module.exports = getSentryExpoConfig(__dirname);
+module.exports = getDefaultConfig(__dirname);
