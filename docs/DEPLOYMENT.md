@@ -27,7 +27,7 @@ If a Render deploy fails (build error, or the app exits at startup), Render keep
 
 ### Manual deploy / rollback
 
-- **Render:** Dashboard → `surajya` → **Manual Deploy → Deploy latest commit**. To roll back: **Events** → pick an earlier successful deploy → **Rollback** (this also brings back that deploy's Node version: the version comes from the commit's `server/package.json`). Pick a commit that was actually deployed, i.e. one that changed `server/`: before the security patch 2e1144b (live 2026-10-13 17:44Z) that is **9d816bc** (Prompt 6 merge), not 241db37 (docs only, never deployed). Afterwards check `/healthz` shows the rolled-back SHA.
+- **Render:** Dashboard → `surajya` → **Manual Deploy → Deploy latest commit**. To roll back: **Events** → pick an earlier successful deploy → **Rollback** (this also brings back that deploy's Node version: it comes from the commit's `server/.nvmrc` / `engines`). Pick a commit that was actually deployed, i.e. one that changed `server/`: before the security patch 2e1144b (live 2026-10-13 17:44Z) that is **9d816bc** (Prompt 6 merge), not 241db37 (docs only, never deployed). Afterwards check `/healthz` shows the rolled-back SHA.
   API alternative: `POST https://api.render.com/v1/services/srv-d7rf1ljt6lks73fs4e10/deploys` with body `{"commitId":"<sha>"}`.
 - **Vercel:** Dashboard → project `surajya` → **Deployments** → pick a deployment → **Promote to Production** (or **Redeploy**).
 
@@ -39,7 +39,7 @@ If a Render deploy fails (build error, or the app exits at startup), Render keep
 | Root directory | `server` |
 | Build command | `npm ci --omit=dev` (production dependencies only; the lockfile must be in sync) |
 | Start command | `npm start` (`node index.js`) |
-| Node version | from `server/package.json` → `engines.node` (22.23.3). `server/.nvmrc` says the same for nvm; a server test keeps the two equal. Render prefers a `NODE_VERSION` variable or a repo-root `.node-version` / `.nvmrc` over `engines`, so don't add those |
+| Node version | 22.23.3 from **`server/.nvmrc`**: Render reads it from the service's root directory (deploy log, 2026-10-17: "Using Node.js version 22.23.3 via /opt/render/project/src/server/.nvmrc"), before `package.json` → `engines.node`, which says the same (a server test keeps the two equal). Change both together. A `NODE_VERSION` environment variable or a `server/.node-version` would win over both, so don't add those |
 
 ## Environment variables
 
