@@ -1,7 +1,7 @@
 # MeetNet API — mobile reference
 
 Every endpoint the React Native (Expo) app uses. Source of truth: `server/routes/*.js`.
-Tests: `server/tests/` (run `npm test`).
+Tests: `server/tests/` (run `npm test`, not plain `npx jest`: the MongoDB driver loads `os` with a dynamic `import()`, which Jest allows only with Node's `--experimental-vm-modules`, and the script passes it).
 
 ## Conventions
 

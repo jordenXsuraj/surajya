@@ -1,5 +1,5 @@
-// Render runs the Node version in package.json engines.node; server/.nvmrc is the same version for
-// nvm users. The two must never disagree (docs/DEPLOYMENT.md, "Render").
+// Render picks the Node version from server/.nvmrc (its build log: "via …/server/.nvmrc");
+// package.json engines.node states the same version. The two must never disagree (docs/DEPLOYMENT.md, "Render").
 const fs = require('fs')
 const path = require('path')
 

@@ -3,7 +3,7 @@ const path       = require('path')
 const crypto     = require('crypto')
 const cloudinary = require('cloudinary').v2
 const multer     = require('multer')
-const { CloudinaryStorage } = require('multer-storage-cloudinary')
+const { CloudinaryStorage } = require('./cloudinaryStorage')
 const { uploadMode, LOCAL_UPLOAD_DIR } = require('./uploadMode')
 
 // 'cloudinary', or 'local' outside production when Cloudinary is not configured (config/uploadMode.js)
