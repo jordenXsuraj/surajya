@@ -78,6 +78,10 @@ async function deleteUserData(userId, session) {
 
 // https://res.cloudinary.com/<cloud>/<image|raw>/upload/v123/<folder>/<id>[.ext]
 const OWN_FOLDERS = ['nexus/', 'meetnet_pdfs/']
+// Public ids our uploads create: letters, digits, _ / - only; raw files (PDFs) may end in one
+// final .pdf (older uploads did). No other dot, so no .. either.
+const SAFE_PUBLIC_ID = { image: /^[\w/-]+$/, video: /^[\w/-]+$/, raw: /^[\w/-]+(\.pdf)?$/ }
+
 function cloudinaryAsset(url) {
   const m = typeof url === 'string' && url.match(/^https?:\/\/res\.cloudinary\.com\/([^/]+)\/(image|raw|video)\/upload\/(?:v\d+\/)?(.+)$/)
   if (!m) return null
@@ -86,6 +90,8 @@ function cloudinaryAsset(url) {
   if (!OWN_FOLDERS.some(f => rest.startsWith(f))) return null
   // Image/video public ids exclude the extension; raw files keep theirs
   const publicId = resourceType === 'raw' ? rest : rest.replace(/\.[a-z0-9]+$/i, '')
+  // Anything else (?, &, .., %, spaces, empty segments) is not ours and never reaches Cloudinary
+  if (!SAFE_PUBLIC_ID[resourceType].test(publicId) || publicId.split('/').includes('')) return null
   return { publicId, resourceType }
 }
 

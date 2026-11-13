@@ -382,7 +382,7 @@ router.post('/me/avatar', protect, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No image provided' })
     const updated = await User.findByIdAndUpdate(
-      req.user._id, { $set: { avatar: req.file.path } }, { new: true }
+      req.user._id, { $set: { avatar: req.file.path } }, { returnDocument: 'after' }
     ).select('-password -__v')
     res.json({ avatar: req.file.path, user: safeUser(updated) })
   } catch (err) {
@@ -397,7 +397,7 @@ router.post('/me/cover', protect, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No image provided' })
     const updated = await User.findByIdAndUpdate(
-      req.user._id, { $set: { coverImage: req.file.path } }, { new: true }
+      req.user._id, { $set: { coverImage: req.file.path } }, { returnDocument: 'after' }
     ).select('-password -__v')
     res.json({ coverImage: req.file.path, user: safeUser(updated) })
   } catch (err) {

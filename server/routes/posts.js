@@ -578,7 +578,7 @@ router.post('/:id/replies', protect, requireVerifiedEmail, async (req, res) => {
         },
         $inc: { replyCount: 1 }
       },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).populate('replies.postedBy', 'name year branch avatar')
 
     if (!post) {
