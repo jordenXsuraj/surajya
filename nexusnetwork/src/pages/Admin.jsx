@@ -47,6 +47,27 @@ const getH = () => ({
   }, [user, keyEntered])   // ← add keyEntered as dep
 
   // ── conditional returns AFTER all hooks ──
+  // Not signed in in this browser: the admin endpoints need the admin account's session, so say so
+  // (before, the page accepted the key and then showed "Loading…" forever)
+  if (!user) return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center',
+      justifyContent:'center', minHeight:'100vh', background:'#0d0d0d',
+      gap:12, padding:24, textAlign:'center' }}>
+      <div style={{ fontFamily:'Fraunces,serif', fontSize:'1.3rem',
+        fontWeight:800, color:'#f0f0f0' }}>🛡️ Admin</div>
+      <div style={{ fontSize:'.9rem', color:'#bbb', fontWeight:600 }}>Sign in as the admin first</div>
+      <div style={{ fontSize:'.78rem', color:'#666', maxWidth:300, lineHeight:1.5 }}>
+        This browser isn't signed in to MeetNet. Sign in with the admin account, then open /admin again.
+      </div>
+      <button onClick={() => nav('/')}
+        style={{ padding:'10px 28px', background:'#a73333', border:'none',
+          borderRadius:12, color:'white', fontWeight:700, cursor:'pointer',
+          fontFamily:'Outfit,sans-serif' }}>
+        Go to sign in
+      </button>
+    </div>
+  )
+
   if (!keyEntered) return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center',
       justifyContent:'center', minHeight:'100vh', background:'#0d0d0d',
