@@ -1,5 +1,8 @@
 # MeetNet mobile app — rules for working in `mobile/`
 
+> **Mobile app is paused — see `docs/MOBILE_PAUSE.md`** (2026-11-14). Server changes for the web must
+> stay backward compatible with `server/API_MOBILE.md`; flag anything that would break it first.
+
 MeetNet's native app: Expo SDK 57 (React Native 0.86, React 19.2, React Compiler on), TypeScript
 strict, expo-router. Android first; iOS must keep working. Also read `AGENTS.md` (Expo's own guidance:
 always check the versioned Expo docs, never trust remembered APIs).
