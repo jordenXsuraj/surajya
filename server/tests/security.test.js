@@ -305,3 +305,35 @@ describe('anonymous post de-anonymisation', () => {
     expect(interest.sender._id).toBe(other._id.toString())
   })
 })
+
+// GHSA-27r3-jxmh-p828 (body-parser < 1.20.9): when a compressed body was refused early (e.g. an
+// unsupported charset, 415), the gzip decoder stayed piped with no error listener, and the invalid
+// compressed bytes then crashed the process after the response, without authentication.
+describe('compressed request bodies', () => {
+  test('a refused gzip body with an unknown charset does not crash the server', async () => {
+    const http = require('http')
+    const crashes = []
+    const onCrash = err => crashes.push(err)
+    process.on('uncaughtException', onCrash)
+    const server = http.createServer(app)
+    await new Promise(r => server.listen(0, '127.0.0.1', r))
+    try {
+      const body = Buffer.from('this is not gzip at all, but says it is'.repeat(50))
+      const status = await new Promise((resolve, reject) => {
+        const req = http.request({
+          host: '127.0.0.1', port: server.address().port, method: 'POST', path: '/api/auth/login',
+          headers: { 'Content-Type': 'application/json; charset=utf-99', 'Content-Encoding': 'gzip', 'Content-Length': body.length },
+        }, res => { res.resume(); resolve(res.statusCode) })
+        req.on('error', reject)
+        req.end(body)
+      })
+      expect(status).toBeLessThan(500)
+      await new Promise(r => setTimeout(r, 400))   // the crash came after the response
+      expect(crashes).toEqual([])
+      expect((await request(app).get('/healthz')).status).toBe(200)
+    } finally {
+      process.off('uncaughtException', onCrash)
+      await new Promise(r => server.close(r))
+    }
+  })
+})
