@@ -22,6 +22,13 @@ _Last updated: 2026-10-17._
 
 ## Server
 
+- **"Nearby Colleges" for MeetNow.**
+  Why: MeetNow ships with "My College" and "Everyone" only; "nearby" needs to know where colleges are, but `college` is free text with no city.
+  Where: a college → city (or coordinates) list, then `visibility: 'nearby'` in `server/models/Meetup.js` / `routes/meetups.js` and the option in `nexusnetwork/src/features/meetnow/meta.js`.
+- **New npm advisories (seen 2026-11-14), not part of the MeetNow branch.**
+  Why: `npm audit --omit=dev` now reports body-parser (high, DoS), mongoose 9.0–9.11.3 (high), multer ≤ 2.4.0 (high, DoS), qs (moderate) and undici on the server, and axios ≤ 1.19 (high) plus follow-redirects on the web. Assess reachability as for the October advisories, then upgrade on its own branch.
+  Where: `server/package.json`, `nexusnetwork/package.json`.
+
 - **Move the server to Node 24 LTS, then upgrade `expo-server-sdk` to 7.**
   Why: Node 22 (in use since Prompt 7) gets security fixes only until 2027-04-30. `expo-server-sdk` 6+ is ESM-only: plain Node 22 loads it, but Jest can only `require()` an ESM package natively on Node 24.9+, so on Node 22 the server suite can't load it (a Babel transform doesn't help: Jest refuses `"type": "module"` files before transforming). On Node 24 the upgrade needs no code change (same API: `Expo`, `isExpoPushToken`, chunking, tickets, receipts).
   Where: `server/.nvmrc`, `server/package.json` (`engines.node`, `expo-server-sdk`), `server/Dockerfile`.
