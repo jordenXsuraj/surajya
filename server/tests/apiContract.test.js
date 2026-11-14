@@ -210,7 +210,7 @@ describe('upload errors are 400 with a code', () => {
     expect(res.body.url).toMatch(/^https:\/\/res\.cloudinary\.com\//)
   })
 
-  test('uploads go to Cloudinary with the same options as before (image, HEIC as JPG, avatar, PDF as raw)', async () => {
+  test('uploads go to Cloudinary with the right options (image, HEIC → JPG, avatar, PDF as raw)', async () => {
     const upload = fakeCloudinary()
     const user = await makeUser()
     const heic = Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypheic')])
@@ -222,13 +222,15 @@ describe('upload errors are 400 with a code', () => {
     expect((await as(user, 'post', '/api/posts/upload-pdf').attach('pdf', Buffer.from('%PDF-1.4\n'), { filename: 'a.pdf', contentType: 'application/pdf' })).status).toBe(200)
 
     const [image, heicOpts, avatarOpts, pdf] = upload.mock.calls.map(c => c[0])
+    // Cloudinary applies `format` only to formats missing from allowed_formats, so heic/heif must stay
+    // out of the list for HEIC to become JPG (jpg/png/webp are stored as they are)
     const imageOpts = {
-      folder: 'nexus', resource_type: 'image', allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'],
+      folder: 'nexus', resource_type: 'image', allowed_formats: ['jpg', 'jpeg', 'png', 'webp'], format: 'jpg',
       public_id: expect.stringMatching(/^post_\d+_[a-z0-9]{1,4}$/),
       transformation: [{ width: 1080, crop: 'limit' }, { quality: 'auto' }],
     }
     expect(image).toEqual(imageOpts)
-    expect(heicOpts).toEqual({ ...imageOpts, format: 'jpg' })
+    expect(heicOpts).toEqual(imageOpts)
     expect(avatarOpts).toEqual(imageOpts)
     expect(pdf).toEqual({ folder: 'meetnet_pdfs', resource_type: 'raw', public_id: expect.stringMatching(/^pdf_\d+_[a-z0-9]{1,4}$/) })
   })
