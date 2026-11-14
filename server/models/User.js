@@ -152,6 +152,14 @@ savedPosts: {
     validate: [arr => arr.length <= 10, 'Too many push tokens'],
   },
 
+  // ── Staff allowlist for features that are not on for everyone yet (config/features.js).
+  // Granted by the admin (POST /api/app/feature-access); never returned by default.
+  featureAccess: {
+    type: [{ type: String, enum: ['meetnow', 'dm'] }],
+    default: [],
+    select: false,
+  },
+
   // ── Safety ───────────────────────────────────
   blockedUsers: {
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

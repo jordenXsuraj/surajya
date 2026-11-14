@@ -65,6 +65,7 @@ async function deleteUserData(userId, session) {
     $or: [
       { reportedBy: me },
       { targetType: 'user', user: me },
+      { 'snapshot.sender': me },   // MeetNow reports quoting what they wrote
       ...(postIds.length ? [{ post: { $in: postIds } }] : []),
       ...(replyIds.length ? [{ targetType: 'reply', replyId: { $in: replyIds } }] : []),
     ],
@@ -133,6 +134,13 @@ async function deleteAccount(userId) {
     return { attempted: 0, failed: 0 }
   })
   const localFiles = await deleteLocalUploads(urls)
+
+  // MeetNow: meetups they started end, their memberships and chat messages go (no transaction:
+  // it emits to connected clients, and every step is idempotent)
+  await require('./meetupLifecycle').removeUser(userId).catch(err => {
+    console.error('account deletion: MeetNow cleanup failed:', err.message)
+  })
+  require('../realtime/socket').disconnectUser(userId)
   return { posts: data.posts.length, cloudinary: cloud, localFiles }
 }
 

@@ -177,10 +177,56 @@ Every route above with `:id` answers 400 `Invalid ID format` for a malformed id 
 { minVersion:    { ios, android },        // below this: force-update screen
   latestVersion: { ios, android },        // below this: optional "update available"
   storeUrl:      { ios, android },
-  features:      { confessionsEnabled: { ios, android }, pdfUploads },
+  features:      { confessionsEnabled: { ios, android }, pdfUploads,
+                   meetnowEnabled, dmEnabled },   // web-only features, see "Staged features"
   maintenance:   { enabled, message } }   // enabled: show message, block the app
 ```
-Versions are `x.y.z` strings. Every field is always present.
+Versions are `x.y.z` strings. Every field is always present. Apps must ignore fields they don't know.
+
+## Staged features (web first; the app ignores them)
+
+Added additively for the web: nothing above changed. Each feature has a server switch,
+`FEATURE_MEETNOW` / `FEATURE_DM` = `off` (default) | `staff` | `on` (`server/config/features.js`).
+While it is off for an account, its routes answer the normal 404 (`Route … not found`), its socket
+events are refused, and `features.*Enabled` in `/app/config` is `false` (it is `true` only for `on`).
+
+| Method | Path | Auth | Answer |
+|---|---|---|---|
+| GET | `/app/features` | ✓ | 200 `{ meetnow, dm }` for this account (`Cache-Control: private, no-store`) |
+| GET / POST | `/app/feature-access` | admin JWT + `x-admin-key` | staff allowlist: list / `{ email, feature, grant }`; anything else is 404 |
+
+### MeetNow (`/meetups`, feature `meetnow`)
+
+Temporary meetups with a group chat. An expired or ended meetup is **404** `{ code: 'MEETUP_NOT_FOUND' }`
+from the second it ends; the server then deletes it with its members and messages (no archive).
+Creating, joining, sending and reporting need a verified email (403 `EMAIL_NOT_VERIFIED`).
+
+| Method | Path | Answer |
+|---|---|---|
+| GET | `/meetups?category=&limit=` (≤ 50) | 200 `[Meetup]`, joined first; only `college` meetups of your college and `everyone` meetups; blocks either way hide them |
+| POST | `/meetups` `{ title (3–80), description? (≤ 300), category, location (2–80), visibility: 'college' or 'everyone', durationMinutes? (15–4320) or duration: 'until_leave' }` | 201 `Meetup` (default 24 h; "until I leave" ≤ 24 h); 400 validation / `PROFANITY`; 429 `TOO_MANY_ACTIVE` (3 active) or `RATE_LIMITED` (10 a day) |
+| GET | `/meetups/:id` | 200 `Meetup` + `description`, `members: [{ _id, name, username, avatar, college, year, branch, isCreator, joinedAt }]` (blocked people left out) |
+| POST | `/meetups/:id/join` | 200 `{ joined: true, alreadyJoined, memberCount }` (idempotent); 409 `MEETUP_FULL` (100) |
+| POST | `/meetups/:id/leave` | 200 `{ left: true, ended }`: ends it if it was the last member, or the creator of an "until I leave" meetup; 400 `NOT_A_MEMBER` |
+| DELETE | `/meetups/:id` | creator: 200 `{ ended: true }` (deleted for everyone); others 403 |
+| GET | `/meetups/:id/messages?before=<ISO>&limit=` (≤ 100) | members: 200 `[Message]` oldest first; 403 `NOT_A_MEMBER` |
+| POST | `/meetups/:id/messages` `{ text (≤ 1000) }` | members: 201 `Message`; 20 per minute |
+| POST | `/meetups/:id/report`, `/meetups/:id/messages/:messageId/report` `{ reason, note? }` | 200; the report keeps a snapshot (title / text + author) for 90 days |
+
+`Meetup = { _id, title, category, location, visibility, memberCount, expiresAt, createdAt, endsWhenCreatorLeaves, creator: { _id, name, username, avatar, college, year, branch }, joined, isCreator }`
+`Message = { _id, meetup, kind: 'text'|'system', text, createdAt, sender: { _id, name, avatar } | null }`; a text from someone blocked either way comes as `{ …, text: null, hidden: true }`.
+
+### Real-time (Socket.IO, same host, path `/socket.io`)
+
+Connect with `auth: { token: <JWT> }`. Refused (`connect_error` `unauthorized` / `not_available`) for a
+bad or revoked token, or when no staged feature is available to the account. Logging out everywhere,
+a password change or reset, an email change and account deletion disconnect the account's sockets.
+
+| Client → server (with ack) | Server → client |
+|---|---|
+| `meetnow:watch` → `{ ok }`: live cards for your college and `everyone` | `meetup:created { meetupId }`, `meetup:members { meetupId, memberCount, joined? or left? }`, `meetup:ended { meetupId, reason }` |
+| `meetup:subscribe { meetupId }` → `{ ok, code? }`: members of an active meetup only | `meetup:message Message` |
+| `meetup:unsubscribe { meetupId }` | |
 
 ## Deep links (Universal Links / App Links)
 

@@ -740,7 +740,8 @@ describe('GET /api/app/config', () => {
       minVersion:    { ios: '0.0.0', android: '0.0.0' },
       latestVersion: { ios: '1.0.0', android: '1.0.0' },
       storeUrl:      { ios: '', android: 'https://play.google.com/store/apps/details?id=com.themeetnet.app' },
-      features:      { confessionsEnabled: { ios: true, android: true }, pdfUploads: true },
+      // meetnowEnabled / dmEnabled: off unless FEATURE_MEETNOW / FEATURE_DM = on (config/features.js)
+      features:      { confessionsEnabled: { ios: true, android: true }, pdfUploads: true, meetnowEnabled: false, dmEnabled: false },
       maintenance:   { enabled: false, message: '' },
     })
   })
