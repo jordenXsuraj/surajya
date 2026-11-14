@@ -153,6 +153,21 @@ export const getNotifications = ()  => API.get('/notifications')
 export const getUnreadCount   = ()  => API.get('/notifications/unread-count')
 export const markAllRead      = ()  => API.put('/notifications/mark-read')
 
+// ── Staged features (MeetNow, messages): what this account may use ──
+export const getFeatures = () => API.get('/app/features')
+
+// ── MeetNow (only while the meetnow feature is available to this account) ──
+export const getMeetups          = (category, limit = 20) => API.get(`/meetups${buildQuery({ category, limit })}`)
+export const createMeetup        = d            => API.post('/meetups', d)
+export const getMeetup           = id           => API.get(`/meetups/${id}`)
+export const joinMeetup          = id           => API.post(`/meetups/${id}/join`)
+export const leaveMeetup         = id           => API.post(`/meetups/${id}/leave`)
+export const endMeetup           = id           => API.delete(`/meetups/${id}`)
+export const getMeetupMessages   = (id, before) => API.get(`/meetups/${id}/messages${buildQuery({ before })}`)
+export const sendMeetupMessage   = (id, text)   => API.post(`/meetups/${id}/messages`, { text })
+export const reportMeetup        = (id, reason) => API.post(`/meetups/${id}/report`, { reason })
+export const reportMeetupMessage = (id, messageId, reason) => API.post(`/meetups/${id}/messages/${messageId}/report`, { reason })
+
 // ── Helper ────────────────────────────────────────
 function buildQuery(params) {
   const q = Object.entries(params)
