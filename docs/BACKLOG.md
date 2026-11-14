@@ -16,6 +16,9 @@ _Last updated: 2026-10-17._
 - **`Onboard.jsx` has 4 pre-existing ESLint errors** (unused variables).
   Why: they hide new lint problems in the signup page and block a clean `npm run lint`.
   Where: `nexusnetwork/src/pages/Onboard.jsx`.
+- **Profile avatar/cover upload sends the original file when the browser can't decode it.**
+  Why: `compressImage` in `Profile.jsx` resolves with the raw file on `img.onerror` (a HEIC picked in Chrome, Edge, Firefox or Android Chrome). The server converts HEIC to JPG since `fix/heic-to-jpg`, but a file with an empty `type` still ends in a bare 400, while `Post.jsx` shows "Could not read image" and uploads nothing. The two should behave the same.
+  Where: `nexusnetwork/src/pages/Profile.jsx` (`compressImage` → `resolve(file)` fallback), `nexusnetwork/src/pages/Post.jsx` (`compressImage` reject path).
 
 ## Server
 
