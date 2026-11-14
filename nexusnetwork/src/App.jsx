@@ -23,6 +23,11 @@ import SecurityNotice from './components/SecurityNotice'
 import VerifyEmailBanner from './components/VerifyEmailBanner'
 import EmailNotVerifiedToast from './components/EmailNotVerifiedToast'
 import VerifyEmail from './pages/VerifyEmail'
+import { RealtimeProvider, RequireFeature } from './context/RealtimeContext'
+import MeetNowAll from './features/meetnow/MeetNowAll'
+import CreateMeetNow from './features/meetnow/CreateMeetNow'
+import MeetNowDetails from './features/meetnow/MeetNowDetails'
+import MeetNowChat from './features/meetnow/MeetNowChat'
 function Guard({ children }) {
   const { user } = useAuth()
   return user ? children : <Navigate to="/" replace />
@@ -54,6 +59,11 @@ useEffect(() => {
         <Route path="/profile/:id" element={<Guard><StudentProfile /></Guard>} />
         <Route path="/post/:id" element={<SinglePost />} />
         <Route path="/admin" element={<Admin />} />
+        {/* MeetNow: only while the server makes it available to this account (else → /home) */}
+        <Route path="/meetnow"          element={<Guard><RequireFeature feature="meetnow"><MeetNowAll /></RequireFeature></Guard>} />
+        <Route path="/meetnow/new"      element={<Guard><RequireFeature feature="meetnow"><CreateMeetNow /></RequireFeature></Guard>} />
+        <Route path="/meetnow/:id"      element={<Guard><RequireFeature feature="meetnow"><MeetNowDetails /></RequireFeature></Guard>} />
+        <Route path="/meetnow/:id/chat" element={<Guard><RequireFeature feature="meetnow"><MeetNowChat /></RequireFeature></Guard>} />
         {/* Public: account recovery, deletion and legal pages (linked from the app stores) */}
         <Route path="/verify-email"         element={<Guard><VerifyEmail /></Guard>} />
         <Route path="/forgot-password"      element={<ForgotPassword />} />
@@ -72,9 +82,11 @@ useEffect(() => {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppShell />
-      </BrowserRouter>
+      <RealtimeProvider>
+        <BrowserRouter>
+          <AppShell />
+        </BrowserRouter>
+      </RealtimeProvider>
     </AuthProvider>
   )
 }

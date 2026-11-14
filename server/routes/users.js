@@ -158,6 +158,7 @@ router.put('/me/email', protect, changeEmailLimiter, async (req, res) => {
     if (err.code === 11000) return res.status(409).json({ code: 'EMAIL_TAKEN', message: 'An account with this email already exists' })
     throw err
   }
+  require('../realtime/socket').disconnectUser(user._id)   // live connections use the old session too
 
   // Best effort, after the change is saved: code to the new address, notice to the old one
   verification.issueCode(user).catch(err => console.error('change-email: code email failed:', err.message))

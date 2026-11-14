@@ -68,6 +68,7 @@ If a Render deploy fails (build error, or the app exits at startup), Render keep
 | `APP_STORE_URL_ANDROID`, `APP_STORE_URL_IOS` | Store links. Android defaults to the Play listing for `com.themeetnet.app`; iOS is empty until the app exists. |
 | `APP_CONFESSIONS_ANDROID`, `APP_CONFESSIONS_IOS`, `APP_PDF_UPLOADS` | Feature flags (`true`/`false`, default `true`). E.g. turn confessions off on iOS during App Review. |
 | `APP_MAINTENANCE`, `APP_MAINTENANCE_MESSAGE` | `true` shows a maintenance screen in the app with the message. |
+| `FEATURE_MEETNOW`, `FEATURE_DM` | Staged features: `off` (default, also when unset), `staff` (the admin account and the allowlist, see [Staged features](#staged-features-meetnow-direct-messages)) or `on` (everyone). **Production: unset/`off` until the owner moves Render to a paid plan.** |
 
 All `APP_*` values are served by `GET /api/app/config` (cached 60 s). Invalid values fall back to the defaults.
 
@@ -85,6 +86,18 @@ After changing a variable, start a deploy. A running instance keeps its old envi
 ### Local development
 
 Copy `.env.example` (Docker Compose) or `server/.env.example` and fill in your own values. `.env` files are git-ignored. Compose has no `JWT_SECRET` default: set one in `.env`.
+
+## Staged features (MeetNow, direct messages)
+
+New features ship switched off and are tried on production by a few accounts before everyone gets them (`server/config/features.js`).
+
+- **Modes** (`FEATURE_MEETNOW`, `FEATURE_DM`): `off` → the routes answer the normal 404, the socket refuses the feature's events, the web shows no entry point. `staff` → only the `ADMIN_EMAIL` account and allowlisted accounts. `on` → everyone. Changing a mode = change the variable on Render, then deploy.
+- **Allowlist** (only used in `staff` mode; no deploy needed): a hidden list on the user (`featureAccess`, never returned by the API), changed by the admin:
+  - in the browser: sign in as the admin → `themeetnet.com/admin` → admin key → **🧪 Access** → email + feature → **Grant** (the list below it has **Revoke**), or
+  - from a terminal (admin token + admin key, both never printed):
+    `POST /api/app/feature-access` with headers `Authorization: Bearer <admin JWT>`, `x-admin-key: <ADMIN_SECRET_KEY>` and body `{ "email": "<account>", "feature": "meetnow", "grant": true }` (`false` revokes; `GET` lists the allowlist and the modes).
+  - Deleting an account removes its grant with it, so disposable test accounts leave nothing behind.
+- **Real-time**: Socket.IO runs in the same Render service (`/socket.io`, same CORS origins). On the free plan the instance sleeps after ~15 min: sockets drop and reconnect when it wakes (the web falls back to polling meanwhile). MeetNow deletion doesn't depend on that: MongoDB TTL indexes delete expired meetups even while the server sleeps, and the API refuses them from the second they expire. One instance only: several instances would need a Socket.IO adapter (Redis).
 
 ## Logs
 

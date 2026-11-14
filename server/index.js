@@ -158,6 +158,7 @@ app.use('/api/posts',         generalLimit, require('./routes/posts'))
 app.use('/api/users',         generalLimit, require('./routes/users'))
 app.use('/api/notifications', generalLimit, require('./routes/notifications'))
 app.use('/api/app',           generalLimit, require('./routes/app'))
+app.use('/api/meetups',       generalLimit, require('./routes/meetups'))   // 404 unless FEATURE_MEETNOW allows it
 app.use('/api/_debug',        generalLimit, require('./routes/debug'))   // 404 unless DEBUG_IP_ROUTE=1
 app.use('/api/webhooks',                    require('./routes/webhooks'))  // 404 unless RESEND_WEBHOOK_SECRET is set
 
@@ -197,6 +198,13 @@ if (require.main === module) {
       : '✅ Uploads: Cloudinary')
     console.log(`✅ Allowed origins: ${allowedOrigins.join(', ')}`)
   })
+  // Real-time (Socket.IO on the same port, path /socket.io): same origins as the REST API
+  require('./realtime/socket').attach(server, {
+    corsOrigin: (origin, cb) => cb(null, !origin || allowedOrigins.includes(origin)),
+  })
+  // MeetNow: delete expired meetups every minute (MongoDB's TTL indexes back this up while asleep)
+  mongoose.connection.once('open', () => require('./services/meetupLifecycle').startSweeper())
+
   // Keep idle connections open longer than clients and proxies keep them (Node's default is 5 s):
   // otherwise a client can reuse a connection the server is just closing, and that request fails
   // without a response. headersTimeout must stay above keepAliveTimeout.

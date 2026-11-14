@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import MeetNowStrip from '../features/meetnow/MeetNowStrip'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -459,6 +460,8 @@ useEffect(() => {
         </div>
       )}
 */}
+      <MeetNowStrip onToast={show} />
+
       {loading && page === 1 && <div className="feed-loading">Loading posts…</div>}
 
       {!loading && visible.length === 0 && (

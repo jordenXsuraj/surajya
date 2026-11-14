@@ -70,3 +70,5 @@ module.exports.optional = async function optionalAuth(req, res, next) {
   } catch { /* treat as logged out */ }
   next()
 }
+
+module.exports.authenticate = authenticate

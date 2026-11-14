@@ -244,6 +244,7 @@ router.post('/logout-all', protect, async (req, res) => {
     { returnDocument: 'after' }
   ).select('tokenVersion')
   if (!user) return res.status(404).json({ message: 'User not found' })
+  require('../realtime/socket').disconnectUser(user._id)   // live connections use the old session too
   res.json({ message: 'Logged out of all other devices', token: signToken(user) })
 })
 
@@ -268,6 +269,7 @@ router.post('/change-password', protect, changePasswordLimiter, async (req, res)
   user.tokenVersion = (user.tokenVersion || 0) + 1
   user.pushTokens   = []
   await user.save({ validateModifiedOnly: true })
+  require('../realtime/socket').disconnectUser(user._id)   // live connections use the old session too
 
   res.json({ message: 'Password changed. Other devices have been logged out.', token: signToken(user) })
 })
@@ -324,6 +326,7 @@ router.post('/reset-password', resetLimiter, async (req, res) => {
   user.pushTokens   = []
   await user.save({ validateModifiedOnly: true })
   await PasswordReset.deleteMany({ user: user._id, _id: { $ne: reset._id } })
+  require('../realtime/socket').disconnectUser(user._id)   // live connections use the old session too
 
   res.json({ message: 'Password updated. Please log in with your new password.' })
 })

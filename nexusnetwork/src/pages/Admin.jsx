@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import FeatureAccessPanel from '../components/FeatureAccessPanel'
 
 export default function Admin() {
   const { user } = useAuth()
@@ -140,7 +141,7 @@ const deletePost = async (postId, reportId) => {
         {/* Tabs */}
         <div style={{ display:'flex', background:'#141414',
           borderRadius:10, padding:3, gap:3 }}>
-          {[['stats','📊 Stats'], ['reports',`🚩 Reports${reports.length > 0 ? ` (${reports.length})` : ''}`]].map(([id, label]) => (
+          {[['stats','📊 Stats'], ['reports',`🚩 Reports${reports.length > 0 ? ` (${reports.length})` : ''}`], ['access','🧪 Access']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
               style={{
                 flex:1, padding:'7px', borderRadius:8, border:'none',
@@ -156,6 +157,8 @@ const deletePost = async (postId, reportId) => {
       </div>
 
       {/* ── STATS TAB ── */}
+      {tab === 'access' && <FeatureAccessPanel base={base} token={token} adminKey={adminKey} />}
+
       {tab === 'stats' && stats && (
         <div style={{ padding:'16px' }}>
 
@@ -315,6 +318,24 @@ const deletePost = async (postId, reportId) => {
                   <p style={{ fontSize:'.8rem', color:'#bbb', margin:0, wordBreak:'break-word' }}>
                     {r.reply?.text || '(reply already deleted)'}
                   </p>
+                </div>
+              )}
+
+              {/* MeetNow meetup / chat message: a snapshot (the meetup itself may be gone already) */}
+              {(r.targetType === 'meetup' || r.targetType === 'meetup_message') && (
+                <div style={{ background:'#0d0d0d', borderRadius:10, padding:'10px 12px', marginBottom:10,
+                  borderLeft:'3px solid #ef4444' }}>
+                  <div style={{ fontSize:'.62rem', color:'#444', marginBottom:5, textTransform:'uppercase' }}>
+                    {r.targetType === 'meetup' ? 'Reported MeetNow' : 'Reported MeetNow message'} · snapshot, deleted {r.expiresAt ? new Date(r.expiresAt).toLocaleDateString() : 'after 90 days'}
+                  </div>
+                  <div style={{ fontSize:'.78rem', color:'#ddd', fontWeight:700, marginBottom:4 }}>{r.snapshot?.title}</div>
+                  <p style={{ fontSize:'.8rem', color:'#bbb', margin:0, wordBreak:'break-word', whiteSpace:'pre-wrap' }}>
+                    {r.snapshot?.text || '(no text)'}
+                  </p>
+                  <div style={{ fontSize:'.66rem', color:'#666', marginTop:6 }}>
+                    {r.targetType === 'meetup' ? 'Started by' : 'Written by'} {r.snapshot?.senderName || 'unknown'}
+                    {r.snapshot?.sender && <a href={`/profile/${r.snapshot.sender}`} style={{ marginLeft:8, color:'#3b82f6' }}>view profile</a>}
+                  </div>
                 </div>
               )}
 
