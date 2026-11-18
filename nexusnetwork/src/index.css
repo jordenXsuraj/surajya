@@ -115,20 +115,19 @@ body {
 .bn-label { font-size: .6rem; font-weight: 500; color: var(--dim); transition: color .2s; font-family: 'Outfit', sans-serif; }
 .bn-item.active .bn-icon svg { stroke: var(--accent); }
 .bn-item.active .bn-label { color: var(--accent); font-weight: 700; }
-/* centre: Connect as a green pill with its label inside */
-.bn-center {
-  flex: 0 0 auto; width: 84px; height: 54px; min-height: 0; margin-top: 2px; padding: 4px 0 5px;
-  border-radius: 16px; gap: 1px; justify-content: center;
-  background: rgba(34,197,94,.14); border: 1.5px solid rgba(34,197,94,.55);
-  box-shadow: 0 4px 16px rgba(34,197,94,.12);
+/* center + button (Post), unchanged */
+.bn-center .bn-icon {
+  width: 46px; height: 46px;
+  background: var(--accent);
+  border-radius: 14px;
+  margin-top: -8px;
+  box-shadow: 0 6px 20px var(--ag);
 }
-.bn-center .bn-icon { width: 30px; height: 26px; }
-.bn-center .bn-icon svg { stroke: #e8fff0; width: 22px; height: 22px; }
-.bn-center .bn-label { color: #e8fff0; font-weight: 700; font-size: .66rem; }
-.bn-center.active { background: rgba(34,197,94,.26); border-color: #22c55e; }
-.bn-center.active .bn-icon svg { stroke: #fff; }
-.bn-center.active .bn-label { color: #fff; }
-.bn-4 .bn-center { width: 96px; }   /* without the Chat tab */
+.bn-center .bn-icon svg { stroke: white; width: 22px; height: 22px; }
+.bn-center .bn-label { color: var(--muted); }
+.bn-center.active .bn-icon { background: #ff1f42; }
+.bn-center.active .bn-icon svg { stroke: white; }
+.bn-center.active .bn-label { color: var(--muted); font-weight: 500; }
 
 /* ── HOME HEADER BUTTONS (notifications, create post) ── */
 .hdr-btn {
@@ -138,8 +137,6 @@ body {
 }
 .hdr-btn:hover { border-color: rgba(255,59,92,.4); }
 .hdr-btn:focus-visible, .bn-item:focus-visible { outline: 2px solid #ff3b5c; outline-offset: 2px; }
-.hdr-btn-sm { width: 36px; height: 36px; border-color: transparent; background: transparent; color: var(--muted); }
-.hdr-btn-sm:hover { color: var(--text); }
 .hdr-badge {
   position: absolute; top: -3px; right: -3px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 100px;
   background: #ff1f42; color: #fff; font-family: 'Outfit', sans-serif; font-size: .58rem; font-weight: 800;

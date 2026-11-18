@@ -4,8 +4,8 @@ import { useDmUnread } from '../features/messages/unread'
 
 let navigating = false
 
-// Home · Following · Connect (centre pill) · Chat (only when direct messages are available) · Profile.
-// Creating a post moved to the "+" in the Home header; /post still works as before.
+// Home · Chat (only when direct messages are available) · Post (centre) · Connect · Profile.
+// The Following feed is a choice in Home's feed filter now (/feed redirects there).
 const HOME = {
   to: '/home', id: 'home', label: 'Home',
   icon: active => (
@@ -15,25 +15,24 @@ const HOME = {
     </svg>
   ),
 }
-const FOLLOWING = {
-  to: '/feed', id: 'feed', label: 'Following',
-  icon: active => (
-    <svg viewBox="0 0 24 24" fill="none" strokeWidth={active ? 2.2 : 1.8}>
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+const POST = {
+  // the same red "+" centre button as before
+  to: '/post', id: 'post', label: 'Post', isCenter: true,
+  icon: () => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2.5}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
     </svg>
   ),
 }
 const CONNECT = {
-  to: '/connect', id: 'connect', label: 'Connect', isCenter: true,
-  icon: () => (
-    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2}>
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  to: '/connect', id: 'connect', label: 'Connect',
+  icon: active => (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={active ? 2.2 : 1.8}>
+      <circle cx="11" cy="11" r="7" />
+      <line x1="20" y1="20" x2="16.5" y2="16.5" />
+      <circle cx="17" cy="7" r="3" fill={active ? 'var(--accent)' : 'none'} stroke={active ? 'var(--accent)' : 'var(--dim)'} strokeWidth="1.5" />
+      <path d="M16 7l1 1 2-2" stroke={active ? '#fff' : 'var(--dim)'} strokeWidth="1.5" fill="none" />
     </svg>
   ),
 }
@@ -60,7 +59,7 @@ const PROFILE = {
 
 export default function BottomNav() {
   const { features } = useRealtime()
-  return features.dm ? <Nav tabs={[HOME, FOLLOWING, CONNECT, CHAT, PROFILE]} withChat /> : <Nav tabs={[HOME, FOLLOWING, CONNECT, PROFILE]} />
+  return features.dm ? <Nav tabs={[HOME, CHAT, POST, CONNECT, PROFILE]} withChat /> : <Nav tabs={[HOME, POST, CONNECT, PROFILE]} />
 }
 
 // The unread hook only runs when the Chat tab exists
