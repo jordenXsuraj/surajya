@@ -36,9 +36,13 @@ export default function MeetNowCard({ meetup, now, busy, onOpen, onJoin, wide })
             <CategoryIcon category={meetup.category} />
             <TimeLeft expiresAt={meetup.expiresAt} now={now} />
           </div>
-          <div className="mn-card-title">{meetup.title}</div>
-          <div className="mn-card-meta"><span>📍 {meetup.location}</span></div>
-          <div className="mn-card-meta"><span className="mn-card-count">👥 {meetup.memberCount} joined</span></div>
+          <div className="mn-card-title" title={meetup.title}>{meetup.title}</div>
+          {/* place and people on one line: "MIT-WPU · 12 joined" */}
+          <div className="mn-card-meta mn-card-line">
+            <span className="mn-card-place">{meetup.location}</span>
+            <span aria-hidden="true">·</span>
+            <span className="mn-card-count">{meetup.memberCount} joined</span>
+          </div>
           {button}
         </>
       )}
