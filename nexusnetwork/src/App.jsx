@@ -8,7 +8,7 @@ import Post from './pages/Post'
 import Connect from './pages/Connect'
 import Profile from './pages/Profile'
 import StudentProfile from './pages/StudentProfile'
-import ConnectionFeed from './pages/ConnectionFeed'
+import { saveFeedScope } from './lib/feedScope'
  import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import Admin from './pages/Admin'
@@ -30,6 +30,12 @@ import MeetNowDetails from './features/meetnow/MeetNowDetails'
 import MeetNowChat from './features/meetnow/MeetNowChat'
 import Inbox from './features/messages/Inbox'
 import Thread from './features/messages/Thread'
+// The old Following page: Home with the Following feed selected
+function FollowingFeed() {
+  saveFeedScope('following')
+  return <Navigate to="/home" replace />
+}
+
 function Guard({ children }) {
   const { user } = useAuth()
   return user ? children : <Navigate to="/" replace />
@@ -54,7 +60,7 @@ useEffect(() => {
       <Routes>
         <Route path="/" element={<Onboard />} />
         <Route path="/home"        element={<Guard><Home /></Guard>} />
-        <Route path="/feed" element={<Guard><ConnectionFeed /></Guard>} />
+        <Route path="/feed"        element={<Guard><FollowingFeed /></Guard>} />
         <Route path="/post"        element={<Guard><Post /></Guard>} />
         <Route path="/connect"     element={<Guard><Connect /></Guard>} />
         <Route path="/profile"     element={<Guard><Profile /></Guard>} />

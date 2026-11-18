@@ -1,7 +1,8 @@
 
 
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { NOTIFICATIONS_READ_EVENT } from '../lib/events'
 import { useAuth } from '../context/AuthContext'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
@@ -151,7 +152,11 @@ export default function Connect() {
   const { user, refreshUser } = useAuth()
   const { msg, show, clear }  = useToast()
 
-  const [tab,              setTab]         = useState('find')
+  // /connect?tab=activity[&sub=notifications] opens Activity directly (the bell in the Home header)
+  const [params]                           = useSearchParams()
+  const openActivity                       = params.get('tab') === 'activity'
+  const openNotifications                  = openActivity && params.get('sub') === 'notifications'
+  const [tab,              setTab]         = useState(openActivity ? 'requests' : 'find')
   const [scope,            setScope]       = useState('college')
   const [skill,            setSkill]       = useState('All')
   const [search,           setSearch]      = useState('')
@@ -165,7 +170,7 @@ export default function Connect() {
   const [page,             setPage]        = useState(1)
   const [hasMore,          setHasMore]     = useState(true)
   const [loadingMore,      setLoadingMore] = useState(false)
-  const [reqSubTab,        setReqSubTab]   = useState('requests') // 'requests' | 'notifications'
+  const [reqSubTab,        setReqSubTab]   = useState(openNotifications ? 'notifications' : 'requests') // 'requests' | 'notifications'
 
   const [sentIds, setSentIds] = useState(
     (user?.sentRequests || []).map(c => c?._id?.toString() || c?.toString() || c)
@@ -181,11 +186,19 @@ const getH  = () => ({ Authorization: `Bearer ${localStorage.getItem('nx_token')
       .then(r => setReqs(Array.isArray(r.data) ? r.data : []))
       .catch(() => {})
 
-    // unread notifications count for badge
+    // unread notifications count for badge; opened from the bell: they are read now
     axios.get(`${base}/notifications/unread-count`, { headers: getH() })
-      .then(r => setUnread(r.data?.count || 0))
+      .then(async r => {
+        const count = r.data?.count || 0
+        if (openNotifications && count > 0) {
+          await axios.put(`${base}/notifications/mark-read`, {}, { headers: getH() })
+          window.dispatchEvent(new Event(NOTIFICATIONS_READ_EVENT))
+          return setUnread(0)
+        }
+        setUnread(count)
+      })
       .catch(() => {})
-  }, [])
+  }, [openNotifications])
 
   // ── Main data fetch ───────────────────────────────
   useEffect(() => {
@@ -261,6 +274,7 @@ const getH  = () => ({ Authorization: `Bearer ${localStorage.getItem('nx_token')
     if (unreadCount > 0) {
       try {
         await axios.put(`${base}/notifications/mark-read`, {}, { headers: getH() })
+        window.dispatchEvent(new Event(NOTIFICATIONS_READ_EVENT))
         setUnread(0)
         setNotifs(p => p.map(n => ({ ...n, read: true })))
       } catch {}

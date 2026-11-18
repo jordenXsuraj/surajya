@@ -2,7 +2,8 @@ import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import MeetNowStrip from '../features/meetnow/MeetNowStrip'
-import MessagesIcon from '../features/messages/MessagesIcon'
+import HeaderActions from '../components/HeaderActions'
+import { savedFeedScope, saveFeedScope } from '../lib/feedScope'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -210,7 +211,9 @@ const location = useLocation()
   const [posts,    setPosts]   = useState([])
   const [category, setCat]     = useState('all')
  // const [scope,    setScope]   = useState('college')
- const [scope, setScope] = useState('global')
+ // feed filter: 'global' (All), 'college' (My College) or 'following'; remembered for the session
+ const [scope, setScopeState] = useState(savedFeedScope)
+ const setScope = v => { setScopeState(v); saveFeedScope(v) }
   const [search,   setSearch]  = useState('')
   const [loading,  setLoading] = useState(true)
   const [savedIds, setSaved]   = useState([])
@@ -250,7 +253,8 @@ const [refreshKey, setRefreshKey] = useState(0)
     const isGlobal  = scope === 'global'
     const typeParam = category === 'all' ? '' : category
 
-    getFeed(typeParam, false, isGlobal, page)
+    // Following: posts of the people you follow (the server's connections feed)
+    getFeed(typeParam, scope === 'following', isGlobal, page)
       .then(r => {
         const raw = r.data || []
 
@@ -424,7 +428,7 @@ useEffect(() => {
             value={search} onChange={e => setSearch(e.target.value)}/>
           {search && <button className="srch-x" onClick={() => setSearch('')}>✕</button>}
         </div>
-        <MessagesIcon />
+        <HeaderActions />
       </header>
 
       <div className="cat-row">
@@ -432,6 +436,7 @@ useEffect(() => {
           <select className="scope-select" value={scope} onChange={e => setScope(e.target.value)}>
             <option value="global">🌐 All</option>
             <option value="college">🏫 My College</option>
+            <option value="following">👥 Following</option>
           </select>
           <span className="scope-arrow">▾</span>
         </div>
@@ -470,9 +475,11 @@ useEffect(() => {
         <div className="feed-empty">
           <div className="fe-icon">📭</div>
           <h3>Nothing here yet</h3>
-          <p>{scope === 'global' ? 'No posts from other colleges yet' : 'Be the first to post!'}</p>
-          {(category !== 'all' || scope === 'global') && (
-            <button onClick={() => { setCat('all'); setScope('college') }}>Show all posts</button>
+          <p>{scope === 'global' ? 'No posts from other colleges yet'
+            : scope === 'following' ? 'No posts from people you follow yet. Follow students in Connect.'
+              : 'Be the first to post!'}</p>
+          {(category !== 'all' || scope !== 'global') && (
+            <button onClick={() => { setCat('all'); setScope('global') }}>Show all posts</button>
           )}
         </div>
       )}
