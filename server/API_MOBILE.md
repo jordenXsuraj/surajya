@@ -216,6 +216,34 @@ Creating, joining, sending and reporting need a verified email (403 `EMAIL_NOT_V
 `Meetup = { _id, title, category, location, visibility, memberCount, expiresAt, createdAt, endsWhenCreatorLeaves, creator: { _id, name, username, avatar, college, year, branch }, joined, isCreator }`
 `Message = { _id, meetup, kind: 'text'|'system', text, createdAt, sender: { _id, name, avatar } | null }`; a text from someone blocked either way comes as `{ …, text: null, hidden: true }`.
 
+### Direct messages (`/conversations`, feature `dm`)
+
+Private one-to-one conversations, permanent until unsent / deleted by both / account deletion; separate
+from MeetNow. A conversation is `active` when the receiver follows the starter, else a **request** in the
+receiver's Requests tab: the starter can send **one text message** until the receiver accepts (or
+replies). Declining hides it for the receiver; the starter still sees `status: 'request'`. Both people
+need the feature (staff mode); blocks either way hide conversations and refuse messages (403 `BLOCKED`).
+Writing (open, send, upload, report) needs a verified email.
+
+| Method | Path | Answer |
+|---|---|---|
+| GET | `/conversations?tab=chats\|requests&search=` | 200 `[Conversation]` newest first (chats: accepted + requests I sent; requests: sent to me) |
+| GET | `/conversations/unread-count` | 200 `{ chats, requests }` |
+| POST | `/conversations` `{ userId }` | 201 new / 200 existing `Conversation`; 429 `CONVERSATION_LIMIT` (30 new a day) or `REQUEST_LIMIT` (10 requests a day); 404 if the person can't receive messages |
+| POST | `/conversations/upload-image` (multipart `image`) | 200 `{ url, width, height }` (Cloudinary `meetnet_dm/`, JPG); 30 an hour |
+| GET | `/conversations/:id` | 200 `Conversation` (+ `blocked`) |
+| GET | `/conversations/:id/messages?before=<ISO>&limit=` (≤ 100) | 200 `[DirectMessage]` oldest first; marks the other person's messages delivered |
+| POST | `/conversations/:id/messages` `{ text? (≤ 2000), imageUrl?, imageWidth?, imageHeight?, replyTo? }` | 201 `DirectMessage`; 30 a minute; 403 `REQUEST_PENDING` / `BLOCKED`; 400 `REQUEST_TEXT_ONLY`, `PROFANITY` (requests only), `INVALID_IMAGE`, `EMPTY`, `TOO_LONG` |
+| POST | `/conversations/:id/read` | 200; the other person gets `dm:read` (accepted conversations only) |
+| POST | `/conversations/:id/accept`, `/conversations/:id/decline` | receiver of a request: 200 `{ status }`; else 400 `NOT_A_REQUEST` |
+| DELETE | `/conversations/:id` | delete the chat for me; when both did, the messages are deleted |
+| DELETE | `/conversations/:id/messages/:messageId?for=me\|everyone` | `everyone` = unsend (own messages, deletes the photo) |
+| POST | `/conversations/:id/messages/:messageId/report` `{ reason, note? }` | 200; the report keeps a copy for 90 days |
+
+`Conversation = { _id, status: 'active'|'request', isRequest, requestedByMe, other: { _id, name, username, avatar, college, year, branch }, lastMessage: { text, image, at, mine } | null, lastMessageAt, unread, otherLastReadAt, activity: { online, lastActiveAt } | null, blocked, createdAt }`
+`DirectMessage = { _id, conversation, sender, mine, text, image: { url, width, height } | null, replyTo: { message, text, image, senderName } | null, deliveredAt, createdAt }`
+`activity` is null unless both people have `showActivityStatus` on (`PUT /users/me { showActivityStatus }`, returned on `/users/me`, never on public profiles).
+
 ### Real-time (Socket.IO, same host, path `/socket.io`)
 
 Connect with `auth: { token: <JWT> }`. Refused (`connect_error` `unauthorized` / `not_available`) for a
@@ -227,6 +255,8 @@ a password change or reset, an email change and account deletion disconnect the 
 | `meetnow:watch` → `{ ok }`: live cards for your college and `everyone` | `meetup:created { meetupId }`, `meetup:members { meetupId, memberCount, joined? or left? }`, `meetup:ended { meetupId, reason }` |
 | `meetup:subscribe { meetupId }` → `{ ok, code? }`: members of an active meetup only | `meetup:message Message` |
 | `meetup:unsubscribe { meetupId }` | |
+| `dm:typing { conversationId }` (no ack; accepted conversations) | `dm:typing { conversationId }` |
+| `dm:delivered { conversationId }` (no ack) | `dm:new { conversationId, message }`, `dm:delivered { conversationId, at }`, `dm:read { conversationId, at }`, `dm:unsent { conversationId, messageId }`, `dm:accepted { conversationId }`, `dm:removed { conversationId }`, `dm:presence { userId, online, lastActiveAt }` |
 
 ## Deep links (Universal Links / App Links)
 

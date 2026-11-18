@@ -329,8 +329,12 @@ router.put('/me', protect, async (req, res) => {
     const invalid = profileUpdateError(body)
     if (invalid) return res.status(400).json({ message: invalid })
 
-const { name, bio, year, branch, skills, projects, roadmap, youtubeUrl, mediaItems, username } = body
+const { name, bio, year, branch, skills, projects, roadmap, youtubeUrl, mediaItems, username, showActivityStatus } = body
     const updates = {}
+    if (showActivityStatus !== undefined) {
+      if (typeof showActivityStatus !== 'boolean') return res.status(400).json({ message: 'showActivityStatus must be true or false' })
+      updates.showActivityStatus = showActivityStatus
+    }
     if (name     !== undefined) updates.name     = name.trim()
     if (bio      !== undefined) updates.bio      = bio.trim().slice(0, 250)
     if (year     !== undefined) updates.year     = year
@@ -908,7 +912,7 @@ router.get('/:id', protect, async (req, res) => {
     if (!(await profileVisible(req, res))) return
     // Email, blocks, push tokens and sessions are private: only returned via /me and auth responses
     const user = await User.findById(req.params.id)
-      .select('-password -email -__v -likedPosts -savedPosts -pendingRequests -sentRequests -blockedUsers -pushTokens -tokenVersion -termsAcceptedAt -emailVerified -emailVerifiedAt -emailBounced -emailBouncedAt')
+      .select('-password -email -__v -likedPosts -savedPosts -pendingRequests -sentRequests -blockedUsers -pushTokens -tokenVersion -termsAcceptedAt -emailVerified -emailVerifiedAt -emailBounced -emailBouncedAt -showActivityStatus')
       .lean()
     if (!user) return res.status(404).json({ message: 'User not found' })
 

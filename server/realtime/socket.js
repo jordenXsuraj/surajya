@@ -1,4 +1,4 @@
-// Real-time delivery over Socket.IO (MeetNow group chats now, direct messages later).
+// Real-time delivery over Socket.IO (MeetNow group chats, direct messages).
 //
 // - Sending stays on the REST routes (auth, validation, rate limits, errors in one place); the socket
 //   only pushes events to clients and lets them subscribe to rooms.
@@ -17,20 +17,37 @@ const { hasFeature, featuresFor } = require('../config/features')
 const { getBlockSets, str } = require('../utils/blocks')
 
 let io = null
+// Direct messages: how many live connections each account has (one server instance)
+const online = new Map()
+const isOnline = userId => (online.get(str(userId)) || 0) > 0
 
 const OBJECT_ID = /^[0-9a-f]{24}$/i
 const collegeRoom = college => `meetnow:college:${String(college).trim().toLowerCase()}`
 const feedRoom = meetup => (meetup.visibility === 'everyone' ? 'meetnow:everyone' : collegeRoom(meetup.college))
 
-// Per-socket budget for subscribe calls (each one reads the database): 30 per minute
-function allow(socket) {
+// Per-socket budgets for events that read the database (per minute): subscribe 30, typing etc. 60
+function allow(socket, name = 'bucket', perMinute = 30) {
   const now = Date.now()
-  const b = socket.data.bucket ?? (socket.data.bucket = { tokens: 30, at: now })
-  b.tokens = Math.min(30, b.tokens + ((now - b.at) / 60_000) * 30)
+  const b = socket.data[name] ?? (socket.data[name] = { tokens: perMinute, at: now })
+  b.tokens = Math.min(perMinute, b.tokens + ((now - b.at) / 60_000) * perMinute)
   b.at = now
   if (b.tokens < 1) return false
   b.tokens -= 1
   return true
+}
+
+// Tell the people this account chats with that it came online / went offline — only those who,
+// like this account, have "Show activity status" on
+async function announcePresence(userId, isNowOnline) {
+  const User = mongoose.model('User')
+  const Conversation = mongoose.model('Conversation')
+  const at = new Date()
+  const me = await User.findByIdAndUpdate(userId, { $set: { lastActiveAt: at } }, { projection: { showActivityStatus: 1 } }).lean()
+  if (!me || me.showActivityStatus === false) return
+  const convs = await Conversation.find({ 'members.user': userId, status: 'active' }).select('members').limit(500).lean()
+  const partnerIds = convs.map(c => c.members.find(m => str(m.user) !== str(userId))?.user).filter(Boolean)
+  const partners = await User.find({ _id: { $in: partnerIds }, showActivityStatus: { $ne: false } }).select('_id').lean()
+  for (const p of partners) io?.to(`user:${str(p._id)}`).emit('dm:presence', { userId: str(userId), online: isNowOnline, lastActiveAt: at })
 }
 
 function attach(httpServer, { corsOrigin } = {}) {
@@ -50,6 +67,7 @@ function attach(httpServer, { corsOrigin } = {}) {
       const features = await featuresFor(user)
       if (!Object.values(features).some(Boolean)) return next(new Error('not_available'))
       socket.data.user = { _id: str(user._id), email: user.email, college: user.college, blockedUsers: user.blockedUsers || [] }
+      socket.data.features = features
       next()
     } catch {
       next(new Error('unauthorized'))
@@ -59,6 +77,43 @@ function attach(httpServer, { corsOrigin } = {}) {
   io.on('connection', socket => {
     const me = socket.data.user
     socket.join(`user:${me._id}`)
+
+    // ── Direct messages: presence, typing, delivery ──
+    if (socket.data.features.dm) {
+      const count = (online.get(me._id) || 0) + 1
+      online.set(me._id, count)
+      if (count === 1) announcePresence(me._id, true).catch(() => {})
+      socket.on('disconnect', () => {
+        const left = (online.get(me._id) || 1) - 1
+        if (left > 0) return online.set(me._id, left)
+        online.delete(me._id)
+        announcePresence(me._id, false).catch(() => {})
+      })
+    }
+
+    // "typing…" to the other member of an accepted conversation (the client sends it at most every few seconds)
+    socket.on('dm:typing', async payload => {
+      const id = payload?.conversationId
+      if (!allow(socket, 'typing', 60) || typeof id !== 'string' || !OBJECT_ID.test(id)) return
+      if (!(await hasFeature(me, 'dm'))) return
+      const Conversation = mongoose.model('Conversation')
+      const conv = await Conversation.findOne({ _id: id, 'members.user': me._id, status: 'active' }).select('members').lean()
+      if (!conv) return
+      const other = conv.members.find(m => str(m.user) !== me._id)?.user
+      const sets = await getBlockSets({ _id: new mongoose.Types.ObjectId(me._id), blockedUsers: me.blockedUsers })
+      if (!other || sets.all.has(str(other))) return
+      io.to(`user:${str(other)}`).emit('dm:typing', { conversationId: id })
+    })
+
+    // The client received new messages: mark them delivered (the sender sees "Delivered")
+    socket.on('dm:delivered', async payload => {
+      const id = payload?.conversationId
+      if (!allow(socket, 'typing', 60) || typeof id !== 'string' || !OBJECT_ID.test(id)) return
+      if (!(await hasFeature(me, 'dm'))) return
+      const dm = require('../services/directMessages')
+      const conv = await dm.loadFor({ _id: me._id }, id)
+      if (conv) await dm.markDelivered({ _id: me._id }, conv)
+    })
 
     // Live counts and endings for the MeetNow cards the user can see
     socket.on('meetnow:watch', async (_payload, ack) => {
@@ -144,4 +199,4 @@ function emitToUser(userId, event, payload) {
   io.to(`user:${str(userId)}`).emit(event, payload)
 }
 
-module.exports = { attach, meetupMessage, meetupMembers, meetupCreated, meetupEnded, disconnectUser, emitToUser, getIO: () => io }
+module.exports = { attach, meetupMessage, meetupMembers, meetupCreated, meetupEnded, disconnectUser, emitToUser, isOnline, getIO: () => io }

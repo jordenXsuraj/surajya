@@ -36,12 +36,12 @@ function warnIfProductionCloud(env = process.env, warn = console.warn) {
   return true
 }
 
-// http://<host>/uploads/<images|pdfs>/<file> → the file on disk (null for anything else)
+// http://<host>/uploads/<images|pdfs|dm>/<file> → the file on disk (null for anything else)
 function localUploadFile(url) {
   if (typeof url !== 'string') return null
   let pathname
   try { pathname = new URL(url).pathname } catch { return null }
-  const m = pathname.match(/^\/uploads\/(images|pdfs)\/([A-Za-z0-9_-]+\.[a-z0-9]+)$/)
+  const m = pathname.match(/^\/uploads\/(images|pdfs|dm)\/([A-Za-z0-9_-]+\.[a-z0-9]+)$/)
   return m ? path.join(LOCAL_UPLOAD_DIR, m[1], m[2]) : null
 }
 

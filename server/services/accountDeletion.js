@@ -78,7 +78,7 @@ async function deleteUserData(userId, session) {
 }
 
 // https://res.cloudinary.com/<cloud>/<image|raw>/upload/v123/<folder>/<id>[.ext]
-const OWN_FOLDERS = ['nexus/', 'meetnet_pdfs/']
+const OWN_FOLDERS = ['nexus/', 'meetnet_pdfs/', 'meetnet_dm/']
 // Public ids our uploads create: letters, digits, _ / - only; raw files (PDFs) may end in one
 // final .pdf (older uploads did). No other dot, so no .. either.
 const SAFE_PUBLIC_ID = { image: /^[\w/-]+$/, video: /^[\w/-]+$/, raw: /^[\w/-]+(\.pdf)?$/ }
@@ -139,6 +139,10 @@ async function deleteAccount(userId) {
   // it emits to connected clients, and every step is idempotent)
   await require('./meetupLifecycle').removeUser(userId).catch(err => {
     console.error('account deletion: MeetNow cleanup failed:', err.message)
+  })
+  // Direct messages: every conversation they were in, with all messages and photos, on both sides
+  await require('./directMessages').removeUser(userId).catch(err => {
+    console.error('account deletion: direct-message cleanup failed:', err.message)
   })
   require('../realtime/socket').disconnectUser(userId)
   return { posts: data.posts.length, cloudinary: cloud, localFiles }
