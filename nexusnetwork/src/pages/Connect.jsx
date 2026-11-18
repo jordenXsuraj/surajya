@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { NOTIFICATIONS_READ_EVENT } from '../lib/events'
+import FilterDropdown from '../components/FilterDropdown'
 import { useAuth } from '../context/AuthContext'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
@@ -146,6 +147,11 @@ function PersonCard({ u, index, onFollow, onView, sentIds, isSuggestion }) {
     </div>
   )
 }
+
+const SCOPE_OPTIONS = [
+  { value: 'college', icon: '🏫', label: 'My College' },
+  { value: 'global',  icon: '🌐', label: 'All' },
+]
 
 export default function Connect() {
   const nav                   = useNavigate()
@@ -360,13 +366,8 @@ const getH  = () => ({ Authorization: `Bearer ${localStorage.getItem('nx_token')
             </div>
 
             <div className="skill-filter-row">
-              <div className="scope-select-wrap" style={{ flexShrink:0 }}>
-                <select className="scope-select" value={scope}
-                  onChange={e => setScope(e.target.value)}>
-                  <option value="college">🏫 My College</option>
-                  <option value="global">🌐 All</option>
-                </select>
-                <span className="scope-arrow">▾</span>
+              <div style={{ flexShrink:0 }}>
+                <FilterDropdown label="Students from" value={scope} onChange={setScope} options={SCOPE_OPTIONS} />
               </div>
               <div style={{ width:1, height:22, background:'var(--br2)', flexShrink:0 }} />
               {SKILL_FILTERS.map(s => (

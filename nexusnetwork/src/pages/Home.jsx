@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import MeetNowStrip from '../features/meetnow/MeetNowStrip'
 import HeaderActions from '../components/HeaderActions'
+import FilterDropdown from '../components/FilterDropdown'
 import { savedFeedScope, saveFeedScope } from '../lib/feedScope'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -204,6 +205,13 @@ function ReplyItem({ reply, postId, currentUserId, onDeleted }) {
 
 
 // ── Home Page ─────────────────────────────────────
+// Feed filter choices (the order of the dropdown)
+const FEED_OPTIONS = [
+  { value: 'college',   icon: '🏫', label: 'My College' },
+  { value: 'global',    icon: '🌐', label: 'All' },
+  { value: 'following', icon: '👥', label: 'Following' },
+]
+
 export default function Home() {
   const { user, refreshUser } = useAuth()
   const { msg, show, clear }  = useToast()
@@ -432,14 +440,7 @@ useEffect(() => {
       </header>
 
       <div className="cat-row">
-        <div className="scope-select-wrap">
-          <select className="scope-select" value={scope} onChange={e => setScope(e.target.value)}>
-            <option value="global">🌐 All</option>
-            <option value="college">🏫 My College</option>
-            <option value="following">👥 Following</option>
-          </select>
-          <span className="scope-arrow">▾</span>
-        </div>
+        <FilterDropdown label="Feed" value={scope} onChange={setScope} options={FEED_OPTIONS} />
         <div className="cat-divider" />
         <div className="cat-chips">
           {CATEGORIES.filter(c => c.id !== 'all').map(c => (

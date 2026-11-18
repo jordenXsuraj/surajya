@@ -1927,6 +1927,27 @@ body {
   transition: all .2s;
 }
 .scope-select:focus { border-color: var(--accent); }
+
+/* Filter dropdown (components/FilterDropdown.jsx): button looks like .scope-select, panel below it */
+.fdd-button { min-width: 104px; text-align: left; line-height: 1.2; white-space: nowrap; }
+.fdd-button:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,59,92,.35); }
+.fdd-panel {
+  position: fixed; z-index: 250; margin: 0; padding: 6px; list-style: none;
+  background: var(--card); border: 1px solid var(--br2); border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.55); animation: fddIn .12s ease-out;
+}
+@keyframes fddIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .fdd-panel { animation: none; } }
+.fdd-option {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 10px;
+  cursor: pointer; font-family: 'Outfit', sans-serif; font-size: .84rem; font-weight: 600; color: var(--muted);
+  outline: none;
+}
+.fdd-option:hover, .fdd-option:focus { background: var(--bg3); color: var(--text); }
+.fdd-option.on { color: var(--text); }
+.fdd-icon { width: 20px; text-align: center; flex-shrink: 0; }
+.fdd-label { flex: 1; white-space: nowrap; }
+.fdd-tick { width: 16px; color: var(--accent); font-weight: 800; text-align: right; flex-shrink: 0; }
 .scope-arrow {
   position: absolute;
   right: 10px;
