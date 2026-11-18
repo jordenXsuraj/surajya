@@ -284,7 +284,7 @@ useEffect(() => {
   }
 
    return (
-    <article className="post-card">
+    <article className="post-card" data-post-id={post._id}>
 
       {/* ── Head — author + tag ── */}
       <div className="pc-head">

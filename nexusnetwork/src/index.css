@@ -369,6 +369,33 @@ body {
 /* feed */
 .feed { padding-top: 4px; }
 .feed-loading { text-align: center; padding: 40px 20px; color: var(--dim); font-size: .85rem; }
+.feed-foot { text-align: center; padding: 20px; color: var(--dim); font-size: .75rem; min-height: 16px; }
+.feed-retry { background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 4px; }
+
+/* Home: new posts wait behind this pill (tap = show them on top) */
+.feed-new-pill {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 66px); left: 50%; transform: translateX(-50%);
+  z-index: 120; display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border: 0; border-radius: 999px;
+  background: var(--accent); color: #fff; font: inherit; font-size: .8rem; font-weight: 600;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .35); cursor: pointer;
+  animation: feed-pill-in .25s ease-out;
+}
+@keyframes feed-pill-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translateX(-50%); } }
+
+/* Home: pull to refresh. The browser's own pull-to-refresh reloads the whole app, so it is off there */
+html.no-native-ptr, html.no-native-ptr body { overscroll-behavior-y: contain; }
+.ptr {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 58px); left: 50%; z-index: 120;
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--br2); color: var(--dim); font-size: .75rem; font-weight: 500;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .3); pointer-events: none;
+}
+.ptr.ready { color: var(--text); }
+.ptr-icon { display: inline-block; font-size: .95rem; }
+.ptr-icon.spin { animation: ptr-spin .8s linear infinite; }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .feed-new-pill, .ptr-icon.spin { animation: none; } }
 .feed-empty {
   display: flex; flex-direction: column; align-items: center;
   padding: 48px 20px; text-align: center; gap: 10px;

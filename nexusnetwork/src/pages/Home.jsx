@@ -1,10 +1,12 @@
 import { createPortal } from 'react-dom'
-import { useLocation } from 'react-router-dom'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useLocation, useNavigationType } from 'react-router-dom'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import MeetNowStrip from '../features/meetnow/MeetNowStrip'
 import HeaderActions from '../components/HeaderActions'
 import FilterDropdown from '../components/FilterDropdown'
 import { savedFeedScope, saveFeedScope } from '../lib/feedScope'
+import { PAGE_SIZE, CHECK_SIZE, appendBatch, prependNew, newerThan, oldestOf, cursorOf, newPostsLabel } from '../lib/feedPaging'
+import usePullToRefresh from '../hooks/usePullToRefresh'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -212,30 +214,58 @@ const FEED_OPTIONS = [
   { value: 'following', icon: '👥', label: 'Following' },
 ]
 
+// What the feed looked like when you left Home (posts, filter, place), so coming back from a post or a
+// profile — or tapping Home in the nav — puts you where you were instead of loading it all again.
+const FEED_CACHE_MS = 30 * 60 * 1000
+let feedCache = null   // { scope, category, posts, hasMore, scrollY, anchor: { id, top }, at }
+
+function takeFeedCache(comingBack) {
+  const c = feedCache
+  if (!comingBack || !c || !c.posts.length || Date.now() - c.at > FEED_CACHE_MS) return null
+  return c
+}
+
+// The first post card whose bottom is below the header, and where it is on screen
+function feedAnchor() {
+  for (const el of document.querySelectorAll('.post-card[data-post-id]')) {
+    const r = el.getBoundingClientRect()
+    if (r.bottom > 80) return { id: el.dataset.postId, top: r.top }
+  }
+  return null
+}
+
 export default function Home() {
   const { user, refreshUser } = useAuth()
   const { msg, show, clear }  = useToast()
-const location = useLocation()
-  const [posts,    setPosts]   = useState([])
-  const [category, setCat]     = useState('all')
- // const [scope,    setScope]   = useState('college')
- // feed filter: 'global' (All), 'college' (My College) or 'following'; remembered for the session
- const [scope, setScopeState] = useState(savedFeedScope)
- const setScope = v => { setScopeState(v); saveFeedScope(v) }
+  const location = useLocation()
+  const navType  = useNavigationType()
+  // Back (browser / swipe) or the Home tab: restore the feed as it was
+  const [restore] = useState(() => takeFeedCache(navType === 'POP' || Boolean(location.state?.fromNav)))
+
+  const [posts,    setPosts]   = useState(() => restore?.posts ?? [])
+  const [category, setCat]     = useState(() => restore?.category ?? 'all')
+  // feed filter: 'global' (All), 'college' (My College) or 'following'; remembered for the session
+  const [scope, setScopeState] = useState(() => restore?.scope ?? savedFeedScope())
+  const setScope = v => { setScopeState(v); saveFeedScope(v) }
   const [search,   setSearch]  = useState('')
-  const [loading,  setLoading] = useState(true)
+  const [loading,  setLoading] = useState(!restore)
   const [savedIds, setSaved]   = useState([])
-const [refreshKey, setRefreshKey] = useState(0)
 
-
-  // ── Pagination state ─────────────────────────────
-  const [page,    setPage]    = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-
-  // ── FIX: use ONE ref to track in-flight requests ──
-  // isLoading.current = true while a fetch is in progress
-  // Prevents duplicate page fetches from rapid scroll events
-  const isLoading = useRef(false)
+  // ── Paging (lib/feedPaging.js) ────────────────────
+  // The first batch is the newest posts; each next one is "older than the oldest I have" (a cursor,
+  // so posts created or deleted meanwhile never repeat or skip one). Each batch is ranked once and
+  // appended below — nothing on screen moves. New posts only come in when the user asks for them.
+  const [hasMore,     setHasMore]     = useState(() => restore?.hasMore ?? true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [moreError,   setMoreError]   = useState(false)
+  const [newCount,    setNewCount]    = useState(0)
+  const gen      = useRef(0)       // bumps on every restart; answers for an older generation are dropped
+  const busy     = useRef(false)   // one feed request at a time
+  const postsRef = useRef(posts)
+  const hasMoreRef = useRef(hasMore)
+  const wrapRef  = useRef(null)
+  const sentinelRef = useRef(null)
+  useEffect(() => { postsRef.current = posts; hasMoreRef.current = hasMore })
 
  const [localConns, setLocalConns] = useState(
   (user?.following || []).map(c => c?._id?.toString() || c?.toString() || c)
@@ -243,98 +273,164 @@ const [refreshKey, setRefreshKey] = useState(0)
   const [localSentReqs, setLocalSentReqs] = useState(
     (user?.sentRequests || []).map(c => c?._id?.toString() || c?.toString() || c)
   )
+  const connsRef = useRef(localConns)
+  useEffect(() => { connsRef.current = localConns })
 
-  // ── FIX 1: Reset page/posts when filter changes ──
-  useEffect(() => {
-    setPage(1)
-    setHasMore(true)
-    setPosts([])
-  }, [category, scope])
+  const feedArgs = useCallback(() => [category === 'all' ? '' : category, scope === 'following', scope === 'global'], [category, scope])
+  // Ranks one new batch (the personal score); never applied to posts already shown
+  const rank = useCallback(batch => smartSort(batch, user?._id || '', connsRef.current || []), [user?._id])
 
-  // ── FIX 2: Fetch posts — proper dependency array ──
-  useEffect(() => {
-    // Guard: don't re-fetch if already loading
-    if (isLoading.current) return
-    isLoading.current = true
-    setLoading(true)
-
-    const isGlobal  = scope === 'global'
-    const typeParam = category === 'all' ? '' : category
-
-    // Following: posts of the people you follow (the server's connections feed)
-    getFeed(typeParam, scope === 'following', isGlobal, page)
+  // (Re)loads the newest posts. `keep`: leave the current posts on screen until the new ones arrive.
+  const loadFirst = useCallback(({ keep = false } = {}) => {
+    const g = ++gen.current
+    busy.current = true
+    setLoading(true); setLoadingMore(false); setMoreError(false); setNewCount(0)
+    if (!keep) { setPosts([]); setHasMore(true) }
+    return getFeed(...feedArgs(), 1, { limit: PAGE_SIZE })
       .then(r => {
+        if (g !== gen.current) return
         const raw = r.data || []
-
-        // ── FIX 3: hasMore check — use actual limit from backend ──
-        // Backend sends limit=20, if we got fewer we've reached the end
-        if (raw.length < 20) setHasMore(false)
-// Also dedupe properly
-
-        setPosts(prev => {
-  const merged =
-    page === 1
-      ? raw
-      : [...prev, ...raw.filter(p => !prev.some(x => x._id === p._id))]
-
-     return smartSort(merged, user?._id || '', localConns || [])
-})
+        setPosts(appendBatch([], raw, rank))
+        setHasMore(raw.length >= PAGE_SIZE)
       })
-      .catch(() => show('❌ Could not load posts'))
-      .finally(() => {
-        setLoading(false)
-        // ── FIX 4: ALWAYS reset the guard in finally ──
-        // Without this, after any error the scroll never works again
-        isLoading.current = false
+      .catch(() => { if (g === gen.current) show('❌ Could not load posts') })
+      .finally(() => { if (g === gen.current) { busy.current = false; setLoading(false) } })
+  }, [feedArgs, rank, show])
+
+  const loadMore = useCallback(() => {
+    if (busy.current || !hasMoreRef.current) return
+    const oldest = oldestOf(postsRef.current)
+    if (!oldest) return
+    const g = gen.current
+    busy.current = true
+    setLoadingMore(true); setMoreError(false)
+    getFeed(...feedArgs(), 1, { before: cursorOf(oldest), limit: PAGE_SIZE })
+      .then(r => {
+        if (g !== gen.current) return
+        const raw = r.data || []
+        setPosts(prev => appendBatch(prev, raw, rank))
+        if (raw.length < PAGE_SIZE) setHasMore(false)
       })
-  // ── FIX 5: correct deps — page + filters only ──
-  // Don't include localConns/user here — that causes re-fetches on connect
-}, [page, category, scope, refreshKey])
+      .catch(() => { if (g === gen.current) setMoreError(true) })
+      .finally(() => { if (g === gen.current) { busy.current = false; setLoadingMore(false) } })
+  }, [feedArgs, rank])
 
+  // Is there anything newer than what is shown? Only sets the count for the pill; the list stays.
+  const checkNew = useCallback(() => {
+    if (busy.current || document.visibilityState !== 'visible' || !postsRef.current.length) return
+    const g = gen.current
+    getFeed(...feedArgs(), 1, { limit: CHECK_SIZE })
+      .then(r => { if (g === gen.current) setNewCount(newerThan(postsRef.current, r.data || []).length) })
+      .catch(() => {})
+  }, [feedArgs])
 
+  // Tap on the pill: put the new posts on top and go up. If the check was full of new posts there may
+  // be more in between, so the feed starts again from the newest instead of leaving a gap.
+  const showNewPosts = useCallback(() => {
+    if (busy.current) return
+    const g = gen.current
+    busy.current = true
+    setNewCount(0)
+    getFeed(...feedArgs(), 1, { limit: PAGE_SIZE })
+      .then(r => {
+        if (g !== gen.current) return
+        const raw = r.data || []
+        if (newerThan(postsRef.current, raw).length >= PAGE_SIZE) {
+          setPosts(appendBatch([], raw, rank)); setHasMore(raw.length >= PAGE_SIZE)
+        } else {
+          setPosts(prev => prependNew(prev, raw, rank))
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      })
+      .catch(() => { if (g === gen.current) show('❌ Could not load new posts') })
+      .finally(() => { if (g === gen.current) busy.current = false })
+  }, [feedArgs, rank, show])
 
+  // A manual refresh (pull down at the top, or tapping Home while on Home)
+  const refresh = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return loadFirst({ keep: true })
+  }, [loadFirst])
 
-useEffect(() => {
-  const onScroll = () => {
-    sessionStorage.setItem('home_scroll', window.scrollY)
-  }
+  // The filter: load when it changes (and on the first visit; not when the feed was restored)
+  const latest = useRef({})
+  latest.current = { loadFirst, loadMore, checkNew, refresh }
+  const restored = useRef(Boolean(restore))
+  useEffect(() => {
+    if (restored.current) { restored.current = false; return }
+    latest.current.loadFirst()
+  }, [scope, category])
 
-  window.addEventListener('scroll', onScroll)
-  return () => window.removeEventListener('scroll', onScroll)
-}, [])
+  // Where the page starts: your old place when the feed was restored, else the top. The anchor post is
+  // put back where it was (images above it may still be loading, so it is re-applied a few times
+  // until you touch the page).
+  useLayoutEffect(() => {
+    if (!restore) { window.scrollTo(0, 0); return }
+    let touched = false
+    const stop = () => { touched = true }
+    const place = () => {
+      if (touched) return
+      const el = restore.anchor && document.querySelector(`.post-card[data-post-id="${restore.anchor.id}"]`)
+      if (el) window.scrollBy(0, el.getBoundingClientRect().top - restore.anchor.top)
+      else window.scrollTo(0, restore.scrollY)
+    }
+    place()
+    const timers = [50, 250, 600, 1200].map(ms => setTimeout(place, ms))
+    const evs = ['wheel', 'touchstart', 'keydown', 'mousedown']
+    evs.forEach(e => window.addEventListener(e, stop, { passive: true }))
+    return () => { timers.forEach(clearTimeout); evs.forEach(e => window.removeEventListener(e, stop)) }
+  }, [restore])
 
-useEffect(() => {
-  if (posts.length === 0) return
+  // Remember the feed and your place for when you come back
+  useEffect(() => {
+    if (!posts.length) return
+    feedCache = { ...(feedCache || {}), scope, category, posts, hasMore, at: Date.now() }
+  }, [posts, hasMore, scope, category])
+  useEffect(() => {
+    let frame = 0
+    const save = () => {
+      frame = 0
+      // after leaving Home the old cards are gone: don't overwrite the place with the next page's
+      if (!wrapRef.current?.isConnected || !feedCache) return
+      feedCache = { ...feedCache, scrollY: window.scrollY, anchor: feedAnchor(), at: Date.now() }
+    }
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(save) }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { window.removeEventListener('scroll', onScroll); if (frame) cancelAnimationFrame(frame) }
+  }, [])
 
-  // ONLY restore when coming from tab navigation
-  if (!location.state?.fromNav) return
+  // Load the next batch when the end of the list comes near (an observer on a marker under the last
+  // post — not a height sum, which was the viewport height and loaded pages on every scroll)
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasMore || loading || !posts.length) return
+    const io = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) latest.current.loadMore()
+    }, { rootMargin: '0px 0px 900px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [hasMore, loading, posts.length])
 
-  const saved = sessionStorage.getItem('home_scroll')
-  if (!saved) return
+  // "New posts" check: every minute while the page is visible, and when you come back to the tab.
+  // It never changes the list — it only shows the pill.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') latest.current.checkNew() }
+    const t = setInterval(() => latest.current.checkNew(), 60000)
+    document.addEventListener('visibilitychange', onVisible)
+    if (restore) latest.current.checkNew()
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVisible) }
+  }, [restore])
 
-  requestAnimationFrame(() => {
-    window.scrollTo(0, parseInt(saved))
-  })
-}, [posts])
+  // Tapping Home while on Home: refresh (BottomNav also scrolls up)
+  useEffect(() => {
+    const onRefresh = () => latest.current.refresh()
+    window.addEventListener('refreshHome', onRefresh)
+    return () => window.removeEventListener('refreshHome', onRefresh)
+  }, [])
 
-useEffect(() => {
-  const handleRefresh = () => {
-    setPosts([])
-    setHasMore(true)
-    setPage(1)
-    setRefreshKey(k => k + 1) // 🔥 FORCE re-fetch
-    sessionStorage.removeItem('home_scroll')
-  }
-
-  window.addEventListener('refreshHome', handleRefresh)
-  return () => window.removeEventListener('refreshHome', handleRefresh)
-}, [])
-
-
-
-
-
-
+  // Pull down at the top to refresh (replaces the browser's pull-to-refresh, which reloaded the app)
+  const pull = usePullToRefresh(() => latest.current.refresh())
+  const refreshing = loading && posts.length > 0
 
   // ── Saved posts ──────────────────────────────────
   useEffect(() => {
@@ -344,25 +440,6 @@ useEffect(() => {
         .catch(() => {})
     })
   }, [])
-
-  // ── FIX 6: Scroll listener — stable with useCallback ──
-  // Using useCallback prevents stale closure over hasMore/loading
-  const handleScroll = useCallback(() => {
-    // Don't trigger if: no more pages, or already loading
-    if (!hasMore || isLoading.current) return
-
-    const scrolledToBottom =
-      window.innerHeight + window.scrollY >= document.body.offsetHeight - 300
-
-    if (scrolledToBottom) {
-      setPage(p => p + 1)
-    }
-  }, [hasMore])
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [handleScroll])
 
   // ── Actions ──────────────────────────────────────
   async function handleLike(postId) {
@@ -424,7 +501,23 @@ useEffect(() => {
   })
 
   return (
-    <div className="page-wrap">
+    <div className="page-wrap" ref={wrapRef}>
+
+      {/* pull to refresh (touch): follows the finger, "Refreshing…" while the newest posts load */}
+      {(pull > 0 || refreshing) && (
+        <div className={`ptr${pull >= 64 || refreshing ? ' ready' : ''}`} role="status"
+          style={{ transform: `translate(-50%, ${refreshing ? 18 : Math.min(pull, 96) - 30}px)` }}>
+          <span className={`ptr-icon${refreshing ? ' spin' : ''}`} aria-hidden="true">↻</span>
+          {refreshing ? 'Refreshing…' : pull >= 64 ? 'Release to refresh' : 'Pull to refresh'}
+        </div>
+      )}
+
+      {/* new posts never push the feed while you read: they wait behind this pill */}
+      {newCount > 0 && !refreshing && (
+        <button className="feed-new-pill" onClick={showNewPosts}>
+          <span aria-hidden="true">↑</span> {newPostsLabel(newCount)}
+        </button>
+      )}
 
       <header className="home-header">
         <div className="home-logo"><span className="logo-dot" />MeetNet</div>
@@ -470,7 +563,7 @@ useEffect(() => {
 */}
       <MeetNowStrip onToast={show} />
 
-      {loading && page === 1 && <div className="feed-loading">Loading posts…</div>}
+      {loading && posts.length === 0 && <div className="feed-loading">Loading posts…</div>}
 
       {!loading && visible.length === 0 && (
         <div className="feed-empty">
@@ -494,31 +587,15 @@ useEffect(() => {
           onConnect={handleConnect}/>
       ))}
 
-     {/* Bottom of feed */}
-{!loading && hasMore && (
-  <div style={{
-    textAlign:'center', padding:'20px',
-    color:'var(--dim)', fontSize:'.75rem'
-  }}>
-    Scroll for more
-  </div>
-)}
-{!loading && !hasMore && posts.length > 0 && (
-  <div style={{
-    textAlign:'center', padding:'20px',
-    color:'var(--dim)', fontSize:'.75rem'
-  }}>
-    You're all caught up 🎉
-  </div>
-)}
-{loading && page > 1 && (
-  <div style={{
-    textAlign:'center', padding:'16px',
-    color:'var(--dim)', fontSize:'.75rem'
-  }}>
-    Loading…
-  </div>
-)}
+      {/* Bottom of feed: the marker that loads the next batch, then the status */}
+      <div ref={sentinelRef} aria-hidden="true" />
+      {!loading && posts.length > 0 && (
+        <div className="feed-foot">
+          {loadingMore ? 'Loading…'
+            : moreError ? <>Couldn’t load more posts. <button className="feed-retry" onClick={loadMore}>Retry</button></>
+              : hasMore ? '' : 'You’re all caught up 🎉'}
+        </div>
+      )}
 
       <div style={{ height:14 }}/>
       <Toast msg={msg} onClose={clear}/>
