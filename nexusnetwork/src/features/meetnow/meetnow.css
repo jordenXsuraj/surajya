@@ -100,7 +100,7 @@
 .mn-strip .mn-card-line .mn-card-place { flex: 0 1 auto; min-width: 0; }
 .mn-strip .mn-card-line .mn-card-count { color: var(--muted); font-weight: 500; flex-shrink: 0; }
 .mn-strip .mn-btn { height: 28px; font-size: 12px; border-radius: 8px; }
-.mn-strip .mn-card.create { gap: 4px; padding: 8px 6px; }
+.mn-strip .mn-card.create { gap: 4px; padding: 8px 6px; min-height: 122px; }   /* as tall as a normal card, also when it's alone */
 .mn-strip .mn-plus { width: 26px; height: 26px; font-size: 1rem; }
 .mn-strip .mn-create-title { font-size: 12px; }
 .mn-strip .mn-create-sub { font-size: 10px; line-height: 1.25; }
