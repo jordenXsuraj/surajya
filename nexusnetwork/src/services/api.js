@@ -168,6 +168,27 @@ export const sendMeetupMessage   = (id, text)   => API.post(`/meetups/${id}/mess
 export const reportMeetup        = (id, reason) => API.post(`/meetups/${id}/report`, { reason })
 export const reportMeetupMessage = (id, messageId, reason) => API.post(`/meetups/${id}/messages/${messageId}/report`, { reason })
 
+// ── Direct messages (only while the dm feature is available to this account) ──
+export const getConversations      = (tab, search) => API.get(`/conversations${buildQuery({ tab, search })}`)
+export const getDmUnread           = ()             => API.get('/conversations/unread-count')
+export const openConversation      = userId         => API.post('/conversations', { userId })
+export const getConversation       = id             => API.get(`/conversations/${id}`)
+export const getDirectMessages     = (id, before)   => API.get(`/conversations/${id}/messages${buildQuery({ before })}`)
+export const sendDirectMessage     = (id, body)     => API.post(`/conversations/${id}/messages`, body)
+export const markConversationRead  = id             => API.post(`/conversations/${id}/read`)
+export const acceptMessageRequest  = id             => API.post(`/conversations/${id}/accept`)
+export const declineMessageRequest = id             => API.post(`/conversations/${id}/decline`)
+export const deleteConversation    = id             => API.delete(`/conversations/${id}`)
+export const deleteDirectMessage   = (id, messageId, forEveryone) =>
+  API.delete(`/conversations/${id}/messages/${messageId}${forEveryone ? '?for=everyone' : ''}`)
+export const reportDirectMessage   = (id, messageId, reason) => API.post(`/conversations/${id}/messages/${messageId}/report`, { reason })
+export const uploadDmImage         = formData       => API.post('/conversations/upload-image', formData)
+
+// ── Safety ────────────────────────────────────────
+export const blockUser   = id           => API.post(`/users/${id}/block`)
+export const unblockUser = id           => API.post(`/users/${id}/unblock`)
+export const reportUser  = (id, reason) => API.post(`/users/${id}/report`, { reason })
+
 // ── Helper ────────────────────────────────────────
 function buildQuery(params) {
   const q = Object.entries(params)

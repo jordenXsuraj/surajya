@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { connectUser, unfollowUser, addReply, deleteReply ,likePost } from '../services/api'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
+import MessageButton from '../features/messages/MessageButton'
 import axios from 'axios'
 import { isOwnReply, isAnonAuthorReply, replyAuthorName, likeCountOf, isLikedBy } from '../utils/postView'
 import { getYouTubeId } from '../utils/youtube'
@@ -1132,6 +1133,7 @@ axios.get(`${base}/users/${id}/followers`, { headers: h })
               {btnBusy ? '…' : '+ Connect'}
             </button>
           )}
+          <MessageButton userId={profile._id} onError={show} />
         </div>
       </div>
 

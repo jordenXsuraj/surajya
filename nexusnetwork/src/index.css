@@ -302,7 +302,8 @@ body {
 }
 .home-search:focus-within { border-color: var(--accent); }
 .home-search svg { flex-shrink: 0; stroke: var(--muted); }
-.home-search input { flex: 1; border: none; outline: none; font-family: 'Outfit', sans-serif; font-size: .82rem; color: var(--text); background: transparent; }
+.home-search { min-width: 0; }   /* lets the header fit next to the messages button */
+.home-search input { flex: 1; min-width: 0; width: 100%; border: none; outline: none; font-family: 'Outfit', sans-serif; font-size: .82rem; color: var(--text); background: transparent; }
 .home-search input::placeholder { color: var(--dim); }
 
 /* type tabs */

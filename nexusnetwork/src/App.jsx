@@ -28,6 +28,8 @@ import MeetNowAll from './features/meetnow/MeetNowAll'
 import CreateMeetNow from './features/meetnow/CreateMeetNow'
 import MeetNowDetails from './features/meetnow/MeetNowDetails'
 import MeetNowChat from './features/meetnow/MeetNowChat'
+import Inbox from './features/messages/Inbox'
+import Thread from './features/messages/Thread'
 function Guard({ children }) {
   const { user } = useAuth()
   return user ? children : <Navigate to="/" replace />
@@ -64,6 +66,9 @@ useEffect(() => {
         <Route path="/meetnow/new"      element={<Guard><RequireFeature feature="meetnow"><CreateMeetNow /></RequireFeature></Guard>} />
         <Route path="/meetnow/:id"      element={<Guard><RequireFeature feature="meetnow"><MeetNowDetails /></RequireFeature></Guard>} />
         <Route path="/meetnow/:id/chat" element={<Guard><RequireFeature feature="meetnow"><MeetNowChat /></RequireFeature></Guard>} />
+        {/* Direct messages: only while the server makes them available to this account (else → /home) */}
+        <Route path="/messages"     element={<Guard><RequireFeature feature="dm"><Inbox /></RequireFeature></Guard>} />
+        <Route path="/messages/:id" element={<Guard><RequireFeature feature="dm"><Thread /></RequireFeature></Guard>} />
         {/* Public: account recovery, deletion and legal pages (linked from the app stores) */}
         <Route path="/verify-email"         element={<Guard><VerifyEmail /></Guard>} />
         <Route path="/forgot-password"      element={<ForgotPassword />} />

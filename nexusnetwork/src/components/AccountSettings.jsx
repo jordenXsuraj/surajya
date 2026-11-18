@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { changePassword, logoutAllDevices } from '../services/api'
+import { changePassword, logoutAllDevices, updateProfile } from '../services/api'
+import { useRealtime } from '../context/realtime'
 import ChangeEmailForm from './ChangeEmailForm'
+import '../features/messages/messages.css'
 
 // Profile → Account: change password, log out everywhere, delete account.
 // Both actions end every other session; the API returns a fresh token for this one.
 export default function AccountSettings({ onMessage }) {
-  const { user, login } = useAuth()
+  const { user, login, updateUser } = useAuth()
+  const { features } = useRealtime()
+  const [statusBusy, setStatusBusy] = useState(false)
   const nav = useNavigate()
   const [open,    setOpen]    = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
@@ -55,9 +59,37 @@ export default function AccountSettings({ onMessage }) {
     }
   }
 
+  // Direct messages: whether others see when you're active (and you see theirs)
+  async function toggleActivity() {
+    const next = user?.showActivityStatus === false
+    setStatusBusy(true)
+    try {
+      await updateProfile({ showActivityStatus: next })
+      updateUser({ showActivityStatus: next })
+      onMessage?.(next ? 'Activity status is on' : 'Activity status is off')
+    } catch {
+      onMessage?.('⚠️ Could not change it. Try again.')
+    } finally {
+      setStatusBusy(false)
+    }
+  }
+
   return (
     <div className="acct-section">
       <div className="acct-title">Account</div>
+
+      {features.dm && (
+        <div className="acct-row" style={{ cursor: 'default' }}>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 2, textAlign: 'left' }}>
+            <span>🟢 Show activity status</span>
+            <span style={{ fontSize: '.66rem', color: 'var(--muted)', fontWeight: 400 }}>
+              People you message see when you're active. Turn it off and you won't see theirs either.
+            </span>
+          </span>
+          <button type="button" role="switch" aria-checked={user?.showActivityStatus !== false} aria-label="Show activity status"
+            className={`dm-switch${user?.showActivityStatus !== false ? ' on' : ''}`} disabled={statusBusy} onClick={toggleActivity} />
+        </div>
+      )}
 
       <button className="acct-row" onClick={() => { setOpen(o => !o); reset() }}>
         <span>🔑 Change password</span><span>{open ? '▲' : '▼'}</span>

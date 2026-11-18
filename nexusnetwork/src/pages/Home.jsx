@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import MeetNowStrip from '../features/meetnow/MeetNowStrip'
+import MessagesIcon from '../features/messages/MessagesIcon'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -423,6 +424,7 @@ useEffect(() => {
             value={search} onChange={e => setSearch(e.target.value)}/>
           {search && <button className="srch-x" onClick={() => setSearch('')}>✕</button>}
         </div>
+        <MessagesIcon />
       </header>
 
       <div className="cat-row">
