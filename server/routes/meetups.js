@@ -164,18 +164,24 @@ async function memberOf(req, res) {
   return meetup
 }
 
-// ── GET /api/meetups/:id/messages?before=<ISO date>&limit= — oldest first ──
+// ── GET /api/meetups/:id/messages?before=<ISO>|after=<ISO>&limit= — oldest first ──
+// before: the page older than that; after: what came since (catching up after a reconnect)
 router.get('/:id/messages', async (req, res) => {
   const meetup = await memberOf(req, res)
   if (!meetup) return
   const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 100)
-  const before = req.query.before ? new Date(String(req.query.before)) : null
+  const date = v => { const d = v ? new Date(String(v)) : null; return d && !Number.isNaN(d.getTime()) ? d : null }
+  const before = date(req.query.before)
+  const after = date(req.query.after)
   const filter = { meetup: meetup._id }
-  if (before && !Number.isNaN(before.getTime())) filter.createdAt = { $lt: before }
+  if (before) filter.createdAt = { $lt: before }
+  if (after) filter.createdAt = { ...filter.createdAt, $gt: after }
   const sets = await getBlockSets(req.user)
-  const rows = await MeetupMessage.find(filter).sort({ createdAt: -1 }).limit(limit).populate('sender', 'name avatar').lean()
+  const rows = after
+    ? await MeetupMessage.find(filter).sort({ createdAt: 1 }).limit(limit).populate('sender', 'name avatar').lean()
+    : (await MeetupMessage.find(filter).sort({ createdAt: -1 }).limit(limit).populate('sender', 'name avatar').lean()).reverse()
   res.set('Cache-Control', 'private, no-store')
-  res.json(rows.reverse().map(m => {
+  res.json(rows.map(m => {
     const out = life.serializeMessage(m)
     return m.kind === 'text' && m.sender && isBlockedEitherWay(sets, m.sender._id) ? { ...out, text: null, hidden: true } : out
   }))

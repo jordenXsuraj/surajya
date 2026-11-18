@@ -5,10 +5,11 @@ import { useToast } from '../../hooks/useToast'
 import { useAuth } from '../../context/AuthContext'
 import { useRealtime } from '../../context/realtime'
 import {
-  endMeetup, getMeetup, getMeetupMessages, leaveMeetup, reportMeetup, reportMeetupMessage,
+  endMeetup, getMeetup, getMeetupMessages, getMeetupMessagesAfter, leaveMeetup, reportMeetup, reportMeetupMessage,
   sendMeetupMessage, reportEmailNotVerified,
 } from '../../services/api'
 import { request } from '../../lib/socket'
+import { catchUpMessages, lastServerMessage } from '../../lib/catchUp'
 import { mergeMessages, messageTime, startsGroup, timeLeft } from './meta'
 import { Avatar, BackButton, Confirm, Menu } from './parts'
 import { REPORT_REASONS, errorText, useNow } from './util'
@@ -52,6 +53,15 @@ export default function MeetNowChat() {
     setMessages(m => mergeMessages(m, r.data))
     return r.data
   }), [id])
+  // after a reconnect: everything since the last message we have (or the latest page if none)
+  const messagesRef = useRef(messages)
+  useEffect(() => { messagesRef.current = messages }, [messages])
+  const catchUp = useCallback(async () => {
+    const last = lastServerMessage(messagesRef.current)
+    if (!last) return loadLatest()
+    const missed = await catchUpMessages(after => getMeetupMessagesAfter(id, after), last.createdAt)
+    if (missed.length) setMessages(m => mergeMessages(m, missed))
+  }, [id, loadLatest])
 
   useEffect(() => {
     let alive = true
@@ -70,7 +80,7 @@ export default function MeetNowChat() {
       if (r.code === 'MEETUP_NOT_FOUND') setState('gone')
       else if (r.code === 'NOT_A_MEMBER') nav(`/meetnow/${id}`, { replace: true })
     })
-    loadLatest().catch(() => {})   // what arrived while we were offline
+    catchUp().catch(err => handleError(err))   // (re)connected: fetch what we missed right away
     const onMessage = m => { if (String(m.meetup) === id) setMessages(list => mergeMessages(list, [m])) }
     const onMembers = p => {
       if (p.meetupId !== id) return
@@ -90,14 +100,18 @@ export default function MeetNowChat() {
       socket.off('meetup:ended', onEnded)
       clearTimeout(reloadTimer.current)
     }
-  }, [socket, connected, state, id, nav, loadLatest, loadMeetup])
+  }, [socket, connected, state, id, nav, catchUp, loadMeetup, handleError])
 
-  // No live connection: check for new messages every 8 s
+  // No live connection (server waking up, or a network that blocks WebSockets): the same catch-up
+  // every 8 s, plus the member count and the end (a 404 shows "This MeetNow has ended")
   useEffect(() => {
     if (connected || state !== 'ready') return
-    const t = setInterval(() => loadLatest().catch(err => handleError(err)), 8000)
+    const t = setInterval(() => {
+      catchUp().catch(err => handleError(err))
+      loadMeetup().catch(err => handleError(err))
+    }, 8000)
     return () => clearInterval(t)
-  }, [connected, state, loadLatest, handleError])
+  }, [connected, state, catchUp, loadMeetup, handleError])
 
   // Keep the view at the newest message unless the user scrolled up to read
   useLayoutEffect(() => {

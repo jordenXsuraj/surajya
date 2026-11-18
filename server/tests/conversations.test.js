@@ -227,6 +227,18 @@ describe('messages', () => {
     }
   })
 
+  test('catching up: ?after= returns only what came since, oldest first', async () => {
+    const a = await makeUser(), b = await makeUser()
+    const conv = await chat(a, b)
+    const first = (await say(a, conv._id, 'one')).body
+    await new Promise(r => setTimeout(r, 5))
+    await say(b, conv._id, 'two'); await say(a, conv._id, 'three')
+    const since = (await as(b, 'get', `/api/conversations/${conv._id}/messages?after=${encodeURIComponent(first.createdAt)}`)).body
+    expect(since.map(m => m.text)).toEqual(['two', 'three'])
+    const page = (await as(b, 'get', `/api/conversations/${conv._id}/messages?after=${encodeURIComponent(first.createdAt)}&limit=1`)).body
+    expect(page.map(m => m.text)).toEqual(['two'])
+  })
+
   test('only the members can read or write', async () => {
     const a = await makeUser(), b = await makeUser(), c = await makeUser()
     const conv = await chat(a, b)
@@ -417,6 +429,32 @@ describe('Socket.IO', () => {
     const read = next(sa, 'dm:read')
     await as(b, 'post', `/api/conversations/${conv._id}/read`)
     expect((await read).conversationId).toBe(conv._id)
+  })
+
+  test('unsend reaches the other person live', async () => {
+    const a = await makeUser(), b = await makeUser()
+    const conv = await chat(a, b)
+    const sb = await open(signToken(b))
+    const m = (await say(a, conv._id, 'oops')).body
+    const unsent = next(sb, 'dm:unsent', p => p.messageId === m._id)
+    expect((await as(a, 'delete', `/api/conversations/${conv._id}/messages/${m._id}?for=everyone`)).body).toEqual({ unsent: true })
+    expect(await unsent).toEqual({ conversationId: conv._id, messageId: m._id })
+  })
+
+  test('the production sequence: typing, delivered, read, reply, photo, then unsend arrives live', async () => {
+    const a = await makeUser(), b = await makeUser()
+    const sa = await open(signToken(a)), sb = await open(signToken(b))
+    const conv = await chat(a, b)
+    const m1 = (await say(a, conv._id, 'hello')).body
+    sb.emit('dm:typing', { conversationId: conv._id })
+    const delivered = next(sa, 'dm:delivered'); sb.emit('dm:delivered', { conversationId: conv._id }); await delivered
+    await as(b, 'post', `/api/conversations/${conv._id}/read`)
+    await say(b, conv._id, { text: 'reply', replyTo: m1._id })
+    const up = await as(a, 'post', '/api/conversations/upload-image').attach('image', PNG, { filename: 'a.png', contentType: 'image/png' })
+    const pm = (await say(a, conv._id, { imageUrl: up.body.url })).body
+    const unsent = next(sb, 'dm:unsent', p => p.messageId === pm._id)
+    expect((await as(a, 'delete', `/api/conversations/${conv._id}/messages/${pm._id}?for=everyone`)).status).toBe(200)
+    expect(await unsent).toEqual({ conversationId: conv._id, messageId: pm._id })
   })
 
   test('typing is not shown in requests or to strangers', async () => {

@@ -7,10 +7,11 @@ import { useAuth } from '../../context/AuthContext'
 import { useRealtime } from '../../context/realtime'
 import {
   acceptMessageRequest, blockUser, declineMessageRequest, deleteConversation, deleteDirectMessage,
-  getConversation, getDirectMessages, markConversationRead, reportDirectMessage, reportUser,
+  getConversation, getDirectMessages, getDirectMessagesAfter, markConversationRead, reportDirectMessage, reportUser,
   sendDirectMessage, unblockUser, uploadDmImage, reportEmailNotVerified,
 } from '../../services/api'
 import { errorText, useNow } from '../../lib/ui'
+import { catchUpMessages, lastServerMessage } from '../../lib/catchUp'
 import { activityLabel, dayLabel, mergeMessages, messageClock, photoBox, receiptFor, startsGroup } from './meta'
 import { announceRead } from './unread'
 import { Avatar, BackButton, Confirm, ReportSheet, Sheet } from './parts'
@@ -76,6 +77,21 @@ export default function Thread() {
     setMessages(m => mergeMessages(m.filter(x => !x._id.startsWith('tmp-') || x.pending || x.failed), r.data))
     return r.data
   }), [id])
+  // after a reconnect: everything since the last message we have (or the latest page if none)
+  const messagesRef = useRef(messages)
+  useEffect(() => { messagesRef.current = messages }, [messages])
+  const catchUp = useCallback(async () => {
+    const last = lastServerMessage(messagesRef.current)
+    if (!last) return loadLatest()
+    const missed = await catchUpMessages(after => getDirectMessagesAfter(id, after), last.createdAt)
+    if (missed.length) setMessages(m => mergeMessages(m, missed))
+    if (missed.some(x => !x.mine) && document.visibilityState === 'visible') markRead()
+    // unsent while we were away: the newest page tells what is still there
+    const { data } = await getDirectMessages(id)
+    const kept = new Set(data.map(x => x._id))
+    const oldest = data[0]?.createdAt
+    setMessages(m => m.filter(x => x.pending || x.failed || String(x._id).startsWith('tmp-') || !oldest || x.createdAt < oldest || kept.has(x._id)))
+  }, [id, loadLatest, markRead])
 
   useEffect(() => {
     let alive = true
@@ -88,7 +104,7 @@ export default function Thread() {
   // Live events for this conversation; catch up after every reconnect
   useEffect(() => {
     if (!socket || !connected || state !== 'ready') return
-    loadLatest().catch(() => {})
+    catchUp().catch(() => {})   // (re)connected: fetch what we missed right away
     loadConv().catch(() => {})
     const mine = p => p.conversationId === id
     const onNew = p => {
@@ -116,14 +132,15 @@ export default function Thread() {
     const handlers = { 'dm:new': onNew, 'dm:typing': onTyping, 'dm:delivered': onDelivered, 'dm:read': onRead, 'dm:unsent': onUnsent, 'dm:presence': onPresence, 'dm:accepted': onAccepted, 'dm:removed': onRemoved }
     Object.entries(handlers).forEach(([e, h]) => socket.on(e, h))
     return () => Object.entries(handlers).forEach(([e, h]) => socket.off(e, h))
-  }, [socket, connected, state, id, loadLatest, loadConv, markRead])
+  }, [socket, connected, state, id, catchUp, loadConv, markRead])
 
-  // No live connection: look for new messages every 8 s
+  // No live connection (server waking up, or a network that blocks WebSockets): the same catch-up
+  // every 8 s, so new and unsent messages, receipts and the request status still update
   useEffect(() => {
     if (connected || state !== 'ready') return
-    const t = setInterval(() => { loadLatest().catch(() => {}); loadConv().catch(() => {}) }, 8000)
+    const t = setInterval(() => { catchUp().catch(() => {}); loadConv().catch(() => {}) }, 8000)
     return () => clearInterval(t)
-  }, [connected, state, loadLatest, loadConv])
+  }, [connected, state, catchUp, loadConv])
 
   // Coming back to the tab reads what arrived meanwhile
   useEffect(() => {

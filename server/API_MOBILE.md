@@ -209,7 +209,7 @@ Creating, joining, sending and reporting need a verified email (403 `EMAIL_NOT_V
 | POST | `/meetups/:id/join` | 200 `{ joined: true, alreadyJoined, memberCount }` (idempotent); 409 `MEETUP_FULL` (100) |
 | POST | `/meetups/:id/leave` | 200 `{ left: true, ended }`: ends it if it was the last member, or the creator of an "until I leave" meetup; 400 `NOT_A_MEMBER` |
 | DELETE | `/meetups/:id` | creator: 200 `{ ended: true }` (deleted for everyone); others 403 |
-| GET | `/meetups/:id/messages?before=<ISO>&limit=` (≤ 100) | members: 200 `[Message]` oldest first; 403 `NOT_A_MEMBER` |
+| GET | `/meetups/:id/messages?before=<ISO>\|after=<ISO>&limit=` (≤ 100) | members: 200 `[Message]` oldest first (`after`: only newer ones); 403 `NOT_A_MEMBER` |
 | POST | `/meetups/:id/messages` `{ text (≤ 1000) }` | members: 201 `Message`; 20 per minute |
 | POST | `/meetups/:id/report`, `/meetups/:id/messages/:messageId/report` `{ reason, note? }` | 200; the report keeps a snapshot (title / text + author) for 90 days |
 
@@ -232,7 +232,7 @@ Writing (open, send, upload, report) needs a verified email.
 | POST | `/conversations` `{ userId }` | 201 new / 200 existing `Conversation`; 429 `CONVERSATION_LIMIT` (30 new a day) or `REQUEST_LIMIT` (10 requests a day); 404 if the person can't receive messages |
 | POST | `/conversations/upload-image` (multipart `image`) | 200 `{ url, width, height }` (Cloudinary `meetnet_dm/`, JPG); 30 an hour |
 | GET | `/conversations/:id` | 200 `Conversation` (+ `blocked`) |
-| GET | `/conversations/:id/messages?before=<ISO>&limit=` (≤ 100) | 200 `[DirectMessage]` oldest first; marks the other person's messages delivered |
+| GET | `/conversations/:id/messages?before=<ISO>\|after=<ISO>&limit=` (≤ 100) | 200 `[DirectMessage]` oldest first (`after`: only newer ones, for catching up); marks the other person's messages delivered |
 | POST | `/conversations/:id/messages` `{ text? (≤ 2000), imageUrl?, imageWidth?, imageHeight?, replyTo? }` | 201 `DirectMessage`; 30 a minute; 403 `REQUEST_PENDING` / `BLOCKED`; 400 `REQUEST_TEXT_ONLY`, `PROFANITY` (requests only), `INVALID_IMAGE`, `EMPTY`, `TOO_LONG` |
 | POST | `/conversations/:id/read` | 200; the other person gets `dm:read` (accepted conversations only) |
 | POST | `/conversations/:id/accept`, `/conversations/:id/decline` | receiver of a request: 200 `{ status }`; else 400 `NOT_A_REQUEST` |
@@ -246,7 +246,7 @@ Writing (open, send, upload, report) needs a verified email.
 
 ### Real-time (Socket.IO, same host, path `/socket.io`)
 
-Connect with `auth: { token: <JWT> }`. Refused (`connect_error` `unauthorized` / `not_available`) for a
+Connect with `auth: { token: <JWT> }` (WebSocket transport). Events can be missed while a deploy runs two instances; after every reconnect fetch with `after=`. Refused (`connect_error` `unauthorized` / `not_available`) for a
 bad or revoked token, or when no staged feature is available to the account. Logging out everywhere,
 a password change or reset, an email change and account deletion disconnect the account's sockets.
 
