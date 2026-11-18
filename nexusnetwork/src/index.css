@@ -369,8 +369,42 @@ body {
 /* feed */
 .feed { padding-top: 4px; }
 .feed-loading { text-align: center; padding: 40px 20px; color: var(--dim); font-size: .85rem; }
-.feed-foot { text-align: center; padding: 20px; color: var(--dim); font-size: .75rem; min-height: 16px; }
-.feed-retry { background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; padding: 4px; }
+/* ── Loading states (components/Loading.jsx): skeletons, spinner, list footer ── */
+.skel {
+  display: block; height: 12px; border-radius: 6px;
+  background: linear-gradient(90deg, #232323 0%, #2c2c2c 40%, #232323 80%);
+  background-size: 250% 100%;
+  animation: skel-shimmer 1.3s ease-in-out infinite;
+}
+.skel-circle { border-radius: 50%; }
+.skel-pill   { border-radius: 999px; }
+.skel-btn    { height: 30px; border-radius: 8px; }
+.skel-tag    { height: 21px; border-radius: 7px; }
+.skel-lines  { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* two lines of .pc-text (same font size and line height): a skeleton post is as tall as a two-line post */
+.skel-text   { margin: 6px 0 0; display: flex; flex-direction: column; }
+.skel-text .skel { height: calc(.95rem * 1.7 - 9px); margin: 4.5px 0; }
+.post-card.skel-post { background: var(--card); pointer-events: none; }
+.post-card.skel-post:active { transform: none; }
+.person-card.skel-person { background: var(--card); pointer-events: none; box-shadow: none; }
+.skel-row { display: flex; align-items: center; }
+.skel-person-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.skel-list { display: contents; }
+@keyframes skel-shimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+
+.list-foot { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 22px; padding: 18px 20px 22px; color: var(--dim); font-size: .75rem; text-align: center; }
+.foot-link { background: none; border: 0; padding: 4px 2px; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.foot-more { width: 100%; padding: 12px; background: var(--bg2); border: 1.5px solid var(--br2); border-radius: 12px; color: var(--muted); font-family: 'Outfit', sans-serif; font-size: .8rem; font-weight: 700; cursor: pointer; }
+.load-error { padding: 36px 20px; text-align: center; color: var(--muted); font-size: .82rem; }
+.spin-wrap { display: inline-flex; align-items: center; gap: 8px; }
+.spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #2c2c2c; border-top-color: var(--accent); animation: spin-ring .7s linear infinite; }
+.spin-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@keyframes spin-ring { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .skel { animation: none; background: #262626; }
+  .spinner { animation: none; border-color: #3a3a3a; }
+  .spin-label { position: static; width: auto; height: auto; clip: auto; }
+}
 
 /* Home: new posts wait behind this pill (tap = show them on top) */
 .feed-new-pill {

@@ -1,6 +1,6 @@
 
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { NOTIFICATIONS_READ_EVENT } from '../lib/events'
 import FilterDropdown from '../components/FilterDropdown'
@@ -8,6 +8,9 @@ import { useAuth } from '../context/AuthContext'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import axios from 'axios'
+import useLoadMore from '../hooks/useLoadMore'
+import { PersonSkeleton, Skeletons, ListFooter, LoadError } from '../components/Loading'
+import { appendBatch } from '../lib/feedPaging'
 
 const SKILL_FILTERS = [
   'All','React','Python','ML','Java','DSA','Embedded System','Node.js','C++','VLSI',
@@ -148,6 +151,8 @@ function PersonCard({ u, index, onFollow, onView, sentIds, isSuggestion }) {
   )
 }
 
+const PAGE = 20   // students per page (the server's page size)
+
 const SCOPE_OPTIONS = [
   { value: 'college', icon: '🏫', label: 'My College' },
   { value: 'global',  icon: '🌐', label: 'All' },
@@ -171,11 +176,17 @@ export default function Connect() {
   const [requests,         setReqs]        = useState([])
   const [notifications,    setNotifs]      = useState([])  // ← NEW
   const [unreadCount,      setUnread]      = useState(0)   // ← NEW
-  const [loading,          setLoading]     = useState(true)
+  const [loading,          setLoading]     = useState(true)    // Suggested / Activity tabs
   const [searchDebounced,  setSearchD]     = useState('')
-  const [page,             setPage]        = useState(1)
+  // Find tab: pages of 20 students, loaded by themselves near the end of the list
+  const [findLoading,      setFindLoading] = useState(true)
   const [hasMore,          setHasMore]     = useState(true)
   const [loadingMore,      setLoadingMore] = useState(false)
+  const [moreError,        setMoreError]   = useState(false)
+  const [firstError,       setFirstError]  = useState(false)
+  const findGen  = useRef(0)       // bumps when a filter changes; answers for an older list are dropped
+  const findBusy = useRef(false)   // one request at a time
+  const nextPage = useRef(2)
   const [reqSubTab,        setReqSubTab]   = useState(openNotifications ? 'notifications' : 'requests') // 'requests' | 'notifications'
 
   const [sentIds, setSentIds] = useState(
@@ -206,48 +217,74 @@ const getH  = () => ({ Authorization: `Bearer ${localStorage.getItem('nx_token')
       .catch(() => {})
   }, [openNotifications])
 
-  // ── Main data fetch ───────────────────────────────
+  // ── Find tab: students page by page ───────────────
+  const studentsUrl = useCallback(page => {
+    const sp = new URLSearchParams()
+    if (skill !== 'All')         sp.set('skill',  skill)
+    if (searchDebounced.trim())  sp.set('search', searchDebounced.trim())
+    sp.set('page', page)
+    return `${scope === 'global' ? `${base}/users/all` : `${base}/users`}?${sp}`
+  }, [base, scope, skill, searchDebounced])
+
+  // A filter, skill or search changed (or the tab opened): start the list again, skeleton first
+  const loadStudents = useCallback(() => {
+    const g = ++findGen.current
+    findBusy.current = true
+    nextPage.current = 2
+    setUsers([]); setHasMore(true); setFindLoading(true); setLoadingMore(false); setMoreError(false); setFirstError(false)
+    axios.get(studentsUrl(1), { headers: getH() })
+      .then(r => {
+        if (g !== findGen.current) return
+        const data = Array.isArray(r.data) ? r.data : []
+        setUsers(appendBatch([], data))
+        setHasMore(data.length >= PAGE)
+      })
+      .catch(() => { if (g === findGen.current) setFirstError(true) })
+      .finally(() => { if (g === findGen.current) { findBusy.current = false; setFindLoading(false) } })
+  }, [studentsUrl])
+
+  const loadMoreStudents = useCallback(() => {
+    if (findBusy.current || !hasMore) return
+    const g = findGen.current
+    const page = nextPage.current
+    findBusy.current = true
+    setLoadingMore(true); setMoreError(false)
+    axios.get(studentsUrl(page), { headers: getH() })
+      .then(r => {
+        if (g !== findGen.current) return
+        const data = Array.isArray(r.data) ? r.data : []
+        nextPage.current = page + 1
+        setUsers(prev => appendBatch(prev, data))   // de-duplicated by id; the list never reorders
+        if (data.length < PAGE) setHasMore(false)
+      })
+      .catch(() => { if (g === findGen.current) setMoreError(true) })
+      .finally(() => { if (g === findGen.current) { findBusy.current = false; setLoadingMore(false) } })
+  }, [studentsUrl, hasMore])
+
+  useEffect(() => {
+    if (tab === 'find') loadStudents()
+  }, [tab, loadStudents])
+
+  const studentsSentinel = useLoadMore(loadMoreStudents, {
+    enabled: tab === 'find' && hasMore && !findLoading && !moreError && users.length > 0, margin: 300, watch: users.length,
+  })
+
+  // ── Suggested / Activity tabs ─────────────────────
   useEffect(() => {
     const controller = new AbortController()
-    setLoading(true)
-    let request
-
-    if (tab === 'find') {
-      const sp = new URLSearchParams()
-      if (skill !== 'All')  sp.set('skill',  skill)
-      if (search.trim())    sp.set('search', search.trim())
-      sp.set('page', page)
-
-      const url = scope === 'global'
-        ? `${base}/users/all?${sp}`
-        : `${base}/users?${sp}`
-
-      const isFirstPage = page === 1
-      if (isFirstPage) setLoading(true)
-      else setLoadingMore(true)
-
-      axios.get(url, { headers: getH() })
-        .then(r => {
-          const data = Array.isArray(r.data) ? r.data : []
-          if (data.length < 20) setHasMore(false)
-          setUsers(prev => isFirstPage ? data : [...prev, ...data])
-          if (!isFirstPage) setTimeout(() => window.scrollBy({ top:300, behavior:'smooth' }), 50)
-        })
-        .catch(() => show('❌ Could not load students'))
-        .finally(() => { setLoading(false); setLoadingMore(false) })
-    }
-
     if (tab === 'suggestions') {
-      request = axios.get(`${base}/users/suggestions`, { headers: getH(), signal:controller.signal })
+      setLoading(true)
+      axios.get(`${base}/users/suggestions`, { headers: getH(), signal: controller.signal })
         .then(r => setSuggests(Array.isArray(r.data) ? r.data : []))
+        .catch(err => { if (err.name !== 'CanceledError') show('❌ Could not load data') })
+        .finally(() => setLoading(false))
     }
-
     if (tab === 'requests') {
       // Load both requests and notifications in parallel
       setLoading(true)
       Promise.all([
-        axios.get(`${base}/users/requests`,    { headers: getH() }),
-        axios.get(`${base}/notifications`,     { headers: getH() }),
+        axios.get(`${base}/users/requests`,    { headers: getH(), signal: controller.signal }),
+        axios.get(`${base}/notifications`,     { headers: getH(), signal: controller.signal }),
       ])
         .then(([reqRes, notifRes]) => {
           setReqs(Array.isArray(reqRes.data) ? reqRes.data : [])
@@ -256,18 +293,8 @@ const getH  = () => ({ Authorization: `Bearer ${localStorage.getItem('nx_token')
         .catch(() => {})
         .finally(() => setLoading(false))
     }
-
-    request
-      ?.catch(err => { if (err.name !== 'CanceledError') show('❌ Could not load data') })
-      .finally(() => setLoading(false))
-
     return () => controller.abort()
-  }, [tab, skill, scope, page, searchDebounced])
-
-  useEffect(() => {
-    if (tab !== 'find') return
-    setPage(1); setHasMore(true); setUsers([])
-  }, [tab, skill, scope, search, searchDebounced])
+  }, [tab])
 
   useEffect(() => {
     const t = setTimeout(() => setSearchD(search), 300)
@@ -424,27 +451,32 @@ const getH  = () => ({ Authorization: `Bearer ${localStorage.getItem('nx_token')
       {/* ── FIND TAB ── */}
       {tab === 'find' && (
         <div className="people-list">
-          {loading && <div className="list-loading">Loading…</div>}
-          {!loading && users.length === 0 && !loadingMore && (
+          {findLoading && <Skeletons count={5} of={PersonSkeleton} />}
+          {!findLoading && firstError && <LoadError what="students" onRetry={loadStudents} />}
+          {!findLoading && !firstError && users.length === 0 && (
             <div className="conn-empty">
               <div style={{ fontSize:'2.2rem' }}>🔍</div>
               <h3>No students found</h3>
               <p>{search ? 'Try a different search' : 'No students from this college yet'}</p>
             </div>
           )}
-          {!loading && users.map((u, i) => (
+          {!findLoading && users.map((u, i) => (
             <PersonCard key={u._id} u={u} index={i}
               onFollow={handleFollow}
               onView={id => nav(`/profile/${id}`)}
               sentIds={sentIds} isSuggestion={false} />
           ))}
+          {!findLoading && (
+            <ListFooter sentinel={studentsSentinel} count={users.length} loadingMore={loadingMore} error={moreError}
+              hasMore={hasMore} onRetry={loadMoreStudents} onMore={loadMoreStudents} />
+          )}
         </div>
       )}
 
       {/* ── SUGGESTIONS TAB ── */}
       {tab === 'suggestions' && (
         <div className="people-list">
-          {loading && <div className="list-loading">Loading suggestions…</div>}
+          {loading && <Skeletons count={4} of={PersonSkeleton} />}
           {!loading && suggests.length === 0 && (
             <div className="conn-empty">
               <div style={{ fontSize:'2.2rem' }}>💡</div>
@@ -463,24 +495,6 @@ const getH  = () => ({ Authorization: `Bearer ${localStorage.getItem('nx_token')
               onView={id => nav(`/profile/${id}`)}
               sentIds={sentIds} isSuggestion={true} />
           ))}
-        </div>
-      )}
-
-      {/* Load more */}
-      {tab === 'find' && !loading && !search.trim() && hasMore && (
-        <div style={{ padding:'12px 14px' }}>
-          <button onClick={() => setPage(p => p + 1)} disabled={loadingMore}
-            style={{ width:'100%', padding:'12px', background:'var(--bg2)',
-              border:'1.5px solid var(--br2)', borderRadius:12, color:'var(--muted)',
-              fontFamily:'Outfit,sans-serif', fontSize:'.8rem', fontWeight:700,
-              cursor: loadingMore ? 'not-allowed' : 'pointer' }}>
-            {loadingMore ? 'Loading…' : 'Load More Students'}
-          </button>
-        </div>
-      )}
-      {tab === 'find' && !loading && !search.trim() && !hasMore && users.length > 0 && (
-        <div style={{ textAlign:'center', padding:'16px', color:'var(--dim)', fontSize:'.72rem' }}>
-          All students loaded ✓
         </div>
       )}
 
