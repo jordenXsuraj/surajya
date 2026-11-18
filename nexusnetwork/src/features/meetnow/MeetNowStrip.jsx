@@ -37,6 +37,7 @@ function Strip({ onToast }) {
       <div className="mn-strip-head">
         <span className="mn-live-dot" aria-hidden="true" />
         <span className="mn-strip-title">MeetNow</span>
+        <span className="beta-badge">Beta</span>
         <span className="mn-strip-sub">Live groups · join &amp; chat</span>
         <button className="mn-view-all" onClick={() => nav('/meetnow')}>View all ›</button>
       </div>

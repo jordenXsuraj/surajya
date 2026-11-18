@@ -49,8 +49,9 @@ export default function CreateMeetNow() {
     <form className="page-wrap mn-page" onSubmit={submit} noValidate>
       <div className="mn-topbar">
         <BackButton onClick={() => nav(-1)} />
-        <div className="mn-topbar-title">Create MeetNow</div>
+        <div className="mn-topbar-title">Create MeetNow<span className="beta-badge">Beta</span></div>
       </div>
+      <p className="mn-hint" style={{ padding: '10px 14px 0' }}>Beta — the app may take a few seconds to wake up.</p>
 
       <div className="mn-section">
         <label className="mn-label" htmlFor="mn-title">What's happening?</label>

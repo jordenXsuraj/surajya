@@ -25,7 +25,7 @@ export default function MeetNowAll() {
     <div className="page-wrap mn-page">
       <div className="mn-topbar">
         <BackButton onClick={() => nav(-1)} />
-        <div className="mn-topbar-title">MeetNow <div className="mn-topbar-sub">Live groups · gone when they end</div></div>
+        <div className="mn-topbar-title">MeetNow<span className="beta-badge">Beta</span> <div className="mn-topbar-sub">Live groups · gone when they end</div></div>
         <button className="mn-btn" style={{ width: 'auto', padding: '0 14px', height: 34 }} onClick={() => nav('/meetnow/new')}>+ Start</button>
       </div>
 

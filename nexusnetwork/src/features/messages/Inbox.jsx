@@ -57,7 +57,7 @@ export default function Inbox() {
     <div className="page-wrap dm-page">
       <div className="dm-topbar">
         <BackButton onClick={() => nav(-1)} />
-        <div className="dm-title">Messages</div>
+        <div className="dm-title">Messages<span className="beta-badge">Beta</span></div>
       </div>
 
       <div className="dm-tabs" role="tablist">
