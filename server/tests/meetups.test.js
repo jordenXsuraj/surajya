@@ -213,6 +213,17 @@ describe('membership', () => {
     }
   })
 
+  test('catching up: ?after= returns only what came since, oldest first', async () => {
+    const a = await makeUser()
+    const m = await start(a)
+    const first = (await as(a, 'post', `/api/meetups/${m._id}/messages`).send({ text: 'one' })).body
+    await new Promise(r => setTimeout(r, 5))
+    await as(a, 'post', `/api/meetups/${m._id}/messages`).send({ text: 'two' })
+    await as(a, 'post', `/api/meetups/${m._id}/messages`).send({ text: 'three' })
+    const since = (await as(a, 'get', `/api/meetups/${m._id}/messages?after=${encodeURIComponent(first.createdAt)}`)).body
+    expect(since.map(x => x.text)).toEqual(['two', 'three'])
+  })
+
   test('the creator leaving keeps it alive; the last member leaving deletes it', async () => {
     const a = await makeUser()
     const b = await makeUser()

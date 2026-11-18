@@ -119,7 +119,8 @@ router.get('/:id', async (req, res) => {
   res.json(dm.serializeConversation(conv, req.user, other, { activity: blocked ? null : dm.activityFor(req.user, other, other.lastActiveAt, conv), blocked }))
 })
 
-// ── GET /api/conversations/:id/messages?before=<ISO>&limit= — oldest first ──
+// ── GET /api/conversations/:id/messages?before=<ISO>|after=<ISO>&limit= — oldest first ──
+// before: the page older than that (scrolling up); after: what came since (catching up after a reconnect)
 router.get('/:id/messages', async (req, res) => {
   const conv = await load(req, res)
   if (!conv) return
@@ -127,16 +128,22 @@ router.get('/:id/messages', async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 100)
   const filter = { conversation: conv._id, hiddenFor: { $ne: me._id } }
   const mine = dm.memberOf(conv, me._id)
-  const before = req.query.before ? new Date(String(req.query.before)) : null
+  const date = v => { const d = v ? new Date(String(v)) : null; return d && !Number.isNaN(d.getTime()) ? d : null }
+  const before = date(req.query.before)
+  const after = date(req.query.after)
+  const since = [mine.clearedAt, after].filter(Boolean).sort((x, y) => y - x)[0]
   filter.createdAt = {
-    ...(mine.clearedAt && { $gt: mine.clearedAt }),
-    ...(before && !Number.isNaN(before.getTime()) && { $lt: before }),
+    ...(since && { $gt: since }),
+    ...(before && { $lt: before }),
   }
   if (!Object.keys(filter.createdAt).length) delete filter.createdAt
-  const rows = await DirectMessage.find(filter).sort({ createdAt: -1 }).limit(limit).lean()
+  // catching up: the oldest ones after `after` first; otherwise the newest page
+  const rows = after
+    ? await DirectMessage.find(filter).sort({ createdAt: 1 }).limit(limit).lean()
+    : (await DirectMessage.find(filter).sort({ createdAt: -1 }).limit(limit).lean()).reverse()
   await dm.markDelivered(me, conv)
   noStore(res)
-  res.json(rows.reverse().map(m => dm.serializeMessage(m, me)))
+  res.json(rows.map(m => dm.serializeMessage(m, me)))
 })
 
 // ── POST /api/conversations/:id/messages { text?, imageUrl?, imageWidth?, imageHeight?, replyTo? } ──

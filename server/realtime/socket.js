@@ -10,6 +10,8 @@
 // - One server instance keeps rooms in memory; several instances would need a Socket.IO adapter.
 // Every helper is a no-op until attach() ran (tests that only use the HTTP app).
 
+const os = require('os')
+const crypto = require('crypto')
 const { Server } = require('socket.io')
 const mongoose = require('mongoose')
 const { authenticate } = require('../middleware/auth')
@@ -17,6 +19,22 @@ const { hasFeature, featuresFor } = require('../config/features')
 const { getBlockSets, str } = require('../utils/blocks')
 
 let io = null
+
+// Diagnostics (server logs only, never in API responses): which instance a connection or event is on.
+// Rooms live in memory per instance, so during a deploy overlap two instances can each hold half of
+// the connections. REALTIME_LOG=off silences it. User ids are logged as a short hash.
+const INSTANCE = process.env.RENDER_INSTANCE_ID || os.hostname()
+const shortId = id => crypto.createHash('sha256').update(String(id)).digest('hex').slice(0, 8)
+const roomLabel = room => (room.startsWith('user:') ? `user:${shortId(room.slice(5))}` : room.replace(/^meetnow:college:.*/, 'meetnow:college:*'))
+function rtLog(text) {
+  if (process.env.REALTIME_LOG === 'off' || process.env.NODE_ENV === 'test') return
+  console.log(`[rt] ${INSTANCE} ${text}`)
+}
+// How many sockets in this room are connected to THIS instance
+const localCount = room => io?.sockets.adapter.rooms.get(room)?.size ?? 0
+function logEmit(event, rooms) {
+  rtLog(`emit ${event} → ${rooms.map(r => `${roomLabel(r)}(${localCount(r)} here)`).join(', ')}`)
+}
 // Direct messages: how many live connections each account has (one server instance)
 const online = new Map()
 const isOnline = userId => (online.get(str(userId)) || 0) > 0
@@ -47,7 +65,10 @@ async function announcePresence(userId, isNowOnline) {
   const convs = await Conversation.find({ 'members.user': userId, status: 'active' }).select('members').limit(500).lean()
   const partnerIds = convs.map(c => c.members.find(m => str(m.user) !== str(userId))?.user).filter(Boolean)
   const partners = await User.find({ _id: { $in: partnerIds }, showActivityStatus: { $ne: false } }).select('_id').lean()
-  for (const p of partners) io?.to(`user:${str(p._id)}`).emit('dm:presence', { userId: str(userId), online: isNowOnline, lastActiveAt: at })
+  for (const p of partners) {
+    logEmit('dm:presence', [`user:${str(p._id)}`])
+    io?.to(`user:${str(p._id)}`).emit('dm:presence', { userId: str(userId), online: isNowOnline, lastActiveAt: at })
+  }
 }
 
 function attach(httpServer, { corsOrigin } = {}) {
@@ -77,6 +98,8 @@ function attach(httpServer, { corsOrigin } = {}) {
   io.on('connection', socket => {
     const me = socket.data.user
     socket.join(`user:${me._id}`)
+    rtLog(`connect user:${shortId(me._id)} via ${socket.conn.transport.name} (${io.engine.clientsCount} connected here)`)
+    socket.on('disconnect', reason => rtLog(`disconnect user:${shortId(me._id)} ${reason} (${io.engine.clientsCount} connected here)`))
 
     // ── Direct messages: presence, typing, delivery ──
     if (socket.data.features.dm) {
@@ -102,6 +125,7 @@ function attach(httpServer, { corsOrigin } = {}) {
       const other = conv.members.find(m => str(m.user) !== me._id)?.user
       const sets = await getBlockSets({ _id: new mongoose.Types.ObjectId(me._id), blockedUsers: me.blockedUsers })
       if (!other || sets.all.has(str(other))) return
+      logEmit('dm:typing', [`user:${str(other)}`])
       io.to(`user:${str(other)}`).emit('dm:typing', { conversationId: id })
     })
 
@@ -161,6 +185,7 @@ async function meetupMessage(meetupId, message) {
   const room = `meetup:${meetupId}`
   const sender = str(message.sender?._id ?? message.sender)
   const sockets = await io.in(room).fetchSockets()
+  logEmit('meetup:message', [room])
   for (const s of sockets) {
     const hidden = message.kind === 'text' && sender && s.data.blocked?.has(sender)
     s.emit('meetup:message', hidden ? { ...message, text: null, hidden: true } : message)
@@ -171,12 +196,14 @@ async function meetupMessage(meetupId, message) {
 function meetupMembers(meetup, change) {
   if (!io) return
   const payload = { meetupId: str(meetup._id), memberCount: meetup.memberCount, ...change }
+  logEmit('meetup:members', [`meetup:${str(meetup._id)}`, feedRoom(meetup)])
   io.to(`meetup:${str(meetup._id)}`).to(feedRoom(meetup)).emit('meetup:members', payload)
 }
 
 // A meetup was created: cards appear for the people who may see it
 function meetupCreated(meetup) {
   if (!io) return
+  logEmit('meetup:created', [feedRoom(meetup)])
   io.to(feedRoom(meetup)).emit('meetup:created', { meetupId: str(meetup._id) })
 }
 
@@ -184,6 +211,7 @@ function meetupCreated(meetup) {
 function meetupEnded(meetup, reason) {
   if (!io) return
   const id = str(meetup._id)
+  logEmit('meetup:ended', [`meetup:${id}`, feedRoom(meetup)])
   io.to(`meetup:${id}`).to(feedRoom(meetup)).emit('meetup:ended', { meetupId: id, reason })
   io.in(`meetup:${id}`).socketsLeave(`meetup:${id}`)
 }
@@ -196,6 +224,7 @@ function disconnectUser(userId) {
 
 function emitToUser(userId, event, payload) {
   if (!io) return
+  logEmit(event, [`user:${str(userId)}`])
   io.to(`user:${str(userId)}`).emit(event, payload)
 }
 

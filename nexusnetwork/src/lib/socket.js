@@ -7,12 +7,13 @@ function socketOrigin() {
 }
 
 // One connection per signed-in tab. The token is read at every (re)connect, so a token renewed by
-// "log out other devices" or a password change is picked up without reloading.
+// "log out other devices" or a password change is picked up without reloading. WebSocket only (no
+// long-polling fallback): every reconnect is a fresh connection, and screens catch up on reconnect.
 export function createSocket() {
   return io(socketOrigin(), {
     autoConnect: false,
     auth: cb => cb({ token: localStorage.getItem('nx_token') }),
-    transports: ['websocket', 'polling'],
+    transports: ['websocket'],
     reconnectionDelay: 1000,
     reconnectionDelayMax: 10000,
   })
