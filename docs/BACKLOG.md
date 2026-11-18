@@ -7,6 +7,9 @@ _Last updated: 2026-10-17._
 
 ## Web
 
+- **Set up Playwright browser tests for the web.**
+  Why: the web has unit tests only (`node --test`); MeetNow and Messages were checked in a browser with one-off scripts (screenshots, WebSockets blocked through a proxy). Real browser tests would catch layout and real-time regressions on every change.
+  Where: `nexusnetwork/` (Playwright + a local API/Mongo like the eye-check stack): create/join/chat/end a MeetNow, DM send/request/accept, offline banner with WebSockets blocked, phone and desktop widths.
 - **Bottom nav highlights "Post" on `/post/<id>` pages.**
   Why: the shared-post page looks like the compose screen is open, which is confusing.
   Where: `nexusnetwork/src/components/BottomNav.jsx` (`pathname.startsWith(t.to)` also matches `/post/<id>`).
@@ -22,6 +25,9 @@ _Last updated: 2026-10-17._
 
 ## Server
 
+- **Move Render to a paid plan when usage grows or users report slowness.**
+  Why: MeetNow and Messages run as a Beta on the free plan: the instance sleeps after ~15 min idle (the first request can take ~50 s, live updates pause until it wakes) and a deploy briefly runs two instances, so live events can be missed (clients catch up). Watch for complaints about slow loading or late messages.
+  Where: Render → `surajya` → Settings → Instance type; afterwards drop the "Beta — the app may take a few seconds to wake up" line (`nexusnetwork/src/features/meetnow/CreateMeetNow.jsx`) and the Beta badges when ready. Two or more instances also need the Socket.IO Redis adapter (`docs/DEPLOYMENT.md`).
 - **"Nearby Colleges" for MeetNow.**
   Why: MeetNow ships with "My College" and "Everyone" only; "nearby" needs to know where colleges are, but `college` is free text with no city.
   Where: a college → city (or coordinates) list, then `visibility: 'nearby'` in `server/models/Meetup.js` / `routes/meetups.js` and the option in `nexusnetwork/src/features/meetnow/meta.js`.
