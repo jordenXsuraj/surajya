@@ -15,6 +15,7 @@ const { getBlockSets, addPostBlockFilter, isPostHidden } = require('../utils/blo
 const { notify, notifyFollowers } = require('../services/notify')
 const validObjectIdParam = require('../middleware/validObjectId')
 const { extractYoutubeId } = require('../utils/youtube')
+const { parseCursor, addBeforeClause, FEED_SORT } = require('../utils/feedCursor')
 
 const REPORT_REASONS = ['spam','hate','harassment','misinformation','other']
 
@@ -86,13 +87,20 @@ if (authorId && followingSet.has(authorId)) score += 80
 // GET /api/posts?type=placement
 // GET /api/posts?global=true
 // GET /api/posts?connections=true  ← Following feed
+// GET /api/posts?before=<cursor>   ← next page by cursor (see utils/feedCursor.js):
+//   the posts older than that post, newest first, not re-ranked; `page` is ignored
 // ─────────────────────────────────────────────────
 router.get('/', protect, async (req, res) => {
   try {
 
+    let cursor = null
+    if (req.query.before !== undefined) {
+      cursor = parseCursor(req.query.before)
+      if (!cursor) return res.status(400).json({ message: 'Invalid cursor' })
+    }
     const page  = parseInt(req.query.page) || 1
-const limit = parseInt(req.query.limit) || 20
-const skip  = (page - 1) * limit
+const limit = cursor ? Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 50) : (parseInt(req.query.limit) || 20)
+const skip  = cursor ? 0 : (page - 1) * limit
 
 
 
@@ -116,6 +124,7 @@ const skip  = (page - 1) * limit
 }, sets)
 
       if (type && type !== 'all' && type !== '') filter.type = type
+      if (cursor) addBeforeClause(filter, cursor)
 
       const posts = await Post.find(filter)
         .populate('postedBy', 'name year branch avatar isContributor')
@@ -124,7 +133,7 @@ const skip  = (page - 1) * limit
                 select: 'name year branch avatar',
             options: { limit: 5 }   // only 2 replies
                })
-        .sort({ createdAt: -1 })
+        .sort(FEED_SORT)
         .skip(skip).limit(limit)
         .lean()
 
@@ -144,6 +153,7 @@ const skip  = (page - 1) * limit
 
     const sets = await getBlockSets(req.user)
     addPostBlockFilter(filter, sets)
+    if (cursor) addBeforeClause(filter, cursor)
 
     // Get user with following info for personalization
     const user = await User.findById(req.user._id)
@@ -157,7 +167,7 @@ const skip  = (page - 1) * limit
   select: 'name year branch avatar',
   options: { limit: 5 }   // only 5 replies
 })
-      .sort({ createdAt: -1 })
+      .sort(FEED_SORT)
       .skip(skip).limit(limit)
       .lean()
 const followingSet = new Set((user.following || []).map(id => id.toString()))
@@ -167,9 +177,13 @@ const followingSet = new Set((user.following || []).map(id => id.toString()))
       postedByYear:   p.postedBy?.year,
     }))
 
-    const scored = postsWithMeta
-      .map(p => ({ post: p, score: scorePost(p, user, followingSet) }))
-      .sort((a, b) => b.score - a.score)
+    // page mode keeps its ranking (with a little randomness) for existing clients; cursor mode returns
+    // the posts in the stable feed order — the client ranks each new batch once and never re-sorts
+    const scored = cursor
+      ? postsWithMeta.map(p => ({ post: p }))
+      : postsWithMeta
+        .map(p => ({ post: p, score: scorePost(p, user, followingSet) }))
+        .sort((a, b) => b.score - a.score)
 
 const result = scored.map(({ post: raw }) => {
   const post = sanitizePost(raw, req.user._id, sets)
