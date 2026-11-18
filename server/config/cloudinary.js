@@ -51,6 +51,22 @@ const storage = new CloudinaryStorage({
   })
 })
 
+// Direct-message photos: own folder (account deletion and unsend delete them), same conversion
+const dmStorage = new CloudinaryStorage({
+  cloudinary,
+  params: async () => ({
+    folder:          'meetnet_dm',
+    resource_type:   'image',
+    allowed_formats: ['jpg','jpeg','png','webp'],
+    format:          'jpg',
+    public_id: `dm_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`,
+    transformation:  [
+      { width: 1280, crop: 'limit' },
+      { quality: 'auto' }
+    ]
+  })
+})
+
 const pdfStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
@@ -127,4 +143,8 @@ const pdfUpload = MODE === 'local'
   ? localUploader(multer({ storage: diskStorage('pdfs', 'pdf'), limits: { fileSize: PDF_LIMIT }, fileFilter: pdfFilter }), 'pdfs')
   : multer({ storage: pdfStorage, limits: { fileSize: PDF_LIMIT }, fileFilter: pdfFilter })
 
-module.exports = { cloudinary, upload, pdfUpload, UPLOAD_MODE: MODE }
+const dmImageUpload = MODE === 'local'
+  ? localUploader(multer({ storage: diskStorage('dm', 'dm'), limits: { fileSize: IMAGE_LIMIT }, fileFilter: imageFilter }), 'dm')
+  : multer({ storage: dmStorage, limits: { fileSize: IMAGE_LIMIT }, fileFilter: imageFilter })
+
+module.exports = { cloudinary, upload, pdfUpload, dmImageUpload, UPLOAD_MODE: MODE }

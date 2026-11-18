@@ -20,6 +20,8 @@ class CloudinaryStorage {
             filename: result.public_id,
             // kept so _removeFile can delete raw files (PDFs) too
             resourceType: result.resource_type ?? options.resource_type,
+            width:  result.width,
+            height: result.height,
           })
         })
         file.stream.pipe(stream)

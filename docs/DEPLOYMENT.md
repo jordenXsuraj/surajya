@@ -89,6 +89,8 @@ Copy `.env.example` (Docker Compose) or `server/.env.example` and fill in your o
 
 ## Staged features (MeetNow, direct messages)
 
+Direct messages (`FEATURE_DM`) also need **both** people to have the feature in `staff` mode: someone without it can't be messaged (404). DM photos go to the Cloudinary folder `meetnet_dm/` (account deletion and unsend delete them).
+
 New features ship switched off and are tried on production by a few accounts before everyone gets them (`server/config/features.js`).
 
 - **Modes** (`FEATURE_MEETNOW`, `FEATURE_DM`): `off` → the routes answer the normal 404, the socket refuses the feature's events, the web shows no entry point. `staff` → only the `ADMIN_EMAIL` account and allowlisted accounts. `on` → everyone. Changing a mode = change the variable on Render, then deploy.

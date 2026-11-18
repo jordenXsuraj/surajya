@@ -343,6 +343,24 @@ const deletePost = async (postId, reportId) => {
               )}
 
               {/* MeetNow meetup / chat message: a snapshot (the meetup itself may be gone already) */}
+              {/* Direct message: a copy of the reported message (it may have been unsent since) */}
+              {r.targetType === 'direct_message' && (
+                <div style={{ background:'#0d0d0d', borderRadius:10, padding:'10px 12px', marginBottom:10,
+                  borderLeft:'3px solid #ef4444' }}>
+                  <div style={{ fontSize:'.62rem', color:'#444', marginBottom:5, textTransform:'uppercase' }}>
+                    Reported private message · copy, deleted {r.expiresAt ? new Date(r.expiresAt).toLocaleDateString() : 'after 90 days'}
+                  </div>
+                  <p style={{ fontSize:'.8rem', color:'#bbb', margin:0, wordBreak:'break-word', whiteSpace:'pre-wrap' }}>
+                    {r.snapshot?.text || '(no text)'}
+                  </p>
+                  {r.snapshot?.imageUrl && <a href={r.snapshot.imageUrl} target="_blank" rel="noreferrer" style={{ fontSize:'.7rem', color:'#3b82f6' }}>open photo</a>}
+                  <div style={{ fontSize:'.66rem', color:'#666', marginTop:6 }}>
+                    Written by {r.snapshot?.senderName || 'unknown'}
+                    {r.snapshot?.sender && <a href={`/profile/${r.snapshot.sender}`} style={{ marginLeft:8, color:'#3b82f6' }}>view profile</a>}
+                  </div>
+                </div>
+              )}
+
               {(r.targetType === 'meetup' || r.targetType === 'meetup_message') && (
                 <div style={{ background:'#0d0d0d', borderRadius:10, padding:'10px 12px', marginBottom:10,
                   borderLeft:'3px solid #ef4444' }}>

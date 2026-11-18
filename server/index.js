@@ -159,6 +159,7 @@ app.use('/api/users',         generalLimit, require('./routes/users'))
 app.use('/api/notifications', generalLimit, require('./routes/notifications'))
 app.use('/api/app',           generalLimit, require('./routes/app'))
 app.use('/api/meetups',       generalLimit, require('./routes/meetups'))   // 404 unless FEATURE_MEETNOW allows it
+app.use('/api/conversations', generalLimit, require('./routes/conversations'))   // 404 unless FEATURE_DM allows it
 app.use('/api/_debug',        generalLimit, require('./routes/debug'))   // 404 unless DEBUG_IP_ROUTE=1
 app.use('/api/webhooks',                    require('./routes/webhooks'))  // 404 unless RESEND_WEBHOOK_SECRET is set
 

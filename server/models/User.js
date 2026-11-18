@@ -160,6 +160,13 @@ savedPosts: {
     select: false,
   },
 
+  // ── Direct messages ──────────────────────────
+  // "Show activity status": when off, others don't see if you're online or when you were last
+  // active, and you don't see theirs either
+  showActivityStatus: { type: Boolean, default: true },
+  // When the account last had a live connection; only shared through direct messages
+  lastActiveAt: { type: Date, default: null, select: false },
+
   // ── Safety ───────────────────────────────────
   blockedUsers: {
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
