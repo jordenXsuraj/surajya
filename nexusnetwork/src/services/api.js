@@ -64,13 +64,15 @@ export const deleteMyAccount = password => API.delete('/users/me', { data: { pas
 export const acceptTerms     = ()       => API.post('/users/me/accept-terms')
 
 // ── Posts ─────────────────────────────────────────
-export const getFeed = (type, connOnly, global, page = 1) =>
+// { before }: the posts older than that cursor (lib/feedPaging.js cursorOf), instead of a page number
+export const getFeed = (type, connOnly, global, page = 1, { before, limit = 20 } = {}) =>
   API.get(`/posts${buildQuery({
     type:        type     || '',
     connections: connOnly ? 'true' : undefined,
     global:      global   ? 'true' : undefined,
-    page,
-    limit: 20
+    page:        before ? undefined : page,
+    before,
+    limit,
   })}`)
 
 export const createPost   = d            => API.post('/posts', d)

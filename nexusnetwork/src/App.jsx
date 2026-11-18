@@ -48,6 +48,8 @@ function AppShell() {
 const { pathname } = useLocation()
 
 useEffect(() => {
+  // Home keeps its own place: it puts you back where you were when you return, else starts at the top
+  if (pathname === '/home') return
   window.scrollTo(0, 0)
 }, [pathname])
 
