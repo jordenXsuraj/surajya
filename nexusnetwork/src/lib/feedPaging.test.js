@@ -110,3 +110,11 @@ test('pill label', () => {
   assert.equal(newPostsLabel(4), '4 new posts')
   assert.equal(newPostsLabel(10), '10+ new posts')
 })
+
+test('student pages (Connect): a repeat on the next page is dropped, the order stays', () => {
+  const s = (id, name) => ({ _id: id, name })   // students have no feed cursor: only the id matters here
+  let list = appendBatch([], [s('a', 'Asha'), s('b', 'Rohan')])
+  // a new sign-up shifts the server's skip/limit pages, so page 2 starts with Rohan again
+  list = appendBatch(list, [s('b', 'Rohan'), s('c', 'Neha'), s('c', 'Neha')])
+  assert.deepEqual(list.map(u => u.name), ['Asha', 'Rohan', 'Neha'])
+})

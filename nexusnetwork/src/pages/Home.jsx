@@ -7,6 +7,8 @@ import FilterDropdown from '../components/FilterDropdown'
 import { savedFeedScope, saveFeedScope } from '../lib/feedScope'
 import { PAGE_SIZE, CHECK_SIZE, appendBatch, prependNew, newerThan, oldestOf, cursorOf, newPostsLabel } from '../lib/feedPaging'
 import usePullToRefresh from '../hooks/usePullToRefresh'
+import useLoadMore from '../hooks/useLoadMore'
+import { PostSkeleton, Skeletons, ListFooter, LoadError } from '../components/Loading'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -258,13 +260,13 @@ export default function Home() {
   const [hasMore,     setHasMore]     = useState(() => restore?.hasMore ?? true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [moreError,   setMoreError]   = useState(false)
+  const [firstError,  setFirstError]  = useState(false)
   const [newCount,    setNewCount]    = useState(0)
   const gen      = useRef(0)       // bumps on every restart; answers for an older generation are dropped
   const busy     = useRef(false)   // one feed request at a time
   const postsRef = useRef(posts)
   const hasMoreRef = useRef(hasMore)
   const wrapRef  = useRef(null)
-  const sentinelRef = useRef(null)
   useEffect(() => { postsRef.current = posts; hasMoreRef.current = hasMore })
 
  const [localConns, setLocalConns] = useState(
@@ -284,7 +286,7 @@ export default function Home() {
   const loadFirst = useCallback(({ keep = false } = {}) => {
     const g = ++gen.current
     busy.current = true
-    setLoading(true); setLoadingMore(false); setMoreError(false); setNewCount(0)
+    setLoading(true); setLoadingMore(false); setMoreError(false); setFirstError(false); setNewCount(0)
     if (!keep) { setPosts([]); setHasMore(true) }
     return getFeed(...feedArgs(), 1, { limit: PAGE_SIZE })
       .then(r => {
@@ -293,7 +295,12 @@ export default function Home() {
         setPosts(appendBatch([], raw, rank))
         setHasMore(raw.length >= PAGE_SIZE)
       })
-      .catch(() => { if (g === gen.current) show('❌ Could not load posts') })
+      .catch(() => {
+        if (g !== gen.current) return
+        // nothing on screen: say so with Retry; a failed refresh keeps the posts and shows a toast
+        if (postsRef.current.length) show('❌ Could not refresh posts')
+        else setFirstError(true)
+      })
       .finally(() => { if (g === gen.current) { busy.current = false; setLoading(false) } })
   }, [feedArgs, rank, show])
 
@@ -400,16 +407,11 @@ export default function Home() {
   }, [])
 
   // Load the next batch when the end of the list comes near (an observer on a marker under the last
-  // post — not a height sum, which was the viewport height and loaded pages on every scroll)
-  useEffect(() => {
-    const el = sentinelRef.current
-    if (!el || !hasMore || loading || !posts.length) return
-    const io = new IntersectionObserver(entries => {
-      if (entries.some(e => e.isIntersecting)) latest.current.loadMore()
-    }, { rootMargin: '0px 0px 900px 0px' })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [hasMore, loading, posts.length])
+  // post — not a height sum, which was the viewport height and loaded pages on every scroll). 900 px
+  // ahead, so a batch is usually there before you reach the end; the spinner shows when it is not.
+  const sentinelRef = useLoadMore(() => latest.current.loadMore(), {
+    enabled: hasMore && !loading && !moreError && posts.length > 0, margin: 900, watch: posts.length,
+  })
 
   // "New posts" check: every minute while the page is visible, and when you come back to the tab.
   // It never changes the list — it only shows the pill.
@@ -563,9 +565,10 @@ export default function Home() {
 */}
       <MeetNowStrip onToast={show} />
 
-      {loading && posts.length === 0 && <div className="feed-loading">Loading posts…</div>}
+      {loading && posts.length === 0 && <Skeletons count={4} of={PostSkeleton} />}
+      {!loading && firstError && posts.length === 0 && <LoadError what="posts" onRetry={() => loadFirst()} />}
 
-      {!loading && visible.length === 0 && (
+      {!loading && !firstError && visible.length === 0 && (
         <div className="feed-empty">
           <div className="fe-icon">📭</div>
           <h3>Nothing here yet</h3>
@@ -587,14 +590,10 @@ export default function Home() {
           onConnect={handleConnect}/>
       ))}
 
-      {/* Bottom of feed: the marker that loads the next batch, then the status */}
-      <div ref={sentinelRef} aria-hidden="true" />
-      {!loading && posts.length > 0 && (
-        <div className="feed-foot">
-          {loadingMore ? 'Loading…'
-            : moreError ? <>Couldn’t load more posts. <button className="feed-retry" onClick={loadMore}>Retry</button></>
-              : hasMore ? '' : 'You’re all caught up 🎉'}
-        </div>
+      {/* Bottom of feed: the marker that loads the next batch, then spinner / retry / all caught up */}
+      {!loading && (
+        <ListFooter sentinel={sentinelRef} count={posts.length} loadingMore={loadingMore} error={moreError}
+          hasMore={hasMore} onRetry={loadMore} onMore={loadMore} />
       )}
 
       <div style={{ height:14 }}/>
